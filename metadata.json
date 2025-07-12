@@ -1,0 +1,5 @@
+{
+  "name": "Employee Performance Analyzer",
+  "description": "An application to analyze employee performance data from a CSV file, visualize individual results, and generate AI-powered summaries using the Gemini API.",
+  "requestFramePermissions": []
+}
