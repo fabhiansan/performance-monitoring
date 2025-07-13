@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Employee } from '../types';
 import { parsePerformanceData } from '../services/parser';
-import { api, Dataset } from '../services/api';
+import ResolveEmployeesDialog from './ResolveEmployeesDialog';
+import { api, UploadSession } from '../services/api';
 import { IconClipboardData, IconAnalyze, IconSparkles, IconUsers } from './Icons';
 
 interface DataManagementProps {
   employees: Employee[];
-  onDataUpdate: (employees: Employee[]) => void;
+  onDataUpdate: (employees: Employee[], sessionName?: string) => void;
 }
 
 const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate }) => {
@@ -14,10 +15,71 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [savedDatasets, setSavedDatasets] = useState<Dataset[]>([]);
+  const [uploadSessions, setUploadSessions] = useState<UploadSession[]>([]);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
-  const [datasetName, setDatasetName] = useState('');
+  const [sessionName, setSessionName] = useState('');
+  const [selectedSessions, setSelectedSessions] = useState<Set<string>>(new Set());
+  const [showMergeOptions, setShowMergeOptions] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [resolveModal, setResolveModal] = useState<{unknown: string[]; orgMap: Record<string, string>} | null>(null);
+
+  const extractEmployeeNamesFromData = (data: string): string[] => {
+    console.log('=== EXTRACTING EMPLOYEE NAMES ===');
+    console.log('Raw data length:', data.length);
+    console.log('First 200 chars:', data.substring(0, 200));
+    
+    const lines = data.trim().split('\n').filter(line => line.trim().length > 1);
+    if (lines.length < 1) return [];
+    
+    const header = lines[0];
+    console.log('Header line:', header.substring(0, 300) + '...');
+    const employeeNames: string[] = [];
+    
+    // Parse CSV line to handle quoted fields
+    const fields = [];
+    let currentField = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < header.length; i++) {
+      const char = header[i];
+      if (char === '"') {
+        if (inQuotes && i < header.length - 1 && header[i + 1] === '"') {
+          currentField += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        fields.push(currentField);
+        currentField = '';
+      } else {
+        currentField += char;
+      }
+    }
+    fields.push(currentField);
+    
+    console.log('Total fields parsed:', fields.length);
+    console.log('Sample fields:', fields.slice(0, 5));
+    
+    // Extract employee names from headers like "Competency [Employee Name]"
+    fields.forEach(field => {
+      const match = field.match(/\[(.*?)\]/);
+      if (match) {
+        let employeeName = match[1].trim();
+        // Remove leading numbering like "1." or "4. "
+        employeeName = employeeName.replace(/^\d+\.?\s*/, '');
+        if (employeeName && !employeeNames.includes(employeeName)) {
+          employeeNames.push(employeeName);
+        }
+      }
+    });
+    
+    console.log('=== EXTRACTION COMPLETE ===');
+    console.log('Total employees found:', employeeNames.length);
+    console.log('Employee names:', employeeNames);
+    
+    return employeeNames;
+  };
 
   const handleProcessData = async () => {
     if (!rawText.trim()) {
@@ -27,22 +89,241 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
     setIsLoading(true);
     setError(null);
     
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
-        const parsedData = parsePerformanceData(rawText);
+        // Extract employee names from performance data
+        const employeeNamesInData = extractEmployeeNamesFromData(rawText);
+        console.log('=== DEBUGGING EMPLOYEE MATCHING ===');
+        console.log('Employee names found in performance data:', employeeNamesInData);
+        console.log('Total performance data employees:', employeeNamesInData.length);
+        
+        // Fetch organizational level mapping from database
+        let orgLevelMapping = {};
+        try {
+          orgLevelMapping = await api.getEmployeeOrgLevelMapping();
+          console.log('=== DATABASE EMPLOYEES ===');
+          console.log('Employee names in database:', Object.keys(orgLevelMapping));
+          console.log('Total employees in database:', Object.keys(orgLevelMapping).length);
+          console.log('Full organizational mapping:', orgLevelMapping);
+          
+          if (Object.keys(orgLevelMapping).length === 0) {
+            console.warn('WARNING: No employee data found in employee_database table!');
+            console.log('Make sure to import employee data first via "Manage Employees" page');
+          }
+          
+          // Test direct matching for first few employees
+          console.log('=== DIRECT MATCHING TEST ===');
+          employeeNamesInData.slice(0, 5).forEach(name => {
+            const directMatch = orgLevelMapping[name];
+            console.log(`Testing "${name}": ${directMatch ? '✅ FOUND' : '❌ NOT FOUND'} (${directMatch || 'none'})`);
+          });
+          
+        } catch (mappingError) {
+          console.error('Error fetching organizational level mapping:', mappingError);
+          console.log('No organizational level mapping available, using defaults');
+        }
+        
+        // Helper function to normalize names for comparison
+        const normalizeName = (name: string): string => {
+          // List of common Indonesian academic titles and honorifics to strip out
+          const stopWords = [
+            'st', 'sh', 'se', 'mm', 'si', 'sk', 'sos', 'ssos', 'sap', 'skep',
+            'ners', 'mi', 'mps', 'sp', 'kom', 'stp', 'ap', 'pd', 'map', 'msc',
+            'ma', 'mph', 'dra', 'dr', 'ir', 'amd'
+          ];
+          const titleRegex = new RegExp(`\\b(${stopWords.join('|')})\\b`, 'g');
+
+          return name
+            .toLowerCase()
+            .replace(/[.,\-_]/g, '') // Remove punctuation characters
+            .replace(/\s+/g, ' ') // Collapse multiple spaces first
+            .replace(titleRegex, '') // Remove detected titles/qualifications
+            .replace(/\s+/g, ' ') // Collapse spaces again after removals
+            .trim();
+        };
+        
+        // Enhanced fuzzy matching with Levenshtein distance
+        const calculateSimilarity = (str1: string, str2: string): number => {
+          const longer = str1.length > str2.length ? str1 : str2;
+          const shorter = str1.length > str2.length ? str2 : str1;
+          
+          if (longer.length === 0) return 1.0;
+          
+          const editDistance = levenshteinDistance(longer, shorter);
+          return (longer.length - editDistance) / longer.length;
+        };
+        
+        const levenshteinDistance = (str1: string, str2: string): number => {
+          const matrix = [];
+          for (let i = 0; i <= str2.length; i++) {
+            matrix[i] = [i];
+          }
+          for (let j = 0; j <= str1.length; j++) {
+            matrix[0][j] = j;
+          }
+          for (let i = 1; i <= str2.length; i++) {
+            for (let j = 1; j <= str1.length; j++) {
+              if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+                matrix[i][j] = matrix[i - 1][j - 1];
+              } else {
+                matrix[i][j] = Math.min(
+                  matrix[i - 1][j - 1] + 1,
+                  matrix[i][j - 1] + 1,
+                  matrix[i - 1][j] + 1
+                );
+              }
+            }
+          }
+          return matrix[str2.length][str1.length];
+        };
+        
+        // Create a normalized mapping for better matching
+        const normalizedOrgMapping: { [key: string]: string } = {};
+        const originalToNormalizedMap: { [key: string]: string } = {};
+        
+        Object.keys(orgLevelMapping).forEach(originalName => {
+          const normalized = normalizeName(originalName);
+          normalizedOrgMapping[normalized] = orgLevelMapping[originalName];
+          originalToNormalizedMap[normalized] = originalName;
+        });
+        
+        // Check for unknown employees with enhanced fuzzy matching
+        const unknownEmployees: string[] = [];
+        const fuzzyMatchedEmployees: { [key: string]: string } = {};
+        
+        employeeNamesInData.forEach(name => {
+          const normalizedName = normalizeName(name);
+          
+          // Direct exact match
+          if (orgLevelMapping[name]) {
+            console.log(`✅ Exact match: "${name}"`);
+            return;
+          }
+          
+          // Normalized exact match
+          if (normalizedOrgMapping[normalizedName]) {
+            fuzzyMatchedEmployees[name] = normalizedOrgMapping[normalizedName];
+            console.log(`🔄 Normalized match: "${name}" -> "${originalToNormalizedMap[normalizedName]}"`);
+            return;
+          }
+          
+          // Enhanced fuzzy matching with similarity threshold
+          let bestMatch = '';
+          let bestSimilarity = 0;
+          const SIMILARITY_THRESHOLD = 0.8; // 80% similarity required
+          
+          Object.keys(orgLevelMapping).forEach(dbName => {
+            const normalizedDbName = normalizeName(dbName);
+            const similarity = calculateSimilarity(normalizedName, normalizedDbName);
+            
+            if (similarity > bestSimilarity && similarity >= SIMILARITY_THRESHOLD) {
+              bestSimilarity = similarity;
+              bestMatch = dbName;
+            }
+          });
+          
+          if (bestMatch) {
+            fuzzyMatchedEmployees[name] = orgLevelMapping[bestMatch];
+            console.log(`🎯 Fuzzy match (${(bestSimilarity * 100).toFixed(1)}%): "${name}" -> "${bestMatch}"`);
+            return;
+          }
+          
+          // No match found
+          console.log(`❌ No match found for: "${name}" (normalized: "${normalizedName}")`);
+          unknownEmployees.push(name);
+        });
+        
+        console.log('Unknown employees after fuzzy matching:', unknownEmployees);
+        console.log('Fuzzy matched employees:', fuzzyMatchedEmployees);
+        
+        // Add fuzzy matches to the orgLevelMapping
+        Object.entries(fuzzyMatchedEmployees).forEach(([originalName, orgLevel]) => {
+          orgLevelMapping[originalName] = orgLevel;
+        });
+        
+        if (unknownEmployees.length > 0) {
+          setResolveModal({ unknown: unknownEmployees, orgMap: orgLevelMapping as Record<string,string> });
+          setIsLoading(false);
+          return;
+        }
+        
+        // If still any unknown (should be none here), default them to Staff/Other
+        unknownEmployees.forEach(name => {
+          orgLevelMapping[name] = 'Staff/Other';
+        });
+        
+        console.log('Starting performance data parsing...');
+        const parsedData = parsePerformanceData(rawText, undefined, orgLevelMapping);
+        console.log('Parsing completed successfully:', parsedData.length, 'employees');
         const sortedData = parsedData.sort((a, b) => a.name.localeCompare(b.name));
         onDataUpdate(sortedData);
+        // Automatically open save dialog and ask for month/year identifier
+        const now = new Date();
+        const defaultName = `${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+        setDatasetName(defaultName);
+        setShowSaveDialog(true);
         setRawText('');
       } catch (e) {
+        console.error('Parsing error details:', e);
         if (e instanceof Error) {
-          setError(`An error occurred during parsing: ${e.message}. Please check the data format.`);
+          let errorMessage = `Parsing error: ${e.message}`;
+          
+          // Provide specific guidance based on common error patterns
+          if (e.message.includes('header row')) {
+            errorMessage += '\n\nTips:\n• Ensure the first row contains column headers\n• Headers should include employee names in brackets like: "Competency [Employee Name]"';
+          } else if (e.message.includes('numeric scores')) {
+            errorMessage += '\n\nTips:\n• Ensure data rows contain numeric scores (10, 65, 75, etc.)\n• Check for missing or non-numeric values in score columns';
+          } else if (e.message.includes('format')) {
+            errorMessage += '\n\nSupported formats:\n• Standard CSV with quoted fields\n• Headers: "Competency [Employee Name]"\n• Multiple assessment rows per employee are supported';
+          }
+          
+          setError(errorMessage);
         } else {
-          setError('An unknown error occurred during parsing.');
+          setError('An unknown error occurred during parsing. Please check the console for more details.');
         }
       } finally {
         setIsLoading(false);
       }
     }, 50);
+  };
+
+  const handleResolveSubmit = async (mapping: Record<string, { chosenName: string; orgLevel: string; isNew: boolean }>) => {
+    if (!resolveModal) return;
+    try {
+      // add new employees if needed
+      for (const [orig, value] of Object.entries(mapping)) {
+        if (value.isNew) {
+          await api.addEmployee(value.chosenName, '-', 'N/A', '-', '-', '-', value.orgLevel);
+        }
+        // map original column name to chosen org level for parsing
+        resolveModal.orgMap[orig] = value.orgLevel;
+      }
+      setResolveModal(null);
+      // Re-run parsing with updated mapping
+      setIsLoading(true);
+      setTimeout(() => {
+        try {
+          const parsed = parsePerformanceData(rawText, undefined, resolveModal.orgMap);
+          const sorted = parsed.sort((a, b) => a.name.localeCompare(b.name));
+          onDataUpdate(sorted);
+          setShowSaveDialog(true);
+          setDatasetName(`${new Date().getMonth() + 1}/${new Date().getFullYear()}`);
+          setRawText('');
+        } catch (e) {
+          console.error(e);
+          setError('Failed after resolving employees.');
+        } finally {
+          setIsLoading(false);
+        }
+      }, 10);
+    } catch (e) {
+      console.error(e);
+      setError('Error while saving resolved employees.');
+    }
+  };
+
+  const handleResolveCancel = () => {
+    setResolveModal(null);
   };
 
   const handleFileUpload = (file: File) => {
@@ -103,61 +384,112 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
     window.URL.revokeObjectURL(url);
   };
 
-  const clearData = async () => {
+  const clearData = () => {
     setRawText('');
     onDataUpdate([]);
     setError(null);
+  };
+
+  const loadUploadSessions = async () => {
     try {
-      await api.clearCurrentDataset();
+      const sessions = await api.getAllUploadSessions();
+      setUploadSessions(sessions);
     } catch (error) {
-      console.error('Failed to clear data:', error);
+      console.error('Failed to load upload sessions:', error);
     }
   };
 
-  const loadSavedDatasets = async () => {
-    try {
-      const datasets = await api.getAllDatasets();
-      setSavedDatasets(datasets);
-    } catch (error) {
-      console.error('Failed to load datasets:', error);
-    }
-  };
-
-  const saveCurrentDataset = async () => {
+  const saveCurrentSession = async () => {
     if (employees.length === 0) return;
     
     try {
-      await api.saveDataset(datasetName, employees);
+      await onDataUpdate(employees, sessionName);
       setShowSaveDialog(false);
-      setDatasetName('');
-      await loadSavedDatasets();
+      setSessionName('');
+      await loadUploadSessions();
     } catch (error) {
-      setError('Failed to save dataset');
+      setError('Failed to save session');
     }
   };
 
-  const loadDataset = async (dataset: Dataset) => {
+  const loadSession = async (session: UploadSession) => {
     try {
-      const fullDataset = await api.getDataset(dataset.id);
-      if (fullDataset && fullDataset.employees) {
-        onDataUpdate(fullDataset.employees);
+      const employees = await api.getEmployeeDataBySession(session.session_id);
+      if (employees) {
+        onDataUpdate(employees);
       }
     } catch (error) {
-      setError('Failed to load dataset');
+      setError('Failed to load session');
     }
   };
 
-  const deleteDataset = async (id: string) => {
+  const deleteSession = async (sessionId: string) => {
     try {
-      await api.deleteDataset(id);
-      await loadSavedDatasets();
+      await api.deleteUploadSession(sessionId);
+      await loadUploadSessions();
     } catch (error) {
-      setError('Failed to delete dataset');
+      setError('Failed to delete session');
     }
+  };
+
+  const handleSessionSelection = (sessionId: string, checked: boolean) => {
+    const newSelected = new Set(selectedSessions);
+    if (checked) {
+      newSelected.add(sessionId);
+    } else {
+      newSelected.delete(sessionId);
+    }
+    setSelectedSessions(newSelected);
+  };
+
+  const mergeSelectedSessions = async () => {
+    if (selectedSessions.size < 2) {
+      setError('Please select at least 2 sessions to merge');
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      const allEmployees: Employee[] = [];
+      
+      // Fetch data from all selected sessions
+      for (const sessionId of selectedSessions) {
+        const employees = await api.getEmployeeDataBySession(sessionId);
+        allEmployees.push(...employees);
+      }
+      
+      // Remove duplicates based on employee name
+      const uniqueEmployees = allEmployees.reduce((acc, current) => {
+        const existing = acc.find(emp => emp.name === current.name);
+        if (!existing) {
+          acc.push(current);
+        }
+        return acc;
+      }, [] as Employee[]);
+      
+      const mergedSessionName = `Merged ${selectedSessions.size} sessions - ${new Date().toLocaleString()}`;
+      onDataUpdate(uniqueEmployees, mergedSessionName);
+      setSelectedSessions(new Set());
+      setShowMergeOptions(false);
+      setError(null);
+    } catch (error) {
+      setError('Failed to merge sessions');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const selectAllSessions = () => {
+    const allIds = new Set(uploadSessions.map(s => s.session_id));
+    setSelectedSessions(allIds);
+  };
+
+  const clearSelection = () => {
+    setSelectedSessions(new Set());
   };
 
   useEffect(() => {
-    loadSavedDatasets();
+    loadUploadSessions();
   }, []);
 
   return (
@@ -215,7 +547,13 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
           <textarea
             value={rawText}
             onChange={(e) => setRawText(e.target.value)}
-            placeholder="Or paste CSV data here..."
+            placeholder="Paste CSV performance data here...
+
+Expected format:
+- Header row with competencies and employee names in brackets
+- Example: '1. Competency Name [Employee Name]'
+- Data rows with numeric scores (10, 65, 75, etc.)
+- Multiple assessment rows per employee are supported"
             className="w-full h-60 p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-sm font-mono mb-4"
           />
           
@@ -324,40 +662,93 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
         </div>
       </div>
 
-      {savedDatasets.length > 0 && (
+      {uploadSessions.length > 0 && (
         <div className="bg-white dark:bg-gray-900 shadow-xl rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
-          <h2 className="flex items-center text-2xl font-bold text-gray-800 dark:text-gray-200 mb-6">
-            <IconUsers className="w-8 h-8 mr-3 text-gray-500"/>
-            Saved Datasets
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="flex items-center text-2xl font-bold text-gray-800 dark:text-gray-200">
+              <IconUsers className="w-8 h-8 mr-3 text-gray-500"/>
+              Saved Datasets
+            </h2>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowMergeOptions(!showMergeOptions)}
+                className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+              >
+                {showMergeOptions ? 'Cancel' : 'Merge Datasets'}
+              </button>
+            </div>
+          </div>
+          
+          {showMergeOptions && (
+            <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <p className="text-sm text-blue-800 dark:text-blue-200 mb-3">
+                Select multiple sessions to merge them together. Selected: {selectedSessions.size}
+              </p>
+              <div className="flex gap-2 mb-3">
+                <button
+                  onClick={selectAllSessions}
+                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  Select All
+                </button>
+                <button
+                  onClick={clearSelection}
+                  className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-50 dark:hover:bg-gray-800"
+                >
+                  Clear
+                </button>
+                <button
+                  onClick={mergeSelectedSessions}
+                  disabled={selectedSessions.size < 2 || isLoading}
+                  className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? 'Merging...' : `Merge ${selectedSessions.size} Sessions`}
+                </button>
+              </div>
+            </div>
+          )}
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {savedDatasets.map((dataset) => (
-              <div key={dataset.id} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+            {uploadSessions.map((session) => (
+              <div key={session.session_id} className={`bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border ${selectedSessions.has(session.session_id) ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700'}`}>
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-gray-900 dark:text-white truncate">
-                    {dataset.name}
-                  </h3>
-                  <button
-                    onClick={() => deleteDataset(dataset.id)}
-                    className="text-red-500 hover:text-red-700 text-sm"
-                    title="Delete dataset"
-                  >
-                    ✕
-                  </button>
+                  <div className="flex items-center">
+                    {showMergeOptions && (
+                      <input
+                        type="checkbox"
+                        checked={selectedSessions.has(session.session_id)}
+                        onChange={(e) => handleSessionSelection(session.session_id, e.target.checked)}
+                        className="mr-3 w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                    )}
+                    <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                      {session.session_name}
+                    </h3>
+                  </div>
+                  {!showMergeOptions && (
+                    <button
+                      onClick={() => deleteSession(session.session_id)}
+                      className="text-red-500 hover:text-red-700 text-sm"
+                      title="Delete session"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  {dataset.employee_count} employees
+                  {session.employee_count} employees
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-500 mb-3">
-                  {new Date(dataset.created_at).toLocaleDateString()}
+                  {new Date(session.upload_timestamp).toLocaleDateString()}
                 </p>
-                <button
-                  onClick={() => loadDataset(dataset)}
-                  className="w-full px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
-                >
-                  Load Dataset
-                </button>
+                {!showMergeOptions && (
+                  <button
+                    onClick={() => loadSession(session)}
+                    className="w-full px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
+                  >
+                    Load Session
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -372,10 +763,10 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
               Save Dataset
             </h3>
             <input
-              type="text"
-              placeholder="Enter dataset name..."
-              value={datasetName}
-              onChange={(e) => setDatasetName(e.target.value)}
+              type="month"
+              placeholder="MM/YYYY e.g. 07/2025"
+              value={sessionName}
+              onChange={(e) => setSessionName(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white mb-4"
               autoFocus
             />
@@ -390,8 +781,8 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
                 Cancel
               </button>
               <button
-                onClick={saveCurrentDataset}
-                disabled={!datasetName.trim()}
+                onClick={saveCurrentSession}
+                disabled={!sessionName.trim()}
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Save
@@ -400,8 +791,15 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
           </div>
         </div>
       )}
-    </div>
-  );
+    {resolveModal && (
+      <ResolveEmployeesDialog
+        unknownEmployees={resolveModal.unknown}
+        onSubmit={handleResolveSubmit}
+        onCancel={handleResolveCancel}
+      />
+    )}
+  </div>
+ );
 };
 
 export default DataManagement;

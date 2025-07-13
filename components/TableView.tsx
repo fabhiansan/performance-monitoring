@@ -9,19 +9,68 @@ const TableView: React.FC<TableViewProps> = ({ employees }) => {
   const [sortColumn, setSortColumn] = useState<string>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState<'all' | 'eselon' | 'staff'>('all');
 
-  // Get all unique competency names
+  // Helper to categorize employees by organizational level
+  const categorizeEmployee = (job: string): 'Eselon III' | 'Eselon IV' | 'Staff' => {
+    const jobTrimmed = job.trim();
+    if (jobTrimmed === 'Eselon III') return 'Eselon III';
+    if (jobTrimmed === 'Eselon IV') return 'Eselon IV';
+    return 'Staff';
+  };
+
+  // Get competency names that have actual data for the current filter
   const competencyNames = useMemo(() => {
     const names = new Set<string>();
-    employees.forEach(emp => {
-      emp.performance.forEach(comp => names.add(comp.name));
+    
+    // Filter employees by tab first
+    let relevantEmployees = employees;
+    if (activeTab === 'eselon') {
+      relevantEmployees = employees.filter(emp => {
+        const level = categorizeEmployee(emp.job);
+        return level === 'Eselon III' || level === 'Eselon IV';
+      });
+    } else if (activeTab === 'staff') {
+      relevantEmployees = employees.filter(emp => categorizeEmployee(emp.job) === 'Staff');
+    }
+    
+    // Then filter by search term
+    if (searchTerm) {
+      relevantEmployees = relevantEmployees.filter(emp =>
+        emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.job.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    // Collect competency names that have actual data
+    relevantEmployees.forEach(emp => {
+      emp.performance.forEach(comp => {
+        // Only include competencies with actual scores > 0
+        if (comp.score > 0) {
+          names.add(comp.name);
+        }
+      });
     });
+    
     return Array.from(names).sort();
-  }, [employees]);
+  }, [employees, activeTab, searchTerm]);
 
   // Filter and sort employees
   const filteredAndSortedEmployees = useMemo(() => {
-    let filtered = employees.filter(emp =>
+    let filtered = employees;
+
+    // Filter by tab
+    if (activeTab === 'eselon') {
+      filtered = filtered.filter(emp => {
+        const level = categorizeEmployee(emp.job);
+        return level === 'Eselon III' || level === 'Eselon IV';
+      });
+    } else if (activeTab === 'staff') {
+      filtered = filtered.filter(emp => categorizeEmployee(emp.job) === 'Staff');
+    }
+
+    // Filter by search term
+    filtered = filtered.filter(emp =>
       emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       emp.job.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -52,7 +101,7 @@ const TableView: React.FC<TableViewProps> = ({ employees }) => {
         return aValue < bValue ? 1 : -1;
       }
     });
-  }, [employees, searchTerm, sortColumn, sortDirection]);
+  }, [employees, searchTerm, sortColumn, sortDirection, activeTab]);
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -113,6 +162,26 @@ const TableView: React.FC<TableViewProps> = ({ employees }) => {
           <p className="text-gray-600 dark:text-gray-400 mt-1">
             Detailed view of all employee performance metrics
           </p>
+          {/* Tab Navigation */}
+          <div className="mt-4 flex space-x-2">
+            {(['all', 'eselon', 'staff'] as const).map(tab => {
+              const label = tab === 'all' ? 'All Employees' : tab === 'eselon' ? 'Eselon' : 'Staff';
+              const active = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium focus:outline-none transition-colors duration-200 ${
+                    active
+                      ? 'bg-blue-600 text-white shadow'
+                      : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
         </div>
         
         <div className="w-full sm:w-auto">

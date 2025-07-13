@@ -24,8 +24,11 @@ const EmployeeImport: React.FC<EmployeeImportProps> = ({ onImportComplete }) => 
 
     try {
       setError(null);
+      console.log('Raw text:', rawText);
       const employees = parseEmployeeCSV(rawText);
+      console.log('Parsed employees:', employees);
       const validation = validateEmployeeData(employees);
+      console.log('Validation result:', validation);
       
       if (!validation.valid) {
         setError(`Data tidak valid:\n${validation.errors.join('\n')}`);
@@ -35,7 +38,9 @@ const EmployeeImport: React.FC<EmployeeImportProps> = ({ onImportComplete }) => 
       setParsedEmployees(employees);
       setShowPreview(true);
     } catch (err) {
-      setError('Gagal memproses data CSV. Pastikan format data sudah benar.');
+      console.error('Parse error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Gagal memproses data CSV: ${errorMessage}. Pastikan format data sudah benar.`);
     }
   };
 

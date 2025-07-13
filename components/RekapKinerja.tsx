@@ -24,6 +24,7 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
   const [error, setError] = useState<string | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<RecapEmployee | null>(null);
   const [showCalculationModal, setShowCalculationModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'eselon' | 'staff'>('all');
 
   // Generate recap data with manual scores
   const recapData = useMemo(() => {
@@ -34,13 +35,26 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
   const eselonEmployees = recapData.filter(emp => emp.performanceRecap.positionType === 'eselon');
   const staffEmployees = recapData.filter(emp => emp.performanceRecap.positionType === 'staff');
 
-  // Filter based on search term
+  // Filter based on search term and active tab
   const filteredData = useMemo(() => {
-    if (!searchTerm) return recapData;
-    return recapData.filter(emp => 
-      emp.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [recapData, searchTerm]);
+    let filtered = recapData;
+    
+    // Filter by tab
+    if (activeTab === 'eselon') {
+      filtered = filtered.filter(emp => emp.performanceRecap.positionType === 'eselon');
+    } else if (activeTab === 'staff') {
+      filtered = filtered.filter(emp => emp.performanceRecap.positionType === 'staff');
+    }
+    
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(emp => 
+        emp.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    return filtered;
+  }, [recapData, searchTerm, activeTab]);
 
   // Load manual scores from backend on component mount
   useEffect(() => {
@@ -182,6 +196,26 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
           <p className="text-gray-600 dark:text-gray-400">
             Performance recap with weighted scoring system
           </p>
+          {/* Tab Navigation */}
+          <div className="mt-4 flex space-x-2">
+            {(['all', 'eselon', 'staff'] as const).map(tab => {
+              const label = tab === 'all' ? 'All Employees' : tab === 'eselon' ? 'Eselon' : 'Staff';
+              const active = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium focus:outline-none transition-colors duration-200 ${
+                    active
+                      ? 'bg-blue-600 text-white shadow'
+                      : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
           {isSaving && (
             <div className="flex items-center mt-2 text-blue-600 dark:text-blue-400">
               <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
@@ -246,14 +280,27 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
           </div>
           <div className="flex flex-col">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Export Report
+              Save & Export
             </label>
-            <button
-              onClick={handleExportReport}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm font-medium transition-colors duration-200"
-            >
-              Export CSV
-            </button>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => debouncedSave(manualScores)}
+                disabled={isSaving}
+                className={`px-4 py-2 text-white rounded-md text-sm font-medium transition-colors duration-200 ${
+                  isSaving 
+                    ? 'bg-gray-400 cursor-not-allowed' 
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+              >
+                {isSaving ? 'Saving...' : 'Save Ratings'}
+              </button>
+              <button
+                onClick={handleExportReport}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm font-medium transition-colors duration-200"
+              >
+                Export CSV
+              </button>
+            </div>
           </div>
         </div>
       </div>

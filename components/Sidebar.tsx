@@ -1,33 +1,38 @@
 import React from 'react';
-import { IconDashboard, IconChartBar, IconUsers, IconCog, IconTable, IconUser, IconCalculator } from './Icons';
+import LogoIcon from '../icon.png';
+import { IconDashboard, IconChartBar, IconUsers, IconCog, IconCalculator, IconDocument } from './Icons';
 
-interface SidebarProps {
-  activeView: string;
-  onViewChange: (view: string) => void;
-  userProfile?: { name: string; nip: string; gol: string; pangkat: string; position: string; sub_position: string } | null;
+interface Dataset {
+  id: string;
+  name: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange, userProfile }) => {
+interface SidebarProps {
+  datasets: Dataset[];
+  selectedDatasetId: string;
+  onDatasetChange: (id: string) => void;
+  activeView: string;
+  onViewChange: (view: string) => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ datasets, selectedDatasetId, onDatasetChange, activeView, onViewChange }) => {
   const navigationItems = [
     { id: 'overview', label: 'Overview', icon: IconDashboard },
+    { id: 'employee-management', label: 'Manage Employees', icon: IconUsers },
     { id: 'analytics', label: 'Analytics', icon: IconChartBar },
     { id: 'rekap-kinerja', label: 'Rekap Kinerja', icon: IconCalculator },
-
-    { id: 'table', label: 'Table View', icon: IconTable },
-    { id: 'employee-management', label: 'Manage Employees', icon: IconUsers },
-    { id: 'data', label: 'Data Management', icon: IconCog },
-    { id: 'profile', label: 'User Profile', icon: IconUser },
+    { id: 'report', label: 'Laporan', icon: IconDocument },
+    { id: 'table', label: 'Data', icon: IconCog },
   ];
 
   return (
     <div className="bg-white dark:bg-gray-900 h-full w-64 shadow-lg border-r border-gray-200 dark:border-gray-700 flex flex-col">
-      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-          Performance Dashboard
-        </h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Employee Analytics
-        </p>
+      <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center space-x-3">
+        <img src={LogoIcon} alt="Logo" className="w-8 h-8" />
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Performance Dashboard</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Employee Analytics</p>
+        </div>
       </div>
       
       <nav className="flex-1 p-4">
@@ -54,22 +59,28 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange, userProfile
           })}
         </ul>
       </nav>
+
+      {/* Dataset selector */}
+      {datasets.length > 0 && (
+        <div className="px-4 pb-4">
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Dataset (Period)</label>
+          <select
+            value={selectedDatasetId}
+            onChange={(e) => onDatasetChange(e.target.value)}
+            className="w-full text-sm px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+          >
+            {datasets.map(ds => (
+              <option key={ds.id} value={ds.id}>{ds.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
       
       <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-        {userProfile ? (
-          <div className="bg-gradient-to-r from-blue-500 to-teal-400 p-4 rounded-lg text-white">
-            <h3 className="font-semibold text-sm truncate">{userProfile.name}</h3>
-            <p className="text-xs opacity-90 mt-1">NIP: {userProfile.nip}</p>
-            <p className="text-xs opacity-90">{userProfile.gol} - {userProfile.pangkat}</p>
-            <p className="text-xs opacity-90 mt-1 truncate">{userProfile.position}</p>
-            <p className="text-xs opacity-75 truncate">{userProfile.sub_position}</p>
-          </div>
-        ) : (
-          <div className="bg-gradient-to-r from-blue-500 to-teal-400 p-4 rounded-lg text-white">
-            <h3 className="font-semibold text-sm">Employee Performance</h3>
-            <p className="text-xs opacity-90 mt-1">Analytics Dashboard</p>
-          </div>
-        )}
+        <div className="bg-gradient-to-r from-blue-500 to-teal-400 p-4 rounded-lg text-white">
+          <h3 className="font-semibold text-sm">Employee Performance</h3>
+          <p className="text-xs opacity-90 mt-1">Analytics Dashboard</p>
+        </div>
       </div>
     </div>
   );

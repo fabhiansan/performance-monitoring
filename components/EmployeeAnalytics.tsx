@@ -5,10 +5,9 @@ import { IconFilter, IconSearch, IconUsers } from './Icons';
 
 interface EmployeeAnalyticsProps {
   employees: Employee[];
-  onSummaryGenerated: (employeeName: string, summary: string) => void;
 }
 
-const EmployeeAnalytics: React.FC<EmployeeAnalyticsProps> = ({ employees, onSummaryGenerated }) => {
+const EmployeeAnalytics: React.FC<EmployeeAnalyticsProps> = ({ employees }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [jobFilter, setJobFilter] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'performance' | 'job'>('name');
@@ -172,7 +171,7 @@ const EmployeeAnalytics: React.FC<EmployeeAnalyticsProps> = ({ employees, onSumm
                 <EmployeeCard 
                   key={employee.name} 
                   employee={employee} 
-                  onSummaryGenerated={onSummaryGenerated} 
+ 
                 />
               ))}
             </div>

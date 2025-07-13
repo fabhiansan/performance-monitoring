@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { IconUsers, IconUpload, IconPlus, IconClipboardData } from './Icons';
+import { IconUsers, IconUpload, IconPlus, IconClipboardData, IconEdit, IconTrash } from './Icons';
 import EmployeeImport from './EmployeeImport';
 import AddEmployeeForm from './AddEmployeeForm';
 
@@ -12,6 +12,7 @@ interface Employee {
   pangkat: string;
   position: string;
   sub_position: string;
+  organizational_level: string;
   created_at: string;
   updated_at: string;
 }
@@ -22,6 +23,7 @@ const EmployeeManagement: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<keyof Employee>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -39,16 +41,32 @@ const EmployeeManagement: React.FC = () => {
     }
   };
 
-  const handleDeleteEmployee = async (id: number) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus pegawai ini?')) {
+  const handleEditEmployee = (employee: Employee) => {
+    setEditingEmployee(employee);
+  };
+
+  const handleDeleteEmployee = async (id: number, name: string) => {
+    const isConfirmed = window.confirm(
+      `Apakah Anda yakin ingin menghapus pegawai "${name}"?\n\n` +
+      'Data yang dihapus tidak dapat dikembalikan. Pastikan ini adalah tindakan yang benar.'
+    );
+    
+    if (!isConfirmed) {
       return;
     }
 
     try {
       await api.deleteEmployee(id);
       await loadEmployees();
+      
+      // Show success message briefly
+      const successMessage = `Pegawai "${name}" berhasil dihapus.`;
+      setError(null);
+      
+      // You could add a success state here if needed
+      console.log(successMessage);
     } catch (err) {
-      setError('Gagal menghapus pegawai');
+      setError(`Gagal menghapus pegawai "${name}". Silakan coba lagi.`);
     }
   };
 
@@ -225,6 +243,12 @@ const EmployeeManagement: React.FC = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Sub-Jabatan
                   </th>
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                    onClick={() => handleSort('organizational_level')}
+                  >
+                    Tingkat Organisasi {sortField === 'organizational_level' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Aksi
                   </th>
@@ -251,14 +275,34 @@ const EmployeeManagement: React.FC = () => {
                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs">
                       <div className="truncate">{emp.sub_position}</div>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        emp.organizational_level === 'Eselon III' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300' :
+                        emp.organizational_level === 'Eselon IV' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300' :
+                        'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'
+                      }`}>
+                        {emp.organizational_level}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <button
-                        onClick={() => handleDeleteEmployee(emp.id)}
-                        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                        title="Hapus pegawai"
-                      >
-                        Hapus
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEditEmployee(emp)}
+                          className="inline-flex items-center px-3 py-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                          title="Edit pegawai"
+                        >
+                          <IconEdit className="w-4 h-4 mr-1"/>
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteEmployee(emp.id, emp.name)}
+                          className="inline-flex items-center px-3 py-1.5 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                          title="Hapus pegawai"
+                        >
+                          <IconTrash className="w-4 h-4 mr-1"/>
+                          Hapus
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -268,13 +312,19 @@ const EmployeeManagement: React.FC = () => {
         )}
       </div>
 
-      {showAddForm && (
+      {(showAddForm || editingEmployee) && (
         <AddEmployeeForm
+          employee={editingEmployee || undefined}
+          isEditMode={!!editingEmployee}
           onEmployeeAdded={() => {
             setShowAddForm(false);
+            setEditingEmployee(null);
             loadEmployees();
           }}
-          onCancel={() => setShowAddForm(false)}
+          onCancel={() => {
+            setShowAddForm(false);
+            setEditingEmployee(null);
+          }}
         />
       )}
     </div>

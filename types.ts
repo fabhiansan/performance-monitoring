@@ -8,5 +8,4 @@ export interface Employee {
   name: string;
   job: string;
   performance: CompetencyScore[];
-  summary?: string;
 }

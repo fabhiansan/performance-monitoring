@@ -1,30 +1,36 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { Employee } from './types';
-import { api, UserProfile } from './services/api';
+import { api, UploadSession } from './services/api';
 import Sidebar from './components/Sidebar';
 import DashboardOverview from './components/DashboardOverview';
 import EmployeeAnalytics from './components/EmployeeAnalytics';
 import RekapKinerja from './components/RekapKinerja';
 import DataManagement from './components/DataManagement';
 import TableView from './components/TableView';
-import UserProfileForm from './components/UserProfileForm';
 import EmployeeManagement from './components/EmployeeManagement';
+import Report from './components/Report';
 import { IconSparkles } from './components/Icons';
 
 const App: React.FC = () => {
   const [employeeData, setEmployeeData] = useState<Employee[]>([]);
+  const [uploadSessions, setUploadSessions] = useState<UploadSession[]>([]);
+  // Map upload sessions to Dataset-like objects expected by Sidebar
+  const datasets = React.useMemo(() => uploadSessions.map(sess => ({ id: sess.session_id, name: sess.session_name })), [uploadSessions]);
+  const [selectedSessionId, setSelectedSessionId] = useState<string>('');
   const [activeView, setActiveView] = useState('overview');
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [isCheckingProfile, setIsCheckingProfile] = useState(false);
 
-  const handleDataUpdate = useCallback(async (newEmployeeData: Employee[]) => {
+  const handleDataUpdate = useCallback(async (newEmployeeData: Employee[], sessionName?: string) => {
     setEmployeeData(newEmployeeData);
-    // Auto-save to database
+    // Auto-save to database using new unified API
     try {
-      await api.saveCurrentDataset(newEmployeeData);
+      const sessionId = await api.saveEmployeeData(newEmployeeData, sessionName);
+      setSelectedSessionId(sessionId);
+      // Refresh upload sessions list
+      const sessions = await api.getAllUploadSessions();
+      setUploadSessions(sessions);
       setApiError(null);
     } catch (error) {
       console.error('Failed to save data:', error);
@@ -35,61 +41,40 @@ const App: React.FC = () => {
     }
   }, [activeView]);
 
-  const updateEmployeeSummary = useCallback(async (employeeName: string, summary: string) => {
-    const updatedData = employeeData.map(emp =>
-      emp.name === employeeName ? { ...emp, summary } : emp
-    );
-    setEmployeeData(updatedData);
-    // Save summary to database
-    try {
-      await api.updateEmployeeSummary(employeeName, summary);
-      setApiError(null);
-    } catch (error) {
-      console.error('Failed to save summary:', error);
-      setApiError('Failed to save summary to database');
-    }
-  }, [employeeData]);
 
-  const handleProfileSaved = useCallback(async (name: string, nip: string, gol: string, pangkat: string, position: string, subPosition: string) => {
-    try {
-      await api.saveUserProfile(name, nip, gol, pangkat, position, subPosition);
-      const profile = await api.getUserProfile();
-      setUserProfile(profile);
-      setIsCheckingProfile(false);
-    } catch (error) {
-      console.error('Failed to save profile:', error);
-      throw error;
-    }
-  }, []);
 
   // Load data on app start
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        // Check if API server is running
-        const isHealthy = await api.checkHealth();
+        // Check if API server is running (retry up to 5 times)
+        let isHealthy = false;
+        for (let attempt = 0; attempt < 5; attempt++) {
+          isHealthy = await api.checkHealth();
+          if (isHealthy) break;
+          await new Promise(r => setTimeout(r, 1000));
+        }
         if (!isHealthy) {
           setApiError('API server is not running. Please start the backend server.');
           setIsLoading(false);
           return;
         }
 
-        // Try to load user profile (optional)
-        try {
-          const profile = await api.getUserProfile();
-          if (profile) {
-            setUserProfile(profile);
-          }
-        } catch (error) {
-          // User profile is optional, continue without it
-          console.log('No user profile found, continuing without it');
-        }
         
-        // Load employee data
-        const currentData = await api.getCurrentDataset();
-        if (currentData.length > 0) {
-          setEmployeeData(currentData);
+        // Load upload sessions list
+        const sessions = await api.getAllUploadSessions();
+        setUploadSessions(sessions);
+        // Load most recent session data if any
+        if (sessions.length > 0) {
+          const latest = sessions.sort((a,b)=> new Date(b.upload_timestamp).getTime() - new Date(a.upload_timestamp).getTime())[0];
+          setSelectedSessionId(latest.session_id);
+          const employeeData = await api.getEmployeeDataBySession(latest.session_id);
+          setEmployeeData(employeeData);
+        } else {
+          // No sessions yet, start with empty data
+          setEmployeeData([]);
         }
+
         
         setApiError(null);
       } catch (error) {
@@ -118,63 +103,19 @@ const App: React.FC = () => {
       case 'overview':
         return <DashboardOverview employees={employeeData} />;
       case 'analytics':
-        return <EmployeeAnalytics employees={employeeData} onSummaryGenerated={updateEmployeeSummary} />;
+        return <EmployeeAnalytics employees={employeeData} />;
       case 'rekap-kinerja':
         return <RekapKinerja employees={employeeData} />;
       case 'employees':
-        return <EmployeeAnalytics employees={employeeData} onSummaryGenerated={updateEmployeeSummary} />;
+        return <EmployeeAnalytics employees={employeeData} />;
+      case 'report':
+        return <Report employees={employeeData} />;
       case 'table':
         return <TableView employees={employeeData} />;
       case 'employee-management':
         return <EmployeeManagement />;
       case 'data':
         return <DataManagement employees={employeeData} onDataUpdate={handleDataUpdate} />;
-      case 'profile':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                User Profile
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400">
-                Manage your profile information
-              </p>
-            </div>
-            {userProfile ? (
-              <div className="bg-white dark:bg-gray-900 shadow-xl rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Current Profile</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nama Lengkap</label>
-                    <p className="text-gray-900 dark:text-white">{userProfile.name}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">NIP</label>
-                    <p className="text-gray-900 dark:text-white">{userProfile.nip}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Golongan</label>
-                    <p className="text-gray-900 dark:text-white">{userProfile.gol}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pangkat</label>
-                    <p className="text-gray-900 dark:text-white">{userProfile.pangkat}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Jabatan</label>
-                    <p className="text-gray-900 dark:text-white">{userProfile.position}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sub-Jabatan</label>
-                    <p className="text-gray-900 dark:text-white">{userProfile.sub_position}</p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <UserProfileForm onProfileSaved={handleProfileSaved} />
-            )}
-          </div>
-        );
       default:
         return <DashboardOverview employees={employeeData} />;
     }
@@ -183,7 +124,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-950 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-300">
       <div className="flex h-screen">
-        <Sidebar activeView={activeView} onViewChange={setActiveView} userProfile={userProfile} />
+        <Sidebar datasets={datasets} selectedDatasetId={selectedSessionId} onDatasetChange={async (id: string) => { setSelectedSessionId(id); /* fetch data for session */ const emp = await api.getEmployeeDataBySession(id); setEmployeeData(emp); }} activeView={activeView} onViewChange={setActiveView} />
         
         <main className="flex-1 overflow-auto">
           <div className="p-8">
@@ -194,7 +135,7 @@ const App: React.FC = () => {
                 <p className="text-sm mt-2">To start the backend server, run: <code className="bg-red-200 dark:bg-red-800 px-1 rounded">node server/server.js</code></p>
               </div>
             )}
-            {employeeData.length === 0 && activeView !== 'data' ? (
+            {employeeData.length === 0 && activeView !== 'data' && activeView !== 'employee-management' ? (
               <div className="text-center py-24">
                 <div className="inline-block bg-gradient-to-r from-blue-500 to-teal-400 p-0.5 rounded-lg shadow-lg mb-6">
                    <div className="bg-gray-100 dark:bg-gray-900 p-4 rounded-md">
@@ -205,14 +146,22 @@ const App: React.FC = () => {
                   Performance Dashboard
                 </h1>
                 <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-8">
-                  Import your CSV data to get started with comprehensive performance analytics
+                  Start by importing employee data, then add performance data for comprehensive analytics
                 </p>
-                <button
-                  onClick={() => setActiveView('data')}
-                  className="inline-flex items-center px-8 py-3 bg-gradient-to-r from-blue-600 to-teal-500 text-white font-bold rounded-lg shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-teal-600 transform hover:scale-105 transition-all duration-300"
-                >
-                  Import Data
-                </button>
+                <div className="flex gap-4 justify-center">
+                  <button
+                    onClick={() => setActiveView('employee-management')}
+                    className="inline-flex items-center px-8 py-3 bg-gradient-to-r from-green-600 to-blue-500 text-white font-bold rounded-lg shadow-lg hover:shadow-xl hover:from-green-700 hover:to-blue-600 transform hover:scale-105 transition-all duration-300"
+                  >
+                    Import Employee Data
+                  </button>
+                  <button
+                    onClick={() => setActiveView('data')}
+                    className="inline-flex items-center px-8 py-3 bg-gradient-to-r from-blue-600 to-teal-500 text-white font-bold rounded-lg shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-teal-600 transform hover:scale-105 transition-all duration-300"
+                  >
+                    Import Performance Data
+                  </button>
+                </div>
               </div>
             ) : (
               renderActiveView()

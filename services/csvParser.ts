@@ -7,41 +7,114 @@ export interface EmployeeData {
   subPosition: string;
 }
 
+/**
+ * A robust CSV parser that handles fields quoted with double quotes.
+ * It correctly processes fields that contain commas and handles escaped quotes.
+ * @param line - A single line from a CSV file.
+ * @returns An array of strings representing the fields.
+ */
+const parseCsvLine = (line: string): string[] => {
+  const fields = [];
+  let currentField = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+
+    if (char === '"') {
+      // Handles escaped quotes ("") by peeking ahead
+      if (inQuotes && i < line.length - 1 && line[i + 1] === '"') {
+        currentField += '"';
+        i++; // Skip the second quote of the pair
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      fields.push(currentField);
+      currentField = '';
+    } else {
+      currentField += char;
+    }
+  }
+  fields.push(currentField);
+  return fields;
+};
+
 export function parseEmployeeCSV(csvText: string): EmployeeData[] {
   try {
+    console.log('Starting CSV parse with text:', csvText.substring(0, 200) + '...');
     const lines = csvText.trim().split('\n');
     const employees: EmployeeData[] = [];
     
-    // Skip header line if it exists
+    // Filter out empty lines
     const dataLines = lines.filter(line => line.trim().length > 0);
-    const startIndex = dataLines[0].toLowerCase().includes('nama') ? 1 : 0;
+    console.log('Data lines count:', dataLines.length);
+    if (dataLines.length === 0) {
+      return employees;
+    }
+    
+    // Skip header line if it exists (check if first line contains column headers)
+    const firstLine = dataLines[0].toLowerCase();
+    const hasHeader = firstLine.includes('nama') || firstLine.includes('nip') || firstLine.includes('gol');
+    const startIndex = hasHeader ? 1 : 0;
+    console.log('Has header:', hasHeader, 'Start index:', startIndex);
     
     for (let i = startIndex; i < dataLines.length; i++) {
       const line = dataLines[i].trim();
       if (!line) continue;
       
-      // Split by tab first, then by multiple spaces if no tabs
-      let columns = line.split('\t');
-      if (columns.length === 1) {
-        // If no tabs, split by 2+ spaces
-        columns = line.split(/\s{2,}/);
-      }
+      console.log(`Processing line ${i}:`, line);
       
-      // Clean up columns
-      columns = columns.map(col => col.trim()).filter(col => col.length > 0);
+      // Use the robust CSV parser to handle comma-separated values with quotes
+      const columns = parseCsvLine(line).map(col => col.trim());
+      console.log(`Parsed columns (${columns.length}):`, columns);
       
-      if (columns.length >= 6) {
-        employees.push({
-          name: columns[0],
-          nip: columns[1],
-          gol: columns[2],
-          pangkat: columns[3],
-          position: columns[4],
-          subPosition: columns[5]
-        });
+      // Expect at least 7 columns: No, Nama, NIP, Gol, Pangkat, Jabatan, Sub-Jabatan
+      if (columns.length >= 7 && columns[1].trim()) { // Check that name is not empty
+        const employee = {
+          name: columns[1]?.trim() || '',           // Nama (index 1)
+          nip: columns[2]?.trim() || '-',           // NIP (index 2) - default to "-"
+          gol: columns[3]?.trim() || '',            // Gol (index 3)
+          pangkat: columns[4]?.trim() || '-',       // Pangkat (index 4) - default to "-"
+          position: columns[5]?.trim() || '-',      // Jabatan (index 5) - default to "-"
+          subPosition: columns[6]?.trim() || '-'    // Sub-Jabatan (index 6) - default to "-"
+        };
+        
+        console.log('Created employee object:', employee);
+        
+        // Only add if name and gol are not empty (minimum required fields)
+        if (employee.name && employee.gol) {
+          employees.push(employee);
+          console.log('Added employee:', employee.name);
+        } else {
+          console.log('Skipped employee due to missing name or gol:', employee);
+        }
+      } else if (columns.length >= 6 && !columns[0].match(/^\d+$/) && columns[0].trim()) {
+        // Fallback: if no number column, assume format: Nama, NIP, Gol, Pangkat, Jabatan, Sub-Jabatan
+        const employee = {
+          name: columns[0]?.trim() || '',
+          nip: columns[1]?.trim() || '-',
+          gol: columns[2]?.trim() || '',
+          pangkat: columns[3]?.trim() || '-',
+          position: columns[4]?.trim() || '-',
+          subPosition: columns[5]?.trim() || '-'
+        };
+        
+        console.log('Created fallback employee object:', employee);
+        
+        // Only add if name and gol are not empty (minimum required fields)
+        if (employee.name && employee.gol) {
+          employees.push(employee);
+          console.log('Added fallback employee:', employee.name);
+        } else {
+          console.log('Skipped fallback employee due to missing name or gol:', employee);
+        }
+      } else {
+        console.log('Skipped line due to insufficient columns or empty name:', columns);
       }
     }
     
+    console.log('Final employees array:', employees);
     return employees;
   } catch (error) {
     console.error('Error parsing CSV:', error);
@@ -51,6 +124,7 @@ export function parseEmployeeCSV(csvText: string): EmployeeData[] {
 
 export function validateEmployeeData(employees: EmployeeData[]): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
+  const warnings: string[] = [];
   
   if (employees.length === 0) {
     errors.push('No employee data found');
@@ -60,30 +134,37 @@ export function validateEmployeeData(employees: EmployeeData[]): { valid: boolea
   employees.forEach((emp, index) => {
     const lineNumber = index + 1;
     
+    // Critical fields - these MUST be present
     if (!emp.name?.trim()) {
       errors.push(`Baris ${lineNumber}: Nama tidak boleh kosong`);
-    }
-    
-    if (!emp.nip?.trim()) {
-      errors.push(`Baris ${lineNumber}: NIP tidak boleh kosong`);
     }
     
     if (!emp.gol?.trim()) {
       errors.push(`Baris ${lineNumber}: Golongan tidak boleh kosong`);
     }
     
+    // Optional fields - log warnings but don't fail validation
+    if (!emp.nip?.trim()) {
+      warnings.push(`Baris ${lineNumber}: NIP kosong (akan diisi dengan "-")`);
+    }
+    
     if (!emp.pangkat?.trim()) {
-      errors.push(`Baris ${lineNumber}: Pangkat tidak boleh kosong`);
+      warnings.push(`Baris ${lineNumber}: Pangkat kosong (akan diisi dengan "-")`);
     }
     
     if (!emp.position?.trim()) {
-      errors.push(`Baris ${lineNumber}: Jabatan tidak boleh kosong`);
+      warnings.push(`Baris ${lineNumber}: Jabatan kosong (akan diisi dengan "-")`);
     }
     
     if (!emp.subPosition?.trim()) {
-      errors.push(`Baris ${lineNumber}: Sub-Jabatan tidak boleh kosong`);
+      warnings.push(`Baris ${lineNumber}: Sub-Jabatan kosong (akan diisi dengan "-")`);
     }
   });
+  
+  // Log warnings to console but don't include them in errors
+  if (warnings.length > 0) {
+    console.log('Data warnings:', warnings);
+  }
   
   return { valid: errors.length === 0, errors };
 }

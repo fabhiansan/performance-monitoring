@@ -1,25 +1,20 @@
 import { Employee } from '../types';
 
-interface Dataset {
-  id: string;
-  name: string;
-  created_at: string;
-  updated_at: string;
-  employee_count?: number;
-  employees?: Employee[];
+
+interface UploadSession {
+  session_id: string;
+  session_name: string;
+  upload_timestamp: string;
+  employee_count: number;
+  competency_count: number;
 }
 
-interface UserProfile {
-  id: number;
-  name: string;
-  nip: string;
-  gol: string;
-  pangkat: string;
-  position: string;
-  sub_position: string;
-  created_at: string;
-  is_active: boolean;
+interface EmployeeWithSession extends Employee {
+  uploadSession?: string;
+  uploadTimestamp?: string;
+  sessionName?: string;
 }
+
 
 class ApiService {
   private baseUrl = 'http://localhost:3001/api';
@@ -34,136 +29,6 @@ class ApiService {
     }
   }
 
-  async getAllDatasets(): Promise<Dataset[]> {
-    const response = await fetch(`${this.baseUrl}/datasets`);
-    if (!response.ok) {
-      throw new Error('Failed to get datasets');
-    }
-    return response.json();
-  }
-
-  async getDataset(id: string): Promise<Dataset | null> {
-    const response = await fetch(`${this.baseUrl}/datasets/${id}`);
-    if (response.status === 404) {
-      return null;
-    }
-    if (!response.ok) {
-      throw new Error('Failed to get dataset');
-    }
-    return response.json();
-  }
-
-  async saveDataset(name: string, employees: Employee[]): Promise<string> {
-    const response = await fetch(`${this.baseUrl}/datasets`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ name, employees }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to save dataset');
-    }
-
-    const result = await response.json();
-    return result.id;
-  }
-
-  async deleteDataset(id: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/datasets/${id}`, {
-      method: 'DELETE',
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to delete dataset');
-    }
-  }
-
-  async getCurrentDataset(): Promise<Employee[]> {
-    const response = await fetch(`${this.baseUrl}/current-dataset`);
-    if (!response.ok) {
-      throw new Error('Failed to get current dataset');
-    }
-    
-    const result = await response.json();
-    return result.employees || [];
-  }
-
-  async saveCurrentDataset(employees: Employee[]): Promise<string> {
-    const response = await fetch(`${this.baseUrl}/current-dataset`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ employees }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to save current dataset');
-    }
-
-    const result = await response.json();
-    return result.id;
-  }
-
-  async clearCurrentDataset(): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/current-dataset`, {
-      method: 'DELETE',
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to clear current dataset');
-    }
-  }
-
-  async updateEmployeeSummary(employeeName: string, summary: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/current-dataset/employee/${encodeURIComponent(employeeName)}/summary`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ summary }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to update employee summary');
-    }
-  }
-
-  async getUserProfile(): Promise<UserProfile | null> {
-    const response = await fetch(`${this.baseUrl}/user-profile`);
-    if (!response.ok) {
-      throw new Error('Failed to get user profile');
-    }
-    return response.json();
-  }
-
-  async saveUserProfile(name: string, nip: string, gol: string, pangkat: string, position: string, subPosition: string): Promise<number> {
-    const response = await fetch(`${this.baseUrl}/user-profile`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ name, nip, gol, pangkat, position, subPosition }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to save user profile');
-    }
-
-    const result = await response.json();
-    return result.id;
-  }
-
-  async checkUserProfileExists(): Promise<boolean> {
-    const response = await fetch(`${this.baseUrl}/user-profile/exists`);
-    if (!response.ok) {
-      throw new Error('Failed to check user profile');
-    }
-    const result = await response.json();
-    return result.exists;
-  }
 
   async getAllEmployees(): Promise<any[]> {
     const response = await fetch(`${this.baseUrl}/employees`);
@@ -181,13 +46,15 @@ class ApiService {
     return response.json();
   }
 
-  async addEmployee(name: string, nip: string, gol: string, pangkat: string, position: string, subPosition: string): Promise<number> {
+  // Add employee with full fields
+  async addEmployee(name: string, nip: string, gol: string, pangkat: string, position: string, subPosition: string, organizationalLevel?: string): Promise<number> {
+
     const response = await fetch(`${this.baseUrl}/employees`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ name, nip, gol, pangkat, position, subPosition }),
+      body: JSON.stringify({ name, nip, gol, pangkat, position, subPosition, organizationalLevel }),
     });
 
     if (!response.ok) {
@@ -215,13 +82,13 @@ class ApiService {
     return result.count;
   }
 
-  async updateEmployee(id: number, name: string, nip: string, gol: string, pangkat: string, position: string, subPosition: string): Promise<void> {
+  async updateEmployee(id: number, name: string, nip: string, gol: string, pangkat: string, position: string, subPosition: string, organizationalLevel?: string): Promise<void> {
     const response = await fetch(`${this.baseUrl}/employees/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ name, nip, gol, pangkat, position, subPosition }),
+      body: JSON.stringify({ name, nip, gol, pangkat, position, subPosition, organizationalLevel }),
     });
 
     if (!response.ok) {
@@ -246,6 +113,22 @@ class ApiService {
     }
     const result = await response.json();
     return result.count;
+  }
+
+  async getEmployeeOrgLevelMapping(): Promise<Record<string, string>> {
+    const response = await fetch(`${this.baseUrl}/employees/org-level-mapping`);
+    if (!response.ok) {
+      throw new Error('Failed to get organizational level mapping');
+    }
+    return response.json();
+  }
+
+  async getEmployeeSuggestions(name: string): Promise<{name: string; organizational_level: string; similarity: number}[]> {
+    const response = await fetch(`${this.baseUrl}/employees/suggestions?name=${encodeURIComponent(name)}`);
+    if (!response.ok) {
+      throw new Error('Failed to get employee suggestions');
+    }
+    return response.json();
   }
 
   // Manual Leadership Scores Methods
@@ -285,7 +168,80 @@ class ApiService {
       throw new Error('Failed to update leadership scores');
     }
   }
+
+  // NEW UNIFIED TIMESTAMP-BASED METHODS
+
+  async saveEmployeeData(employees: Employee[], sessionName?: string): Promise<string> {
+    const response = await fetch(`${this.baseUrl}/employee-data`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ employees, sessionName }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to save employee data');
+    }
+
+    const result = await response.json();
+    return result.sessionId;
+  }
+
+  async getAllUploadSessions(): Promise<UploadSession[]> {
+    const response = await fetch(`${this.baseUrl}/upload-sessions`);
+    if (!response.ok) {
+      throw new Error('Failed to get upload sessions');
+    }
+    return response.json();
+  }
+
+  async getEmployeeDataBySession(sessionId: string): Promise<EmployeeWithSession[]> {
+    const response = await fetch(`${this.baseUrl}/employee-data/session/${sessionId}`);
+    if (!response.ok) {
+      throw new Error('Failed to get employee data by session');
+    }
+    const result = await response.json();
+    return result.employees || [];
+  }
+
+  async getEmployeeDataByTimeRange(startTime?: string, endTime?: string): Promise<EmployeeWithSession[]> {
+    let url = `${this.baseUrl}/employee-data/range`;
+    const params = new URLSearchParams();
+    
+    if (startTime) params.append('startTime', startTime);
+    if (endTime) params.append('endTime', endTime);
+    
+    if (params.toString()) {
+      url += `?${params.toString()}`;
+    }
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('Failed to get employee data by time range');
+    }
+    return response.json();
+  }
+
+  async getLatestEmployeeData(): Promise<EmployeeWithSession[]> {
+    const response = await fetch(`${this.baseUrl}/employee-data/latest`);
+    if (!response.ok) {
+      throw new Error('Failed to get latest employee data');
+    }
+    return response.json();
+  }
+
+  async deleteUploadSession(sessionId: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/upload-sessions/${sessionId}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete upload session');
+    }
+  }
+
 }
 
 export const api = new ApiService();
-export type { Dataset, UserProfile };
+export type { UploadSession, EmployeeWithSession };

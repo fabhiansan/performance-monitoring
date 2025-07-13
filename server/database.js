@@ -6,16 +6,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 class SQLiteService {
-  constructor() {
+  constructor(customDbPath = null) {
     this.db = null;
+    this.customDbPath = customDbPath;
     this.init();
   }
 
   init() {
     try {
-      // Create database file in server directory
-      const dbPath = join(__dirname, 'performance_analyzer.db');
+      // Create database file in custom path or server directory
+      const dbPath = this.customDbPath || join(__dirname, 'performance_analyzer.db');
       this.db = new Database(dbPath);
+      console.log('Database initialized at:', dbPath);
       
       // Create tables
       this.createTables();
@@ -27,38 +29,31 @@ class SQLiteService {
   }
 
   createTables() {
-    // Create datasets table
-    const createDatasetsTable = `
-      CREATE TABLE IF NOT EXISTS datasets (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `;
-
-    // Create employees table
-    const createEmployeesTable = `
-      CREATE TABLE IF NOT EXISTS employees (
+    // Create unified employee_data table with timestamps
+    const createEmployeeDataTable = `
+      CREATE TABLE IF NOT EXISTS employee_data (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        dataset_id TEXT,
-        name TEXT NOT NULL,
-        job TEXT,
-        summary TEXT,
-        FOREIGN KEY (dataset_id) REFERENCES datasets (id) ON DELETE CASCADE
-      )
-    `;
-
-    // Create performance_scores table
-    const createPerformanceTable = `
-      CREATE TABLE IF NOT EXISTS performance_scores (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        employee_id INTEGER,
+        upload_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        upload_session TEXT NOT NULL,
+        employee_name TEXT NOT NULL,
+        job_title TEXT,
         competency_name TEXT NOT NULL,
-        score REAL NOT NULL,
-        FOREIGN KEY (employee_id) REFERENCES employees (id) ON DELETE CASCADE
+        competency_score REAL NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `;
+
+    // Create upload_sessions table for metadata
+    const createUploadSessionsTable = `
+      CREATE TABLE IF NOT EXISTS upload_sessions (
+        session_id TEXT PRIMARY KEY,
+        session_name TEXT,
+        upload_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        employee_count INTEGER DEFAULT 0,
+        competency_count INTEGER DEFAULT 0
+      )
+    `;
+
 
     // Create current_dataset table for active dataset
     const createCurrentDatasetTable = `
@@ -70,20 +65,6 @@ class SQLiteService {
       )
     `;
 
-    // Create user_profile table (for single login user - admin/analyst)
-    const createUserProfileTable = `
-      CREATE TABLE IF NOT EXISTS user_profile (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        nip TEXT NOT NULL,
-        gol TEXT NOT NULL,
-        pangkat TEXT NOT NULL,
-        position TEXT NOT NULL,
-        sub_position TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        is_active BOOLEAN DEFAULT 1
-      )
-    `;
 
     // Create employee_database table (for all employees data)
     const createEmployeeDatabaseTable = `
@@ -95,6 +76,7 @@ class SQLiteService {
         pangkat TEXT NOT NULL,
         position TEXT NOT NULL,
         sub_position TEXT NOT NULL,
+        organizational_level TEXT DEFAULT 'Staff/Other',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
@@ -114,211 +96,34 @@ class SQLiteService {
       )
     `;
 
-    this.db.exec(createDatasetsTable);
-    this.db.exec(createEmployeesTable);
-    this.db.exec(createPerformanceTable);
+    // Execute new table creation
+    this.db.exec(createEmployeeDataTable);
+    this.db.exec(createUploadSessionsTable);
+    
     this.db.exec(createCurrentDatasetTable);
-    this.db.exec(createUserProfileTable);
     this.db.exec(createEmployeeDatabaseTable);
     this.db.exec(createManualLeadershipScoresTable);
 
     // Create indexes for better performance
-    this.db.exec('CREATE INDEX IF NOT EXISTS idx_employees_dataset ON employees(dataset_id)');
-    this.db.exec('CREATE INDEX IF NOT EXISTS idx_performance_employee ON performance_scores(employee_id)');
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_employee_data_session ON employee_data(upload_session)');
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_employee_data_timestamp ON employee_data(upload_timestamp)');
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_employee_data_name ON employee_data(employee_name)');
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_upload_sessions_timestamp ON upload_sessions(upload_timestamp)');
+    
     this.db.exec('CREATE INDEX IF NOT EXISTS idx_employee_database_nip ON employee_database(nip)');
     this.db.exec('CREATE INDEX IF NOT EXISTS idx_manual_leadership_scores ON manual_leadership_scores(dataset_id, employee_name)');
   }
 
-  // Save a new dataset
-  saveDataset(name, employees) {
-    const datasetId = Date.now().toString();
-    
-    const transaction = this.db.transaction(() => {
-      // Insert dataset
-      const insertDataset = this.db.prepare(`
-        INSERT INTO datasets (id, name) VALUES (?, ?)
-      `);
-      insertDataset.run(datasetId, name);
-
-      // Insert employees and their performance data
-      const insertEmployee = this.db.prepare(`
-        INSERT INTO employees (dataset_id, name, job, summary) VALUES (?, ?, ?, ?)
-      `);
-      const insertPerformance = this.db.prepare(`
-        INSERT INTO performance_scores (employee_id, competency_name, score) VALUES (?, ?, ?)
-      `);
-
-      for (const employee of employees) {
-        const result = insertEmployee.run(datasetId, employee.name, employee.job, employee.summary || null);
-        const employeeId = result.lastInsertRowid;
-
-        for (const performance of employee.performance) {
-          insertPerformance.run(employeeId, performance.name, performance.score);
-        }
-      }
-    });
-
-    transaction();
-    return datasetId;
-  }
-
-  // Get all datasets
-  getAllDatasets() {
-    const query = `
-      SELECT d.*, COUNT(e.id) as employee_count
-      FROM datasets d
-      LEFT JOIN employees e ON d.id = e.dataset_id
-      GROUP BY d.id
-      ORDER BY d.updated_at DESC
-    `;
-    return this.db.prepare(query).all();
-  }
-
-  // Get a specific dataset with all employee data
-  getDataset(datasetId) {
-    const datasetQuery = this.db.prepare('SELECT * FROM datasets WHERE id = ?');
-    const dataset = datasetQuery.get(datasetId);
-
-    if (!dataset) return null;
-
-    const employeesQuery = `
-      SELECT e.*, ps.competency_name, ps.score
-      FROM employees e
-      LEFT JOIN performance_scores ps ON e.id = ps.employee_id
-      WHERE e.dataset_id = ?
-      ORDER BY e.name, ps.competency_name
-    `;
-
-    const rows = this.db.prepare(employeesQuery).all(datasetId);
-    
-    // Group performance data by employee
-    const employeesMap = new Map();
-    
-    rows.forEach(row => {
-      if (!employeesMap.has(row.id)) {
-        employeesMap.set(row.id, {
-          name: row.name,
-          job: row.job,
-          summary: row.summary,
-          performance: []
-        });
-      }
-      
-      if (row.competency_name) {
-        employeesMap.get(row.id).performance.push({
-          name: row.competency_name,
-          score: row.score
-        });
-      }
-    });
-
-    return {
-      ...dataset,
-      employees: Array.from(employeesMap.values())
-    };
-  }
-
-  // Delete a dataset
-  deleteDataset(datasetId) {
-    const transaction = this.db.transaction(() => {
-      // Delete performance scores
-      this.db.prepare('DELETE FROM performance_scores WHERE employee_id IN (SELECT id FROM employees WHERE dataset_id = ?)').run(datasetId);
-      // Delete employees
-      this.db.prepare('DELETE FROM employees WHERE dataset_id = ?').run(datasetId);
-      // Delete dataset
-      this.db.prepare('DELETE FROM datasets WHERE id = ?').run(datasetId);
-      // Clear current dataset if it matches
-      this.db.prepare('UPDATE current_dataset SET dataset_id = NULL WHERE dataset_id = ?').run(datasetId);
-    });
-
-    transaction();
-  }
-
-  // Save current active dataset
-  saveCurrentDataset(employees) {
-    const datasetId = this.saveDataset(`Auto-save ${new Date().toLocaleString()}`, employees);
-    
-    // Update current dataset pointer
-    const upsertCurrent = this.db.prepare(`
-      INSERT OR REPLACE INTO current_dataset (key, dataset_id, updated_at) 
-      VALUES ('active', ?, CURRENT_TIMESTAMP)
-    `);
-    upsertCurrent.run(datasetId);
-    
-    return datasetId;
-  }
-
-  // Get current active dataset
-  getCurrentDataset() {
-    const currentQuery = this.db.prepare('SELECT dataset_id FROM current_dataset WHERE key = ?');
-    const current = currentQuery.get('active');
-    
-    if (!current || !current.dataset_id) {
-      return { employees: [] };
-    }
-    
-    return this.getDataset(current.dataset_id);
-  }
-
-  // Clear current dataset
-  clearCurrentDataset() {
-    this.db.prepare('UPDATE current_dataset SET dataset_id = NULL WHERE key = ?').run('active');
-  }
-
-  // Update employee summary
-  updateEmployeeSummary(datasetId, employeeName, summary) {
-    const updateSummary = this.db.prepare(`
-      UPDATE employees 
-      SET summary = ? 
-      WHERE dataset_id = ? AND name = ?
-    `);
-    updateSummary.run(summary, datasetId, employeeName);
-  }
-
-  // Get current dataset ID
-  getCurrentDatasetId() {
-    const currentQuery = this.db.prepare('SELECT dataset_id FROM current_dataset WHERE key = ?');
-    const current = currentQuery.get('active');
-    return current?.dataset_id || null;
-  }
-
-  // User Profile Methods
-  
-  // Save user profile
-  saveUserProfile(name, nip, gol, pangkat, position, subPosition) {
-    // First, set all existing profiles to inactive
-    this.db.prepare('UPDATE user_profile SET is_active = 0').run();
-    
-    // Insert new active profile
-    const insertProfile = this.db.prepare(`
-      INSERT INTO user_profile (name, nip, gol, pangkat, position, sub_position, is_active) 
-      VALUES (?, ?, ?, ?, ?, ?, 1)
-    `);
-    const result = insertProfile.run(name, nip, gol, pangkat, position, subPosition);
-    return result.lastInsertRowid;
-  }
-
-  // Get active user profile
-  getActiveUserProfile() {
-    const query = this.db.prepare('SELECT * FROM user_profile WHERE is_active = 1 ORDER BY created_at DESC LIMIT 1');
-    return query.get();
-  }
-
-  // Check if user profile exists
-  hasActiveUserProfile() {
-    const profile = this.getActiveUserProfile();
-    return !!profile;
-  }
 
   // Employee Database Methods
 
   // Add single employee
-  addEmployee(name, nip, gol, pangkat, position, subPosition) {
+  addEmployee(name, nip, gol, pangkat, position, subPosition, organizationalLevel = 'Staff/Other') {
     const insertEmployee = this.db.prepare(`
-      INSERT INTO employee_database (name, nip, gol, pangkat, position, sub_position) 
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO employee_database (name, nip, gol, pangkat, position, sub_position, organizational_level) 
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
-    const result = insertEmployee.run(name, nip, gol, pangkat, position, subPosition);
+    const result = insertEmployee.run(name, nip, gol, pangkat, position, subPosition, organizationalLevel);
     return result.lastInsertRowid;
   }
 
@@ -330,12 +135,31 @@ class SQLiteService {
       
       // Insert new data
       const insertEmployee = this.db.prepare(`
-        INSERT INTO employee_database (name, nip, gol, pangkat, position, sub_position) 
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO employee_database (name, nip, gol, pangkat, position, sub_position, organizational_level) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
       
       for (const emp of employeesData) {
-        insertEmployee.run(emp.name, emp.nip, emp.gol, emp.pangkat, emp.position, emp.subPosition);
+        // Map golongan to organizational level
+        let organizationalLevel = 'Staff/Other';
+        if (emp.gol) {
+          const romanNumeral = emp.gol.split('/')[0];
+          if (romanNumeral === 'IV') {
+            organizationalLevel = 'Eselon IV';
+          } else if (romanNumeral === 'III') {
+            organizationalLevel = 'Eselon III';
+          }
+        }
+        
+        insertEmployee.run(
+          emp.name, 
+          emp.nip || '-', 
+          emp.gol, 
+          emp.pangkat || '-', 
+          emp.position || '-', 
+          emp.subPosition || '-', 
+          organizationalLevel
+        );
       }
     });
     
@@ -356,13 +180,13 @@ class SQLiteService {
   }
 
   // Update employee
-  updateEmployee(id, name, nip, gol, pangkat, position, subPosition) {
+  updateEmployee(id, name, nip, gol, pangkat, position, subPosition, organizationalLevel = 'Staff/Other') {
     const updateEmployee = this.db.prepare(`
       UPDATE employee_database 
-      SET name = ?, nip = ?, gol = ?, pangkat = ?, position = ?, sub_position = ?, updated_at = CURRENT_TIMESTAMP
+      SET name = ?, nip = ?, gol = ?, pangkat = ?, position = ?, sub_position = ?, organizational_level = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `);
-    updateEmployee.run(name, nip, gol, pangkat, position, subPosition, id);
+    updateEmployee.run(name, nip, gol, pangkat, position, subPosition, organizationalLevel, id);
   }
 
   // Delete employee
@@ -375,6 +199,52 @@ class SQLiteService {
   getEmployeesCount() {
     const query = this.db.prepare('SELECT COUNT(*) as count FROM employee_database');
     return query.get().count;
+  }
+
+  // Get employee suggestions by fuzzy match
+  getEmployeeSuggestions(searchName, limit = 5) {
+    const all = this.getAllEmployees();
+    const normalize = (name) => name.toLowerCase().replace(/[.,\-_]/g, '').replace(/\s+/g, ' ').trim();
+    const target = normalize(searchName);
+
+    const distance = (a, b) => {
+      const m = [];
+      for (let i = 0; i <= b.length; i++) m[i] = [i];
+      for (let j = 0; j <= a.length; j++) m[0][j] = j;
+      for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+          if (b.charAt(i - 1) === a.charAt(j - 1)) m[i][j] = m[i - 1][j - 1];
+          else m[i][j] = Math.min(m[i - 1][j - 1] + 1, m[i][j - 1] + 1, m[i - 1][j] + 1);
+        }
+      }
+      return m[b.length][a.length];
+    };
+
+    const scored = all.map(emp => {
+      const norm = normalize(emp.name);
+      const dist = distance(target, norm);
+      const maxLen = Math.max(target.length, norm.length);
+      const similarity = (maxLen - dist) / maxLen;
+      return { ...emp, similarity };
+    }).filter(e => e.similarity >= 0.4) // lower threshold to broaden suggestions
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, limit)
+      .map(e => ({ name: e.name, organizational_level: e.organizational_level, similarity: Number(e.similarity.toFixed(3)) }));
+    return scored;
+  }
+
+  // Get employee organizational level mapping
+  getEmployeeOrgLevelMapping() {
+    const query = this.db.prepare('SELECT name, organizational_level FROM employee_database');
+    const results = query.all();
+    
+    // Convert to object for easier access
+    const mapping = {};
+    results.forEach(row => {
+      mapping[row.name] = row.organizational_level;
+    });
+    
+    return mapping;
   }
 
   // Manual Leadership Scores Methods
@@ -430,6 +300,179 @@ class SQLiteService {
     
     transaction();
   }
+
+
+  // New unified data methods
+  
+  // Save employee data with timestamp
+  saveEmployeeData(employees, sessionName = null) {
+    const sessionId = Date.now().toString();
+    const timestamp = new Date().toISOString();
+    const finalSessionName = sessionName || `Upload ${new Date().toLocaleString()}`;
+    
+    const transaction = this.db.transaction(() => {
+      // Insert upload session
+      const insertSession = this.db.prepare(`
+        INSERT INTO upload_sessions (session_id, session_name, upload_timestamp) 
+        VALUES (?, ?, ?)
+      `);
+      insertSession.run(sessionId, finalSessionName, timestamp);
+      
+      // Insert employee data
+      const insertData = this.db.prepare(`
+        INSERT INTO employee_data 
+        (upload_session, upload_timestamp, employee_name, job_title, competency_name, competency_score)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      
+      for (const employee of employees) {
+        for (const performance of employee.performance) {
+          insertData.run(
+            sessionId,
+            timestamp,
+            employee.name,
+            employee.job,
+            performance.name,
+            performance.score
+          );
+        }
+      }
+      
+      // Update session metadata
+      const updateSession = this.db.prepare(`
+        UPDATE upload_sessions 
+        SET employee_count = ?, competency_count = ?
+        WHERE session_id = ?
+      `);
+      
+      const employeeCount = employees.length;
+      const competencyCount = employees.reduce((sum, emp) => sum + emp.performance.length, 0);
+      updateSession.run(employeeCount, competencyCount, sessionId);
+    });
+    
+    transaction();
+    return sessionId;
+  }
+  
+  // Get all upload sessions
+  getAllUploadSessions() {
+    const query = `
+      SELECT * FROM upload_sessions 
+      ORDER BY upload_timestamp DESC
+    `;
+    return this.db.prepare(query).all();
+  }
+  
+  // Get employee data by timestamp range
+  getEmployeeDataByTimeRange(startTime = null, endTime = null) {
+    let query = `
+      SELECT ed.*, us.session_name
+      FROM employee_data ed
+      JOIN upload_sessions us ON ed.upload_session = us.session_id
+    `;
+    const params = [];
+    
+    if (startTime && endTime) {
+      query += ' WHERE ed.upload_timestamp BETWEEN ? AND ?';
+      params.push(startTime, endTime);
+    } else if (startTime) {
+      query += ' WHERE ed.upload_timestamp >= ?';
+      params.push(startTime);
+    } else if (endTime) {
+      query += ' WHERE ed.upload_timestamp <= ?';
+      params.push(endTime);
+    }
+    
+    query += ' ORDER BY ed.upload_timestamp DESC, ed.employee_name, ed.competency_name';
+    
+    const rows = this.db.prepare(query).all(...params);
+    
+    // Group by employee
+    const employeesMap = new Map();
+    
+    rows.forEach(row => {
+      const key = `${row.employee_name}_${row.upload_session}`;
+      if (!employeesMap.has(key)) {
+        employeesMap.set(key, {
+          name: row.employee_name,
+          job: row.job_title,
+          uploadSession: row.upload_session,
+          uploadTimestamp: row.upload_timestamp,
+          sessionName: row.session_name,
+          performance: []
+        });
+      }
+      
+      employeesMap.get(key).performance.push({
+        name: row.competency_name,
+        score: row.competency_score
+      });
+    });
+    
+    return Array.from(employeesMap.values());
+  }
+  
+  // Get latest employee data (current active dataset equivalent)
+  getLatestEmployeeData() {
+    // Get the most recent upload session
+    const latestSession = this.db.prepare(`
+      SELECT session_id FROM upload_sessions 
+      ORDER BY upload_timestamp DESC LIMIT 1
+    `).get();
+    
+    if (!latestSession) {
+      return [];
+    }
+    
+    return this.getEmployeeDataBySession(latestSession.session_id);
+  }
+  
+  // Get employee data by session
+  getEmployeeDataBySession(sessionId) {
+    const query = `
+      SELECT ed.*, us.session_name
+      FROM employee_data ed
+      JOIN upload_sessions us ON ed.upload_session = us.session_id
+      WHERE ed.upload_session = ?
+      ORDER BY ed.employee_name, ed.competency_name
+    `;
+    
+    const rows = this.db.prepare(query).all(sessionId);
+    
+    // Group by employee
+    const employeesMap = new Map();
+    
+    rows.forEach(row => {
+      if (!employeesMap.has(row.employee_name)) {
+        employeesMap.set(row.employee_name, {
+          name: row.employee_name,
+          job: row.job_title,
+          uploadSession: row.upload_session,
+          uploadTimestamp: row.upload_timestamp,
+          sessionName: row.session_name,
+          performance: []
+        });
+      }
+      
+      employeesMap.get(row.employee_name).performance.push({
+        name: row.competency_name,
+        score: row.competency_score
+      });
+    });
+    
+    return Array.from(employeesMap.values());
+  }
+  
+  // Delete session and all its data
+  deleteUploadSession(sessionId) {
+    const transaction = this.db.transaction(() => {
+      this.db.prepare('DELETE FROM employee_data WHERE upload_session = ?').run(sessionId);
+      this.db.prepare('DELETE FROM upload_sessions WHERE session_id = ?').run(sessionId);
+    });
+    
+    transaction();
+  }
+  
 
   close() {
     if (this.db) {

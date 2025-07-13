@@ -1,46 +1,62 @@
 import React, { useState } from 'react';
 import { api } from '../services/api';
 
+interface Employee {
+  id: number;
+  name: string;
+  nip: string;
+  gol: string;
+  pangkat: string;
+  position: string;
+  sub_position: string;
+  organizational_level: string;
+}
+
 interface AddEmployeeFormProps {
   onEmployeeAdded: () => void;
   onCancel: () => void;
+  employee?: Employee; // For edit mode
+  isEditMode?: boolean;
 }
 
-const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeAdded, onCancel }) => {
-  const [name, setName] = useState('');
-  const [nip, setNip] = useState('');
-  const [gol, setGol] = useState('');
-  const [pangkat, setPangkat] = useState('');
-  const [position, setPosition] = useState('');
-  const [subPosition, setSubPosition] = useState('');
+const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeAdded, onCancel, employee, isEditMode = false }) => {
+  const [name, setName] = useState(employee?.name || '');
+  const [nip, setNip] = useState(employee?.nip || '');
+  const [gol, setGol] = useState(employee?.gol || '');
+  const [pangkat, setPangkat] = useState(employee?.pangkat || '');
+  const [position, setPosition] = useState(employee?.position || '');
+  const [subPosition, setSubPosition] = useState(employee?.sub_position || '');
+  const [organizationalLevel, setOrganizationalLevel] = useState(employee?.organizational_level || 'Staff/Other');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<{ name?: string; nip?: string; gol?: string; pangkat?: string; position?: string; subPosition?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; nip?: string; gol?: string; pangkat?: string; position?: string; subPosition?: string; organizationalLevel?: string }>({});
 
   const validateForm = () => {
     const newErrors: { name?: string; nip?: string; gol?: string; pangkat?: string; position?: string; subPosition?: string } = {};
     
+    // Only name and gol are required
     if (!name.trim()) {
       newErrors.name = 'Nama wajib diisi';
-    }
-    
-    if (!nip.trim()) {
-      newErrors.nip = 'NIP wajib diisi';
     }
     
     if (!gol.trim()) {
       newErrors.gol = 'Golongan wajib diisi';
     }
     
+    // Optional field validation (no errors, just warnings in console)
+    if (!nip.trim()) {
+      console.log('Warning: NIP is empty, will be set to "-"');
+    }
+    
     if (!pangkat.trim()) {
-      newErrors.pangkat = 'Pangkat wajib diisi';
+      console.log('Warning: Pangkat is empty, will be set to "-"');
     }
     
     if (!position.trim()) {
-      newErrors.position = 'Jabatan wajib diisi';
+      console.log('Warning: Position is empty, will be set to "-"');
     }
     
     if (!subPosition.trim()) {
-      newErrors.subPosition = 'Sub-Jabatan wajib diisi';
+      console.log('Warning: Sub-Position is empty, will be set to "-"');
     }
     
     setErrors(newErrors);
@@ -57,11 +73,43 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeAdded, onCa
     setIsSubmitting(true);
     
     try {
-      await api.addEmployee(name.trim(), nip.trim(), gol.trim(), pangkat.trim(), position.trim(), subPosition.trim());
+      // Prepare data with default values for empty fields
+      const employeeData = {
+        name: name.trim(),
+        nip: nip.trim() || '-',
+        gol: gol.trim(),
+        pangkat: pangkat.trim() || '-',
+        position: position.trim() || '-',
+        subPosition: subPosition.trim() || '-',
+        organizationalLevel: organizationalLevel || 'Staff/Other'
+      };
+      
+      if (isEditMode && employee) {
+        await api.updateEmployee(
+          employee.id, 
+          employeeData.name, 
+          employeeData.nip, 
+          employeeData.gol, 
+          employeeData.pangkat, 
+          employeeData.position, 
+          employeeData.subPosition,
+          employeeData.organizationalLevel
+        );
+      } else {
+        await api.addEmployee(
+          employeeData.name, 
+          employeeData.nip, 
+          employeeData.gol, 
+          employeeData.pangkat, 
+          employeeData.position, 
+          employeeData.subPosition,
+          employeeData.organizationalLevel
+        );
+      }
       onEmployeeAdded();
     } catch (error) {
-      console.error('Error adding employee:', error);
-      setErrors({ name: 'Gagal menambahkan pegawai. Silakan coba lagi.' });
+      console.error(`Error ${isEditMode ? 'updating' : 'adding'} employee:`, error);
+      setErrors({ name: `Gagal ${isEditMode ? 'mengubah' : 'menambahkan'} pegawai. Silakan coba lagi.` });
     } finally {
       setIsSubmitting(false);
     }
@@ -73,11 +121,15 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeAdded, onCa
         <div className="text-center mb-6">
           <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isEditMode ? "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" : "M12 4v16m8-8H4"} />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Tambah Pegawai Baru</h2>
-          <p className="text-gray-600 dark:text-gray-400">Masukkan data pegawai baru</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            {isEditMode ? 'Edit Pegawai' : 'Tambah Pegawai Baru'}
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400">
+            {isEditMode ? 'Ubah data pegawai' : 'Masukkan data pegawai baru'}
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -104,7 +156,7 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeAdded, onCa
 
             <div>
               <label htmlFor="nip" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                NIP *
+                NIP <span className="text-xs text-gray-500">(opsional)</span>
               </label>
               <input
                 type="text"
@@ -146,7 +198,7 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeAdded, onCa
 
             <div>
               <label htmlFor="pangkat" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Pangkat *
+                Pangkat <span className="text-xs text-gray-500">(opsional)</span>
               </label>
               <input
                 type="text"
@@ -167,7 +219,7 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeAdded, onCa
 
           <div>
             <label htmlFor="position" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Jabatan *
+              Jabatan <span className="text-xs text-gray-500">(opsional)</span>
             </label>
             <input
               type="text"
@@ -187,7 +239,7 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeAdded, onCa
 
           <div>
             <label htmlFor="subPosition" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Sub-Jabatan *
+              Sub-Jabatan <span className="text-xs text-gray-500">(opsional)</span>
             </label>
             <input
               type="text"
@@ -202,6 +254,28 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeAdded, onCa
             />
             {errors.subPosition && (
               <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.subPosition}</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="organizationalLevel" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Tingkat Organisasi <span className="text-xs text-gray-500">(opsional)</span>
+            </label>
+            <select
+              id="organizationalLevel"
+              value={organizationalLevel}
+              onChange={(e) => setOrganizationalLevel(e.target.value)}
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                errors.organizationalLevel ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+              }`}
+              disabled={isSubmitting}
+            >
+              <option value="Staff/Other">Staff/Other</option>
+              <option value="Eselon IV">Eselon IV</option>
+              <option value="Eselon III">Eselon III</option>
+            </select>
+            {errors.organizationalLevel && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.organizationalLevel}</p>
             )}
           </div>
 
@@ -225,10 +299,10 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeAdded, onCa
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Menyimpan...
+                  {isEditMode ? 'Menyimpan...' : 'Menyimpan...'}
                 </div>
               ) : (
-                'Tambah Pegawai'
+                isEditMode ? 'Simpan Perubahan' : 'Tambah Pegawai'
               )}
             </button>
           </div>

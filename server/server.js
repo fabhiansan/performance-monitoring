@@ -3,10 +3,11 @@ import cors from 'cors';
 import SQLiteService from './database.js';
 
 const app = express();
-const port = 3001;
+const port = process.env.PORT || 3001;
 
-// Initialize database
-const db = new SQLiteService();
+// Initialize database with optional custom path
+const dbPath = process.env.DB_PATH || null;
+const db = new SQLiteService(dbPath);
 
 // Middleware
 app.use(cors());
@@ -14,155 +15,81 @@ app.use(express.json({ limit: '50mb' }));
 
 // Routes
 
-// Get all datasets
-app.get('/api/datasets', (req, res) => {
-  try {
-    const datasets = db.getAllDatasets();
-    res.json(datasets);
-  } catch (error) {
-    console.error('Error getting datasets:', error);
-    res.status(500).json({ error: 'Failed to get datasets' });
-  }
-});
+// NEW UNIFIED TIMESTAMP-BASED ENDPOINTS
 
-// Get specific dataset
-app.get('/api/datasets/:id', (req, res) => {
+// Upload employee data with timestamp
+app.post('/api/employee-data', (req, res) => {
   try {
-    const dataset = db.getDataset(req.params.id);
-    if (!dataset) {
-      return res.status(404).json({ error: 'Dataset not found' });
-    }
-    res.json(dataset);
-  } catch (error) {
-    console.error('Error getting dataset:', error);
-    res.status(500).json({ error: 'Failed to get dataset' });
-  }
-});
-
-// Save new dataset
-app.post('/api/datasets', (req, res) => {
-  try {
-    const { name, employees } = req.body;
+    const { employees, sessionName } = req.body;
     if (!employees || !Array.isArray(employees)) {
       return res.status(400).json({ error: 'Invalid employees data' });
     }
     
-    const datasetId = db.saveDataset(name || `Dataset ${new Date().toLocaleString()}`, employees);
-    res.json({ id: datasetId, message: 'Dataset saved successfully' });
+    const sessionId = db.saveEmployeeData(employees, sessionName);
+    res.json({ sessionId, message: 'Employee data saved successfully' });
   } catch (error) {
-    console.error('Error saving dataset:', error);
-    res.status(500).json({ error: 'Failed to save dataset' });
+    console.error('Error saving employee data:', error);
+    res.status(500).json({ error: 'Failed to save employee data' });
   }
 });
 
-// Delete dataset
-app.delete('/api/datasets/:id', (req, res) => {
+// Get all upload sessions (replaces datasets list)
+app.get('/api/upload-sessions', (req, res) => {
   try {
-    db.deleteDataset(req.params.id);
-    res.json({ message: 'Dataset deleted successfully' });
+    const sessions = db.getAllUploadSessions();
+    res.json(sessions);
   } catch (error) {
-    console.error('Error deleting dataset:', error);
-    res.status(500).json({ error: 'Failed to delete dataset' });
+    console.error('Error getting upload sessions:', error);
+    res.status(500).json({ error: 'Failed to get upload sessions' });
   }
 });
 
-// Get current active dataset
-app.get('/api/current-dataset', (req, res) => {
+// Get employee data by session ID
+app.get('/api/employee-data/session/:sessionId', (req, res) => {
   try {
-    const dataset = db.getCurrentDataset();
-    res.json(dataset);
+    const employees = db.getEmployeeDataBySession(req.params.sessionId);
+    res.json({ employees, sessionId: req.params.sessionId });
   } catch (error) {
-    console.error('Error getting current dataset:', error);
-    res.status(500).json({ error: 'Failed to get current dataset' });
+    console.error('Error getting employee data by session:', error);
+    res.status(500).json({ error: 'Failed to get employee data' });
   }
 });
 
-// Save current dataset
-app.post('/api/current-dataset', (req, res) => {
+// Get employee data by time range
+app.get('/api/employee-data/range', (req, res) => {
   try {
-    const { employees } = req.body;
-    if (!employees || !Array.isArray(employees)) {
-      return res.status(400).json({ error: 'Invalid employees data' });
-    }
-    
-    const datasetId = db.saveCurrentDataset(employees);
-    res.json({ id: datasetId, message: 'Current dataset saved successfully' });
+    const { startTime, endTime } = req.query;
+    const employees = db.getEmployeeDataByTimeRange(startTime, endTime);
+    res.json(employees);
   } catch (error) {
-    console.error('Error saving current dataset:', error);
-    res.status(500).json({ error: 'Failed to save current dataset' });
+    console.error('Error getting employee data by time range:', error);
+    res.status(500).json({ error: 'Failed to get employee data' });
   }
 });
 
-// Clear current dataset
-app.delete('/api/current-dataset', (req, res) => {
+// Get latest employee data (current dataset equivalent)
+app.get('/api/employee-data/latest', (req, res) => {
   try {
-    db.clearCurrentDataset();
-    res.json({ message: 'Current dataset cleared successfully' });
+    const employees = db.getLatestEmployeeData();
+    res.json(employees);
   } catch (error) {
-    console.error('Error clearing current dataset:', error);
-    res.status(500).json({ error: 'Failed to clear current dataset' });
+    console.error('Error getting latest employee data:', error);
+    res.status(500).json({ error: 'Failed to get latest employee data' });
   }
 });
 
-// Update employee summary
-app.patch('/api/current-dataset/employee/:name/summary', (req, res) => {
+// Delete upload session
+app.delete('/api/upload-sessions/:sessionId', (req, res) => {
   try {
-    const { name } = req.params;
-    const { summary } = req.body;
-    
-    const currentDatasetId = db.getCurrentDatasetId();
-    if (!currentDatasetId) {
-      return res.status(404).json({ error: 'No current dataset found' });
-    }
-    
-    db.updateEmployeeSummary(currentDatasetId, name, summary);
-    res.json({ message: 'Employee summary updated successfully' });
+    db.deleteUploadSession(req.params.sessionId);
+    res.json({ message: 'Upload session deleted successfully' });
   } catch (error) {
-    console.error('Error updating employee summary:', error);
-    res.status(500).json({ error: 'Failed to update employee summary' });
+    console.error('Error deleting upload session:', error);
+    res.status(500).json({ error: 'Failed to delete upload session' });
   }
 });
 
-// User Profile Routes
 
-// Get active user profile
-app.get('/api/user-profile', (req, res) => {
-  try {
-    const profile = db.getActiveUserProfile();
-    res.json(profile || null);
-  } catch (error) {
-    console.error('Error getting user profile:', error);
-    res.status(500).json({ error: 'Failed to get user profile' });
-  }
-});
-
-// Save user profile
-app.post('/api/user-profile', (req, res) => {
-  try {
-    const { name, nip, gol, pangkat, position, subPosition } = req.body;
-    
-    if (!name || !nip || !gol || !pangkat || !position || !subPosition) {
-      return res.status(400).json({ error: 'All fields are required: name, nip, gol, pangkat, position, subPosition' });
-    }
-    
-    const profileId = db.saveUserProfile(name, nip, gol, pangkat, position, subPosition);
-    res.json({ id: profileId, message: 'User profile saved successfully' });
-  } catch (error) {
-    console.error('Error saving user profile:', error);
-    res.status(500).json({ error: 'Failed to save user profile' });
-  }
-});
-
-// Check if user profile exists
-app.get('/api/user-profile/exists', (req, res) => {
-  try {
-    const exists = db.hasActiveUserProfile();
-    res.json({ exists });
-  } catch (error) {
-    console.error('Error checking user profile:', error);
-    res.status(500).json({ error: 'Failed to check user profile' });
-  }
-});
 
 // Employee Database Routes
 
@@ -174,6 +101,32 @@ app.get('/api/employees', (req, res) => {
   } catch (error) {
     console.error('Error getting employees:', error);
     res.status(500).json({ error: 'Failed to get employees' });
+  }
+});
+
+// Get employee suggestions by fuzzy match
+app.get('/api/employees/suggestions', (req, res) => {
+  try {
+    const { name } = req.query;
+    if (!name || typeof name !== 'string') {
+      return res.status(400).json({ error: 'Query param "name" is required' });
+    }
+    const suggestions = db.getEmployeeSuggestions(name, 5);
+    res.json(suggestions);
+  } catch (error) {
+    console.error('Error getting employee suggestions:', error);
+    res.status(500).json({ error: 'Failed to get suggestions' });
+  }
+});
+
+// Get employee organizational level mapping (MUST be declared before the dynamic :id route)
+app.get('/api/employees/org-level-mapping', (req, res) => {
+  try {
+    const mapping = db.getEmployeeOrgLevelMapping();
+    res.json(mapping);
+  } catch (error) {
+    console.error('Error getting organizational level mapping:', error);
+    res.status(500).json({ error: 'Failed to get organizational level mapping' });
   }
 });
 
@@ -194,13 +147,33 @@ app.get('/api/employees/:id', (req, res) => {
 // Add single employee
 app.post('/api/employees', (req, res) => {
   try {
-    const { name, nip, gol, pangkat, position, subPosition } = req.body;
+    const { name, nip, gol, pangkat, position, subPosition, organizationalLevel } = req.body;
     
-    if (!name || !nip || !gol || !pangkat || !position || !subPosition) {
-      return res.status(400).json({ error: 'All fields are required' });
+    // Only name and gol are required, others can be empty and will be set to default values
+    if (!name?.trim() || !gol?.trim()) {
+      return res.status(400).json({ error: 'Name and Golongan are required' });
     }
     
-    const employeeId = db.addEmployee(name, nip, gol, pangkat, position, subPosition);
+    // Set default values for optional fields
+    const employeeData = {
+      name: name.trim(),
+      nip: nip?.trim() || '-',
+      gol: gol.trim(),
+      pangkat: pangkat?.trim() || '-',
+      position: position?.trim() || '-',
+      subPosition: subPosition?.trim() || '-',
+      organizationalLevel: organizationalLevel?.trim() || 'Staff/Other'
+    };
+    
+    const employeeId = db.addEmployee(
+      employeeData.name, 
+      employeeData.nip, 
+      employeeData.gol, 
+      employeeData.pangkat, 
+      employeeData.position, 
+      employeeData.subPosition,
+      employeeData.organizationalLevel
+    );
     res.json({ id: employeeId, message: 'Employee added successfully' });
   } catch (error) {
     console.error('Error adding employee:', error);
@@ -228,13 +201,34 @@ app.post('/api/employees/import-csv', (req, res) => {
 // Update employee
 app.put('/api/employees/:id', (req, res) => {
   try {
-    const { name, nip, gol, pangkat, position, subPosition } = req.body;
+    const { name, nip, gol, pangkat, position, subPosition, organizationalLevel } = req.body;
     
-    if (!name || !nip || !gol || !pangkat || !position || !subPosition) {
-      return res.status(400).json({ error: 'All fields are required' });
+    // Only name and gol are required, others can be empty and will be set to default values
+    if (!name?.trim() || !gol?.trim()) {
+      return res.status(400).json({ error: 'Name and Golongan are required' });
     }
     
-    db.updateEmployee(req.params.id, name, nip, gol, pangkat, position, subPosition);
+    // Set default values for optional fields
+    const employeeData = {
+      name: name.trim(),
+      nip: nip?.trim() || '-',
+      gol: gol.trim(),
+      pangkat: pangkat?.trim() || '-',
+      position: position?.trim() || '-',
+      subPosition: subPosition?.trim() || '-',
+      organizationalLevel: organizationalLevel?.trim() || 'Staff/Other'
+    };
+    
+    db.updateEmployee(
+      req.params.id, 
+      employeeData.name, 
+      employeeData.nip, 
+      employeeData.gol, 
+      employeeData.pangkat, 
+      employeeData.position, 
+      employeeData.subPosition,
+      employeeData.organizationalLevel
+    );
     res.json({ message: 'Employee updated successfully' });
   } catch (error) {
     console.error('Error updating employee:', error);
@@ -261,6 +255,17 @@ app.get('/api/employees-count', (req, res) => {
   } catch (error) {
     console.error('Error getting employees count:', error);
     res.status(500).json({ error: 'Failed to get employees count' });
+  }
+});
+
+// Get employee organizational level mapping
+app.get('/api/employees/org-level-mapping', (req, res) => {
+  try {
+    const mapping = db.getEmployeeOrgLevelMapping();
+    res.json(mapping);
+  } catch (error) {
+    console.error('Error getting organizational level mapping:', error);
+    res.status(500).json({ error: 'Failed to get organizational level mapping' });
   }
 });
 
@@ -359,18 +364,24 @@ process.on('SIGINT', () => {
 
 app.listen(port, () => {
   console.log(`Performance Analyzer API server running on http://localhost:${port}`);
+  
+  // Send ready message to parent process (for Electron)
+  if (process.send) {
+    process.send('server-ready');
+  }
+  
   console.log('Available endpoints:');
   console.log('  GET /api/health - Health check');
-  console.log('  GET /api/datasets - Get all datasets');
-  console.log('  GET /api/datasets/:id - Get specific dataset');
-  console.log('  POST /api/datasets - Save new dataset');
-  console.log('  DELETE /api/datasets/:id - Delete dataset');
-  console.log('  GET /api/current-dataset - Get current active dataset');
-  console.log('  POST /api/current-dataset - Save current dataset');
-  console.log('  DELETE /api/current-dataset - Clear current dataset');
-  console.log('  GET /api/user-profile - Get active user profile');
-  console.log('  POST /api/user-profile - Save user profile');
-  console.log('  GET /api/user-profile/exists - Check if user profile exists');
+  console.log('');
+  console.log('  NEW UNIFIED TIMESTAMP-BASED ENDPOINTS:');
+  console.log('  POST /api/employee-data - Upload employee data with timestamp');
+  console.log('  GET /api/upload-sessions - Get all upload sessions');
+  console.log('  GET /api/employee-data/session/:sessionId - Get employee data by session');
+  console.log('  GET /api/employee-data/range?startTime&endTime - Get employee data by time range');
+  console.log('  GET /api/employee-data/latest - Get latest employee data');
+  console.log('  DELETE /api/upload-sessions/:sessionId - Delete upload session');
+  console.log('');
+  console.log('  OTHER ENDPOINTS:');
   console.log('  GET /api/employees - Get all employees');
   console.log('  GET /api/employees/:id - Get employee by ID');
   console.log('  POST /api/employees - Add single employee');
