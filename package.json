@@ -22,7 +22,7 @@
     "electron:build": "npm run build && electron .",
     "electron:rebuild": "npx electron-rebuild -f -w better-sqlite3",
     "dist": "npm run build && npx electron-rebuild && electron-builder",
-    "dist:win": "npm run build && npx electron-rebuild && electron-builder --win",
+    "dist:win": "npm run build && electron-builder --win",
     "dist:mac": "npm run build && npx electron-rebuild && electron-builder --mac",
     "dist:linux": "npm run build && npx electron-rebuild && electron-builder --linux",
     "postinstall": "npm run electron:rebuild"
@@ -90,14 +90,26 @@
     "win": {
       "target": [
         {
-          "target": "portable",
+          "target": "nsis",
           "arch": [
             "x64"
           ]
         }
-      ]
+      ],
+      "icon": "icon.png",
+      "requestedExecutionLevel": "asInvoker"
     },
-    "npmRebuild": false,
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "installerIcon": "icon.png",
+      "uninstallerIcon": "icon.png",
+      "installerHeaderIcon": "icon.png",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Employee Performance Analyzer"
+    },
     "linux": {
       "target": [
         {
@@ -107,10 +119,6 @@
           ]
         }
       ]
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
     }
   }
 }
