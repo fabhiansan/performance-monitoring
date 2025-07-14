@@ -52,7 +52,6 @@
     "wait-on": "^7.2.0"
   },
   "build": {
-    "icon": "icon.png",
     "appId": "com.yourcompany.employee-performance-analyzer",
     "productName": "Employee Performance Analyzer",
     "directories": {
@@ -95,16 +94,13 @@
           ]
         }
       ],
-      "icon": "icon.png",
-      "requestedExecutionLevel": "asInvoker"
+      "requestedExecutionLevel": "asInvoker",
+      "sign": false
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "allowElevation": true,
-      "installerIcon": "icon.png",
-      "uninstallerIcon": "icon.png",
-      "installerHeaderIcon": "icon.png",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Employee Performance Analyzer"
