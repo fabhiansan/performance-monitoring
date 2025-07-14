@@ -61,6 +61,7 @@
       "dist/**/*",
       "server/**/*",
       "main.js",
+      "electron-config.js",
       "package.json",
       "node_modules/**/*"
     ],
