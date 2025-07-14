@@ -25,7 +25,6 @@
     "dist:win": "npm run build && electron-builder --win",
     "dist:mac": "npm run build && npx electron-rebuild && electron-builder --mac",
     "dist:linux": "npm run build && npx electron-rebuild && electron-builder --linux",
-    "postinstall": "npm run electron:rebuild"
   },
   "dependencies": {
     "@types/jspdf": "^1.3.3",
