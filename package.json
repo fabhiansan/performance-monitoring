@@ -96,15 +96,19 @@
         }
       ],
       "requestedExecutionLevel": "asInvoker",
-      "forceCodeSigning": false
+      "forceCodeSigning": false,
+      "publisherName": "Your Company"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "allowElevation": true,
+      "allowElevation": false,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Employee Performance Analyzer"
+      "shortcutName": "Employee Performance Analyzer",
+      "menuCategory": "Business",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false
     },
     "linux": {
       "target": [
