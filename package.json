@@ -12,9 +12,8 @@
     "dev:vite": "vite",
     "dev": "concurrently \"npm:dev:vite\" \"npm:electron:dev\"",
     "build": "vite build",
-    "preview": "vite preview",
-    "server": "ELECTRON_RUN_AS_NODE=1 electron server/server.js",
-    "dev:full": "concurrently \"npm run server\" \"npm run dev\"",
+    "preview": "vite preview",    
+    "dev:full": "concurrently \"npm run server:node\" \"npm run dev\"",
     "server:node": "npm run rebuild:node && node server/server.js",
     "rebuild:node": "npm rebuild better-sqlite3",
     "electron": "electron .",
@@ -67,15 +66,6 @@
       "icon.png",
       "package.json",
       "node_modules/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "server",
-        "to": "server",
-        "filter": [
-          "**/*"
-        ]
-      }
     ],
     "mac": {
       "category": "public.app-category.business",
