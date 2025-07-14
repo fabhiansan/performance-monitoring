@@ -96,8 +96,7 @@
         }
       ],
       "requestedExecutionLevel": "asInvoker",
-      "forceCodeSigning": false,
-      "publisherName": "Your Company"
+      "forceCodeSigning": false
     },
     "nsis": {
       "oneClick": false,
