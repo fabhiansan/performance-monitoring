@@ -95,7 +95,7 @@
         }
       ],
       "requestedExecutionLevel": "asInvoker",
-      "sign": false
+      "forceCodeSigning": false
     },
     "nsis": {
       "oneClick": false,
