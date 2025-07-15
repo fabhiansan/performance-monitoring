@@ -5,18 +5,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Web Development
-- **Start frontend only**: `npm run dev` (Vite dev server on port 5173)
-- **Start backend server**: `npm run server` (Express server on port 3001)
+- **Start frontend only**: `npm run dev:vite` (Vite dev server on port 5173)
+- **Start backend server**: `npm run server:node` (Express server on port 3001)
 - **Start both frontend and backend**: `npm run dev:full` (requires concurrently)
 - **Build for production**: `npm run build`
 - **Preview production build**: `npm run preview`
 - **Install dependencies**: `npm install`
+- **Rebuild native modules**: `npm run rebuild:node` (for better-sqlite3 in web mode)
 
 ### Electron Desktop App
-- **Development mode**: `npm run electron:dev` (with DevTools)
+- **Development mode**: `npm run dev` (runs both Vite and Electron with concurrently)
+- **Individual Electron dev**: `npm run electron:dev` (requires Vite running separately)
 - **Production mode**: `npm run electron:build` (run after `npm run build`)
-- **Rebuild native modules**: `npm run electron:rebuild` (for better-sqlite3)
-- **Build distributables**: `npm run dist:mac` / `npm run dist:win` / `npm run dist:linux`
+- **Build distributables**: `npm run dist` / `npm run dist:mac` / `npm run dist:win` / `npm run dist:linux`
+- **Rebuild native modules**: Use `npm run rebuild:node` for web mode or `postinstall` script for Electron
 
 ### TypeScript
 - **Type checking**: `tsc --noEmit` (no specific script configured)
@@ -140,8 +142,8 @@ This is a full-stack dashboard application with React + TypeScript frontend and 
 ### Web Application
 1. **Install dependencies**: `npm install`
 2. **Set up environment**: Create `.env.local` with `GEMINI_API_KEY`
-3. **Start the backend server**: `npm run server` (runs on port 3001)
-4. **Start the frontend**: `npm run dev` (runs on port 5173)
+3. **Start the backend server**: `npm run server:node` (runs on port 3001)
+4. **Start the frontend**: `npm run dev:vite` (runs on port 5173)
 5. **Or start both**: `npm run dev:full` (requires concurrently package)
 6. **Import your CSV data** in the Data Management section
 7. **Explore the dashboard** with Overview, Analytics, and Employee views
@@ -149,9 +151,9 @@ This is a full-stack dashboard application with React + TypeScript frontend and 
 ### Electron Desktop App
 1. **Install dependencies**: `npm install`
 2. **Build frontend**: `npm run build`
-3. **Rebuild native modules**: `npm run electron:rebuild`
+3. **Rebuild native modules**: Native modules are rebuilt automatically via `postinstall` script
 4. **Run desktop app**: `npm run electron:build`
-5. **Or use development mode**: `npm run electron:dev`
+5. **Or use development mode**: `npm run dev` (starts both Vite and Electron)
 6. **Create distributables**: `npm run dist:mac` (or dist:win/dist:linux)
 
 ### Development Workflow
@@ -175,6 +177,8 @@ This is a full-stack dashboard application with React + TypeScript frontend and 
 ### CSV Data Processing
 - CSV parser handles quoted fields, escaped quotes, and bracketed employee names
 - Competency scores are extracted and aggregated per employee
+- Supports both numeric scores (10, 65, 75, etc.) and string ratings ("Baik", "Sangat Baik", "Kurang Baik")
+- String rating mapping: "Kurang Baik" → 65, "Baik" → 75, "Sangat Baik" → 85
 - Data validation and employee resolution for mismatched names
 - Support for drag-drop import and paste functionality
 
@@ -185,11 +189,12 @@ This is a full-stack dashboard application with React + TypeScript frontend and 
 - Dataset versioning and current dataset management
 
 ### Electron Troubleshooting
-- **Native module errors**: Run `npm run electron:rebuild` after install
+- **Native module errors**: Reinstall with `npm install` (triggers `postinstall` script)
 - **Database issues**: Check userData directory permissions
 - **Server startup failures**: Verify server/server.js exists and DB_PATH is writable
 - **Build issues**: Ensure `npm run build` completes successfully before Electron build
 - **API key issues**: Check Electron config file in OS-specific userData directory
+- **Development server issues**: Use `npm run dev` for integrated development or `npm run electron:dev` if running Vite separately
 
 ### TypeScript Development
 - Strict mode enabled with comprehensive linting rules

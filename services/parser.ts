@@ -8,11 +8,6 @@ interface ScoreMap {
   };
 }
 
-interface EmployeeData {
-  name: string;
-  golongan: string;
-  eselonLevel: string;
-}
 
 /**
  * A robust parser that handles CSV, TSV, and Google Sheets copy-paste formats.
@@ -99,6 +94,31 @@ const extractEmployeeName = (rawHeader: string): string | null => {
   name = name.replace(/^\d+\.\s*/,'').replace(/^\d+\s+/,'');
   console.log(`Final cleaned name: "${name}"`);
   return name;
+};
+
+/**
+ * Check if a string represents a valid performance rating
+ */
+const isStringRating = (value: string): boolean => {
+  const trimmed = value.trim().toLowerCase();
+  return trimmed === 'baik' || trimmed === 'sangat baik' || trimmed === 'kurang baik';
+};
+
+/**
+ * Convert string rating to numeric score
+ */
+const convertStringRatingToScore = (rating: string): number => {
+  const trimmed = rating.trim().toLowerCase();
+  switch (trimmed) {
+    case 'sangat baik':
+      return 85;
+    case 'baik':
+      return 75;
+    case 'kurang baik':
+      return 65;
+    default:
+      throw new Error(`Invalid rating: ${rating}`);
+  }
 };
 
 /**
@@ -205,10 +225,10 @@ export const parsePerformanceData = (text: string, employeeDataCsv?: string, org
     const values = parseCsvLine(line);
     console.log(`Processing row ${rowIndex + 1}, values count:`, values.length);
     
-    // Check if this is a pure score row (all numeric values)
+    // Check if this is a pure score row (all numeric values or string ratings)
     const isScoreRow = values.length > 0 && values.every(val => {
       const trimmed = val.trim();
-      return trimmed === '' || !isNaN(Number(trimmed));
+      return trimmed === '' || !isNaN(Number(trimmed)) || isStringRating(trimmed);
     });
     
     console.log(`Row ${rowIndex + 1} is score row:`, isScoreRow);
@@ -232,21 +252,33 @@ export const parsePerformanceData = (text: string, employeeDataCsv?: string, org
       if (index < values.length) {
         const scoreValue = values[index];
         
-        if (scoreValue && scoreValue.trim() !== '' && !isNaN(Number(scoreValue))) {
-          let score = parseInt(scoreValue, 10);
+        if (scoreValue && scoreValue.trim() !== '') {
+          let score: number;
           
-          // Normalize score values
-          if (score === 10) {
-            score = 65; // Kurang Baik
-          } else if (score === 65) {
-            score = 65; // Kurang Baik (already correct)
-          } else if (score === 75) {
-            score = 75; // Baik
-          } else if (score >= 75) {
-            score = 85; // Sangat Baik
+          // Handle string ratings first
+          if (isStringRating(scoreValue)) {
+            score = convertStringRatingToScore(scoreValue);
+            console.log(`Converted string rating "${scoreValue}" to score ${score}`);
+          } else if (!isNaN(Number(scoreValue))) {
+            score = parseInt(scoreValue, 10);
+            
+            // Normalize numeric score values
+            if (score === 10) {
+              score = 65; // Kurang Baik
+            } else if (score === 65) {
+              score = 65; // Kurang Baik (already correct)
+            } else if (score === 75) {
+              score = 75; // Baik
+            } else if (score >= 75) {
+              score = 85; // Sangat Baik
+            } else {
+              // Keep original score for other values
+              score = score;
+            }
           } else {
-            // Keep original score for other values
-            score = score;
+            // Skip invalid values
+            console.log(`Skipping invalid score value: "${scoreValue}"`);
+            return;
           }
           
           if (!isNaN(score) && score >= 0 && score <= 100) {
