@@ -92,55 +92,43 @@ jobs:
             echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
           fi
           
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
+      - name: Create Release and Upload Assets
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ steps.version.outputs.version }}
-          release_name: Employee Performance Analyzer ${{ steps.version.outputs.version }}
-          body: |
-            ## Windows Release ${{ steps.version.outputs.version }}
-            
-            ### What's New
-            - Windows x64 desktop application
-            - Includes installer and portable executable
-            
-            ### Installation
-            1. Download the installer (.exe file)
-            2. Run the installer and follow the setup wizard
-            3. Launch "Employee Performance Analyzer" from Start Menu or Desktop
-            
-            ### Requirements
-            - Windows 10 or later
-            - 64-bit architecture
-            
-            ---
-            Built with Electron and packaged with NSIS installer.
-          draft: false
-          prerelease: false
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Create release with GitHub CLI
+          gh release create ${{ steps.version.outputs.version }} \
+            --title "Employee Performance Analyzer ${{ steps.version.outputs.version }}" \
+            --notes "## Windows Release ${{ steps.version.outputs.version }}
+
+          ### What's New
+          - Windows x64 desktop application
+          - Includes installer and portable executable
+
+          ### Installation
+          1. Download the installer (.exe file)
+          2. Run the installer and follow the setup wizard
+          3. Launch \"Employee Performance Analyzer\" from Start Menu or Desktop
+
+          ### Requirements
+          - Windows 10 or later
+          - 64-bit architecture
+
+          ---
+          Built with Electron and packaged with NSIS installer."
           
-      - name: Upload Windows Installer
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./release/Employee Performance Analyzer Setup ${{ steps.version.outputs.version }}.exe
-          asset_name: EmployeePerformanceAnalyzer-${{ steps.version.outputs.version }}-windows-setup.exe
-          asset_content_type: application/vnd.microsoft.portable-executable
+          # Upload installer
+          if [ -f "./release/Employee Performance Analyzer Setup ${{ steps.version.outputs.version }}.exe" ]; then
+            gh release upload ${{ steps.version.outputs.version }} \
+              "./release/Employee Performance Analyzer Setup ${{ steps.version.outputs.version }}.exe#EmployeePerformanceAnalyzer-${{ steps.version.outputs.version }}-windows-setup.exe"
+          fi
           
-      - name: Upload Portable Executable (if exists)
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./release/win-unpacked/Employee Performance Analyzer.exe
-          asset_name: EmployeePerformanceAnalyzer-${{ steps.version.outputs.version }}-windows-portable.exe
-          asset_content_type: application/vnd.microsoft.portable-executable
-        continue-on-error: true
+          # Upload portable executable if it exists
+          if [ -f "./release/win-unpacked/Employee Performance Analyzer.exe" ]; then
+            gh release upload ${{ steps.version.outputs.version }} \
+              "./release/win-unpacked/Employee Performance Analyzer.exe#EmployeePerformanceAnalyzer-${{ steps.version.outputs.version }}-windows-portable.exe"
+          fi
         
       - name: Upload build artifacts to workflow
         uses: actions/upload-artifact@v4
