@@ -58,6 +58,8 @@
       "output": "release"
     },
     "publish": null,
+    "includeSubNodeModules": true,
+    "afterPack": "./build-scripts.js",
     "files": [
       "dist/**/*",
       "server/**/*",
@@ -90,7 +92,10 @@
         }
       ],
       "requestedExecutionLevel": "asInvoker",
-      "forceCodeSigning": false
+      "forceCodeSigning": false,
+      "includeSubNodeModules": true,
+      "electronDist": "node_modules/electron/dist",
+      "electronVersion": "30.0.6"
     },
     "nsis": {
       "oneClick": false,
