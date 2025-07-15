@@ -1,0 +1,28 @@
+﻿2025-07-15T04:12:34.9335511Z ##[group]Run npm run electron:rebuild:win
+2025-07-15T04:12:34.9336080Z [36;1mnpm run electron:rebuild:win[0m
+2025-07-15T04:12:34.9372418Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2025-07-15T04:12:34.9372747Z env:
+2025-07-15T04:12:34.9372996Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.11.9\x64
+2025-07-15T04:12:34.9373404Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.11.9\x64/lib/pkgconfig
+2025-07-15T04:12:34.9373815Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.11.9\x64
+2025-07-15T04:12:34.9374176Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.11.9\x64
+2025-07-15T04:12:34.9374529Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.11.9\x64
+2025-07-15T04:12:34.9374813Z ##[endgroup]
+2025-07-15T04:12:35.5549851Z 
+2025-07-15T04:12:35.5550955Z > employee-performance-analyzer@1.0.0 electron:rebuild:win
+2025-07-15T04:12:35.5552064Z > npm run electron:rebuild -- --arch x64
+2025-07-15T04:12:35.5552598Z 
+2025-07-15T04:12:35.9107561Z 
+2025-07-15T04:12:35.9108921Z > employee-performance-analyzer@1.0.0 electron:rebuild
+2025-07-15T04:12:35.9110154Z > npx electron-rebuild -f -w better-sqlite3 --version 30.0.6 --arch x64
+2025-07-15T04:12:35.9133021Z 
+2025-07-15T04:12:37.1167400Z 
+2025-07-15T04:12:37.1168431Z An unhandled error occurred inside electron-rebuild
+2025-07-15T04:12:37.1175720Z The "paths[0]" argument must be of type string. Received undefined
+2025-07-15T04:12:37.1179595Z 
+2025-07-15T04:12:37.1181422Z TypeError [ERR_INVALID_ARG_TYPE]: The "paths[0]" argument must be of type string. Received undefined
+2025-07-15T04:12:37.1182431Z     at new NodeError (node:internal/errors:405:5)
+2025-07-15T04:12:37.1183125Z     at validateString (node:internal/validators:162:11)
+2025-07-15T04:12:37.1183748Z     at Object.resolve (node:path:168:9)
+2025-07-15T04:12:37.1184930Z     at file:///D:/a/performance-monitoring/performance-monitoring/node_modules/@electron/rebuild/lib/cli.js:73:30
+2025-07-15T04:12:37.2587151Z ##[error]Process completed with exit code 1.

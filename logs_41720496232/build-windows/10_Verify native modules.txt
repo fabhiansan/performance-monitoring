@@ -1,0 +1,16 @@
+﻿2025-07-15T04:12:37.2725413Z ##[group]Run if (Test-Path node_modules/better-sqlite3/build/Release/better_sqlite3.node) {
+2025-07-15T04:12:37.2726147Z [36;1mif (Test-Path node_modules/better-sqlite3/build/Release/better_sqlite3.node) {[0m
+2025-07-15T04:12:37.2726646Z [36;1m  Write-Host "Native module built successfully"[0m
+2025-07-15T04:12:37.2726935Z [36;1m} else {[0m
+2025-07-15T04:12:37.2727186Z [36;1m  Write-Host "Native module build failed"[0m
+2025-07-15T04:12:37.2728268Z [36;1m  exit 1[0m
+2025-07-15T04:12:37.2728452Z [36;1m}[0m
+2025-07-15T04:12:37.2761233Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2025-07-15T04:12:37.2761575Z env:
+2025-07-15T04:12:37.2761865Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.11.9\x64
+2025-07-15T04:12:37.2762290Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.11.9\x64/lib/pkgconfig
+2025-07-15T04:12:37.2762721Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.11.9\x64
+2025-07-15T04:12:37.2763110Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.11.9\x64
+2025-07-15T04:12:37.2763578Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.11.9\x64
+2025-07-15T04:12:37.2763896Z ##[endgroup]
+2025-07-15T04:12:37.7443237Z Native module built successfully

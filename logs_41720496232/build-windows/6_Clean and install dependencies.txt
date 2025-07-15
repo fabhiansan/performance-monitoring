@@ -1,0 +1,58 @@
+﻿2025-07-15T04:08:50.5771497Z ##[group]Run if (Test-Path package-lock.json) { Remove-Item package-lock.json }
+2025-07-15T04:08:50.5772131Z [36;1mif (Test-Path package-lock.json) { Remove-Item package-lock.json }[0m
+2025-07-15T04:08:50.5772484Z [36;1mnpm install[0m
+2025-07-15T04:08:50.6543614Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2025-07-15T04:08:50.6544059Z env:
+2025-07-15T04:08:50.6544364Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.11.9\x64
+2025-07-15T04:08:50.6545138Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.11.9\x64/lib/pkgconfig
+2025-07-15T04:08:50.6545608Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.11.9\x64
+2025-07-15T04:08:50.6546051Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.11.9\x64
+2025-07-15T04:08:50.6546484Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.11.9\x64
+2025-07-15T04:08:50.6546812Z ##[endgroup]
+2025-07-15T04:09:40.7536742Z npm warn EBADENGINE Unsupported engine {
+2025-07-15T04:09:40.7537786Z npm warn EBADENGINE   package: '@electron/rebuild@4.0.1',
+2025-07-15T04:09:40.7545421Z npm warn EBADENGINE   required: { node: '>=22.12.0' },
+2025-07-15T04:09:40.7552147Z npm warn EBADENGINE   current: { node: 'v18.20.8', npm: '10.8.2' }
+2025-07-15T04:09:40.7556960Z npm warn EBADENGINE }
+2025-07-15T04:09:40.7571712Z npm warn EBADENGINE Unsupported engine {
+2025-07-15T04:09:40.7578290Z npm warn EBADENGINE   package: 'better-sqlite3@12.2.0',
+2025-07-15T04:09:40.7580482Z npm warn EBADENGINE   required: { node: '20.x || 22.x || 23.x || 24.x' },
+2025-07-15T04:09:40.7581594Z npm warn EBADENGINE   current: { node: 'v18.20.8', npm: '10.8.2' }
+2025-07-15T04:09:40.7585674Z npm warn EBADENGINE }
+2025-07-15T04:09:40.7586340Z npm warn EBADENGINE Unsupported engine {
+2025-07-15T04:09:40.7587049Z npm warn EBADENGINE   package: 'node-abi@4.12.0',
+2025-07-15T04:09:40.7587827Z npm warn EBADENGINE   required: { node: '>=22.12.0' },
+2025-07-15T04:09:40.7588739Z npm warn EBADENGINE   current: { node: 'v18.20.8', npm: '10.8.2' }
+2025-07-15T04:09:40.7589454Z npm warn EBADENGINE }
+2025-07-15T04:09:40.7590018Z npm warn EBADENGINE Unsupported engine {
+2025-07-15T04:09:40.7590766Z npm warn EBADENGINE   package: 'minimatch@10.0.3',
+2025-07-15T04:09:40.7591598Z npm warn EBADENGINE   required: { node: '20 || >=22' },
+2025-07-15T04:09:40.7592563Z npm warn EBADENGINE   current: { node: 'v18.20.8', npm: '10.8.2' }
+2025-07-15T04:09:40.7612869Z npm warn EBADENGINE }
+2025-07-15T04:09:40.7613655Z npm warn EBADENGINE Unsupported engine {
+2025-07-15T04:09:40.7637720Z npm warn EBADENGINE   package: '@isaacs/brace-expansion@5.0.0',
+2025-07-15T04:09:40.7638740Z npm warn EBADENGINE   required: { node: '20 || >=22' },
+2025-07-15T04:09:40.7642634Z npm warn EBADENGINE   current: { node: 'v18.20.8', npm: '10.8.2' }
+2025-07-15T04:09:40.7643375Z npm warn EBADENGINE }
+2025-07-15T04:09:40.7643955Z npm warn EBADENGINE Unsupported engine {
+2025-07-15T04:09:40.7644730Z npm warn EBADENGINE   package: '@isaacs/balanced-match@4.0.1',
+2025-07-15T04:09:40.7645542Z npm warn EBADENGINE   required: { node: '20 || >=22' },
+2025-07-15T04:09:40.7646488Z npm warn EBADENGINE   current: { node: 'v18.20.8', npm: '10.8.2' }
+2025-07-15T04:09:40.7653374Z npm warn EBADENGINE }
+2025-07-15T04:09:40.9161103Z npm warn skipping integrity check for git dependency ssh://git@github.com/electron/node-gyp.git
+2025-07-15T04:09:43.1651498Z npm warn deprecated @npmcli/move-file@2.0.1: This functionality has been moved to @npmcli/fs
+2025-07-15T04:09:44.2892354Z npm warn deprecated rimraf@2.6.3: Rimraf versions prior to v4 are no longer supported
+2025-07-15T04:09:44.9389534Z npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+2025-07-15T04:09:46.9621911Z npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+2025-07-15T04:09:47.2446588Z npm warn deprecated rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported
+2025-07-15T04:09:47.2475001Z npm warn deprecated rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported
+2025-07-15T04:09:47.2948511Z npm warn deprecated glob@8.1.0: Glob versions prior to v9 are no longer supported
+2025-07-15T04:09:47.2991080Z npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+2025-07-15T04:09:47.9029006Z npm warn deprecated boolean@3.2.0: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
+2025-07-15T04:12:32.5011496Z 
+2025-07-15T04:12:32.5012549Z added 622 packages, and audited 623 packages in 4m
+2025-07-15T04:12:32.5013302Z 
+2025-07-15T04:12:32.5013688Z 92 packages are looking for funding
+2025-07-15T04:12:32.5014352Z   run `npm fund` for details
+2025-07-15T04:12:32.5026352Z 
+2025-07-15T04:12:32.5026721Z found 0 vulnerabilities

@@ -25,7 +25,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
           
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -38,6 +38,9 @@ jobs:
       - name: Clean and install dependencies
         run: |
           if (Test-Path package-lock.json) { Remove-Item package-lock.json }
+          $env:npm_config_target_arch = "x64"
+          $env:npm_config_target_platform = "win32"
+          $env:npm_config_arch = "x64"
           npm install
           
       - name: Check installed versions
@@ -54,8 +57,8 @@ jobs:
       - name: Fallback native module rebuild
         if: failure()
         run: |
-          npm rebuild better-sqlite3 --arch=x64
-          npx electron-rebuild -f -w better-sqlite3
+          npm rebuild better-sqlite3
+          npx electron-rebuild -f -w better-sqlite3 --arch x64
         
       - name: Verify native modules
         run: |

@@ -1,0 +1,17 @@
+﻿2025-07-15T04:12:32.7694978Z ##[group]Run node --version
+2025-07-15T04:12:32.7695344Z [36;1mnode --version[0m
+2025-07-15T04:12:32.7695616Z [36;1mnpm --version[0m
+2025-07-15T04:12:32.7695901Z [36;1mnpm list electron[0m
+2025-07-15T04:12:32.7729504Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2025-07-15T04:12:32.7729859Z env:
+2025-07-15T04:12:32.7730150Z   pythonLocation: C:\hostedtoolcache\windows\Python\3.11.9\x64
+2025-07-15T04:12:32.7730607Z   PKG_CONFIG_PATH: C:\hostedtoolcache\windows\Python\3.11.9\x64/lib/pkgconfig
+2025-07-15T04:12:32.7731024Z   Python_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.11.9\x64
+2025-07-15T04:12:32.7731445Z   Python2_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.11.9\x64
+2025-07-15T04:12:32.7731851Z   Python3_ROOT_DIR: C:\hostedtoolcache\windows\Python\3.11.9\x64
+2025-07-15T04:12:32.7732191Z ##[endgroup]
+2025-07-15T04:12:33.0742339Z v18.20.8
+2025-07-15T04:12:33.3714849Z 10.8.2
+2025-07-15T04:12:34.8042605Z employee-performance-analyzer@1.0.0 D:\a\performance-monitoring\performance-monitoring
+2025-07-15T04:12:34.8043851Z `-- electron@30.5.1
+2025-07-15T04:12:34.8044203Z 
