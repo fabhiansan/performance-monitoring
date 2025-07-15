@@ -18,11 +18,8 @@
     "rebuild:node": "npm rebuild better-sqlite3",
     "postinstall": "electron-builder install-app-deps",
     "electron": "electron .",
-    "electron:dev": "npm run electron:rebuild && wait-on http://localhost:5173 && NODE_ENV=development electron .",
+    "electron:dev": "wait-on http://localhost:5173 && NODE_ENV=development electron .",
     "electron:build": "npm run build && NODE_ENV=production electron .",
-    "electron:rebuild": "npx electron-rebuild -f -w better-sqlite3",
-    "electron:rebuild:win": "npm run electron:rebuild -- --arch x64",
-    "rebuild:debug": "npm list electron && npx electron-rebuild -f -w better-sqlite3 --debug",
     "dist": "npm run build && electron-builder",
     "dist:win": "npm run build && electron-builder --win",
     "dist:mac": "npm run build && electron-builder --mac",
@@ -40,7 +37,6 @@
     "recharts": "^3.1.0"
   },
   "devDependencies": {
-    "@electron/rebuild": "^4.0.1",
     "@types/node": "^22.14.0",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
@@ -59,8 +55,7 @@
       "output": "release"
     },
     "publish": null,
-    "afterPack": "./build-scripts.js",
-    "downloadAlternateFFmpeg": false,
+    "afterPack": "./build-scripts.cjs",
     "files": [
       "dist/**/*",
       "server/**/*",
