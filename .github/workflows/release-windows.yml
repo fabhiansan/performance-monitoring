@@ -1,0 +1,116 @@
+name: Release Windows
+
+on:
+  # Trigger on version tags (e.g., v1.0.0, v1.2.3)
+  push:
+    tags:
+      - 'v*'
+  
+  # Allow manual trigger from GitHub UI
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install Visual Studio Build Tools
+        uses: microsoft/setup-msbuild@v2
+        
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Rebuild native modules for Windows
+        run: npm run electron:rebuild:win
+        
+      - name: Build application
+        run: npm run dist:win
+        
+      - name: List build artifacts
+        run: dir release
+        
+      - name: Get version from tag or input
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          release_name: Employee Performance Analyzer ${{ steps.version.outputs.version }}
+          body: |
+            ## Windows Release ${{ steps.version.outputs.version }}
+            
+            ### What's New
+            - Windows x64 desktop application
+            - Includes installer and portable executable
+            
+            ### Installation
+            1. Download the installer (.exe file)
+            2. Run the installer and follow the setup wizard
+            3. Launch "Employee Performance Analyzer" from Start Menu or Desktop
+            
+            ### Requirements
+            - Windows 10 or later
+            - 64-bit architecture
+            
+            ---
+            Built with Electron and packaged with NSIS installer.
+          draft: false
+          prerelease: false
+          
+      - name: Upload Windows Installer
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./release/Employee Performance Analyzer Setup ${{ steps.version.outputs.version }}.exe
+          asset_name: EmployeePerformanceAnalyzer-${{ steps.version.outputs.version }}-windows-setup.exe
+          asset_content_type: application/vnd.microsoft.portable-executable
+          
+      - name: Upload Portable Executable (if exists)
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./release/win-unpacked/Employee Performance Analyzer.exe
+          asset_name: EmployeePerformanceAnalyzer-${{ steps.version.outputs.version }}-windows-portable.exe
+          asset_content_type: application/vnd.microsoft.portable-executable
+        continue-on-error: true
+        
+      - name: Upload build artifacts to workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-${{ steps.version.outputs.version }}
+          path: release/
+          retention-days: 30

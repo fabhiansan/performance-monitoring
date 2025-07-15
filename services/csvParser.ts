@@ -8,12 +8,36 @@ export interface EmployeeData {
 }
 
 /**
- * A robust CSV parser that handles fields quoted with double quotes.
- * It correctly processes fields that contain commas and handles escaped quotes.
- * @param line - A single line from a CSV file.
+ * A robust parser that handles CSV, TSV, and Google Sheets copy-paste formats.
+ * Auto-detects the delimiter (comma, tab, or multiple spaces) and handles quoted fields correctly.
+ * @param line - A single line from a CSV/TSV file.
  * @returns An array of strings representing the fields.
  */
 const parseCsvLine = (line: string): string[] => {
+  // Enhanced delimiter detection for Google Sheets copy-paste
+  const commaCount = (line.match(/,/g) || []).length;
+  const tabCount = (line.match(/\t/g) || []).length;
+  const multiSpaceCount = (line.match(/\s{2,}/g) || []).length; // 2+ consecutive spaces
+  
+  let delimiter = ',';
+  let isSpaceDelimited = false;
+  
+  // Priority: tabs > multiple spaces > commas
+  if (tabCount > 0) {
+    delimiter = '\t';
+  } else if (multiSpaceCount > 0 && multiSpaceCount >= commaCount) {
+    // Use regex-based splitting for multiple spaces
+    isSpaceDelimited = true;
+  } else {
+    delimiter = ',';
+  }
+
+  if (isSpaceDelimited) {
+    // Split on 2+ consecutive spaces, then trim each field
+    return line.split(/\s{2,}/).map(field => field.trim()).filter(field => field.length > 0);
+  }
+
+  // Standard delimiter parsing
   const fields = [];
   let currentField = '';
   let inQuotes = false;
@@ -29,15 +53,15 @@ const parseCsvLine = (line: string): string[] => {
       } else {
         inQuotes = !inQuotes;
       }
-    } else if (char === ',' && !inQuotes) {
-      fields.push(currentField);
+    } else if (char === delimiter && !inQuotes) {
+      fields.push(currentField.trim());
       currentField = '';
     } else {
       currentField += char;
     }
   }
-  fields.push(currentField);
-  return fields;
+  fields.push(currentField.trim());
+  return fields.filter(field => field.length > 0);
 };
 
 export function parseEmployeeCSV(csvText: string): EmployeeData[] {

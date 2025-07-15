@@ -15,12 +15,38 @@ interface EmployeeData {
 }
 
 /**
- * A simple CSV parser that handles fields quoted with double quotes.
- * It correctly processes fields that contain commas and handles escaped quotes.
- * @param line - A single line from a CSV file.
+ * A robust parser that handles CSV, TSV, and Google Sheets copy-paste formats.
+ * Auto-detects the delimiter (comma, tab, or multiple spaces) and handles quoted fields correctly.
+ * @param line - A single line from a CSV/TSV file.
  * @returns An array of strings representing the fields.
  */
 const parseCsvLine = (line: string): string[] => {
+  // Enhanced delimiter detection for Google Sheets copy-paste
+  const commaCount = (line.match(/,/g) || []).length;
+  const tabCount = (line.match(/\t/g) || []).length;
+  const multiSpaceCount = (line.match(/\s{2,}/g) || []).length; // 2+ consecutive spaces
+  
+  let delimiter = ',';
+  let isSpaceDelimited = false;
+  
+  // Priority: tabs > multiple spaces > commas
+  if (tabCount > 0) {
+    delimiter = '\t';
+  } else if (multiSpaceCount > 0 && multiSpaceCount >= commaCount) {
+    // Use regex-based splitting for multiple spaces
+    isSpaceDelimited = true;
+  } else {
+    delimiter = ',';
+  }
+  
+  console.log(`Delimiter detection - tabs: ${tabCount}, multi-spaces: ${multiSpaceCount}, commas: ${commaCount}, chosen: ${isSpaceDelimited ? 'multi-space' : delimiter}`);
+
+  if (isSpaceDelimited) {
+    // Split on 2+ consecutive spaces, then trim each field
+    return line.split(/\s{2,}/).map(field => field.trim()).filter(field => field.length > 0);
+  }
+
+  // Standard delimiter parsing
   const fields = [];
   let currentField = '';
   let inQuotes = false;
@@ -36,33 +62,42 @@ const parseCsvLine = (line: string): string[] => {
       } else {
         inQuotes = !inQuotes;
       }
-    } else if (char === ',' && !inQuotes) {
-      fields.push(currentField);
+    } else if (char === delimiter && !inQuotes) {
+      fields.push(currentField.trim());
       currentField = '';
     } else {
       currentField += char;
     }
   }
-  fields.push(currentField);
-  return fields;
+  fields.push(currentField.trim());
+  return fields.filter(field => field.length > 0);
 };
 
 
 const cleanCompetencyName = (rawName: string): string => {
-  return rawName
+  console.log(`Cleaning competency name from: "${rawName}"`);
+  const cleaned = rawName
     .replace(/^\d+\s*[.]?\s*/, '') // Remove leading numbers like "1. " or "1 "
     .replace(/\s*\[.*\]\s*/, '') // Remove the employee name in brackets
     .replace(/^\s+|\s+$/g, '') // Trim whitespace
     .replace(/\s+/g, ' ') // Normalize internal whitespace
     .trim();
+  console.log(`Cleaned competency name: "${cleaned}"`);
+  return cleaned;
 };
 
 const extractEmployeeName = (rawHeader: string): string | null => {
+  console.log(`Extracting employee name from: "${rawHeader}"`);
   const match = rawHeader.match(/\[(.*?)\]/);
-  if (!match) return null;
+  if (!match) {
+    console.log(`No bracket match found in: "${rawHeader}"`);
+    return null;
+  }
   let name = match[1].trim();
+  console.log(`Found name in brackets: "${name}"`);
   // Remove leading numbering like "1." or "6 " inside brackets
   name = name.replace(/^\d+\.\s*/,'').replace(/^\d+\s+/,'');
+  console.log(`Final cleaned name: "${name}"`);
   return name;
 };
 
@@ -137,8 +172,11 @@ export const parsePerformanceData = (text: string, employeeDataCsv?: string, org
 
   // Pre-populate employees and map column indices to competency-employee pairs
   header.forEach((h, index) => {
+    console.log(`Processing header field ${index}: "${h}"`);
     const employeeName = extractEmployeeName(h);
     const competency = cleanCompetencyName(h);
+    
+    console.log(`Field ${index} - Employee: "${employeeName}", Competency: "${competency}"`);
     
     if (employeeName && competency) {
       // Initialize employee if not exists
@@ -154,6 +192,8 @@ export const parsePerformanceData = (text: string, employeeDataCsv?: string, org
       if (!scoreData[employeeName].scores[competency]) {
         scoreData[employeeName].scores[competency] = [];
       }
+    } else {
+      console.log(`Skipping field ${index} - missing employee name or competency`);
     }
   });
   
@@ -165,15 +205,24 @@ export const parsePerformanceData = (text: string, employeeDataCsv?: string, org
     const values = parseCsvLine(line);
     console.log(`Processing row ${rowIndex + 1}, values count:`, values.length);
     
-    // Skip rows that don't have enough values or are metadata rows
-    if (values.length < 5) {
-      console.log(`Skipping row ${rowIndex + 1} - insufficient values`);
+    // Check if this is a pure score row (all numeric values)
+    const isScoreRow = values.length > 0 && values.every(val => {
+      const trimmed = val.trim();
+      return trimmed === '' || !isNaN(Number(trimmed));
+    });
+    
+    console.log(`Row ${rowIndex + 1} is score row:`, isScoreRow);
+    
+    // Skip rows that don't have any values
+    if (values.length === 0) {
+      console.log(`Skipping row ${rowIndex + 1} - no values`);
       return;
     }
     
-    // Extract position/job info from the row (usually in column 3 or 4)
+    // For score rows, we don't need job info
+    // For mixed rows, extract position/job info from the row (usually in column 3 or 4)
     let rowJobInfo = '';
-    if (values.length > 3 && values[3] && values[3].trim()) {
+    if (!isScoreRow && values.length > 3 && values[3] && values[3].trim()) {
       rowJobInfo = values[3].trim();
     }
     
@@ -204,10 +253,11 @@ export const parsePerformanceData = (text: string, employeeDataCsv?: string, org
             scoreData[mapping.employee].scores[mapping.competency].push(score);
             
             // Set job info if not already set
-            if (!scoreData[mapping.employee].job && rowJobInfo) {
+            if (!scoreData[mapping.employee].job) {
               scoreData[mapping.employee].job = dynamicEmployeeMapping[mapping.employee] || 
                                                 employeeOrgLevelMapping[mapping.employee] || 
-                                                rowJobInfo;
+                                                rowJobInfo ||
+                                                'Staff/Other';
             }
           }
         }

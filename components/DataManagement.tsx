@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Employee } from '../types';
 import { parsePerformanceData } from '../services/parser';
+import { parseEmployeeCSV, validateEmployeeData } from '../services/csvParser';
 import ResolveEmployeesDialog from './ResolveEmployeesDialog';
 import { api, UploadSession } from '../services/api';
 import { IconClipboardData, IconAnalyze, IconSparkles, IconUsers } from './Icons';
@@ -23,6 +24,38 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [resolveModal, setResolveModal] = useState<{unknown: string[]; orgMap: Record<string, string>} | null>(null);
 
+  const detectDataType = (data: string): 'employee_roster' | 'performance_data' => {
+    const lines = data.trim().split('\n').filter(line => line.trim().length > 1);
+    if (lines.length < 1) return 'performance_data'; // default fallback
+    
+    const header = lines[0].toLowerCase();
+    
+    // Check for employee roster headers (Indonesian)
+    const employeeRosterKeywords = ['nama', 'nip', 'gol', 'pangkat', 'jabatan'];
+    const foundEmployeeKeywords = employeeRosterKeywords.filter(keyword => 
+      header.includes(keyword)
+    );
+    
+    // Check for performance data headers (employee names in brackets)
+    const hasBracketedNames = header.includes('[') && header.includes(']');
+    
+    // If 3+ employee roster keywords found, it's employee roster data
+    if (foundEmployeeKeywords.length >= 3) {
+      console.log('Detected employee roster data based on keywords:', foundEmployeeKeywords);
+      return 'employee_roster';
+    }
+    
+    // If bracketed names found, it's performance data
+    if (hasBracketedNames) {
+      console.log('Detected performance data based on bracketed names');
+      return 'performance_data';
+    }
+    
+    // Default to performance data if unclear
+    console.log('Could not clearly detect data type, defaulting to performance data');
+    return 'performance_data';
+  };
+
   const extractEmployeeNamesFromData = (data: string): string[] => {
     console.log('=== EXTRACTING EMPLOYEE NAMES ===');
     console.log('Raw data length:', data.length);
@@ -35,28 +68,54 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
     console.log('Header line:', header.substring(0, 300) + '...');
     const employeeNames: string[] = [];
     
-    // Parse CSV line to handle quoted fields
-    const fields = [];
-    let currentField = '';
-    let inQuotes = false;
+    // Enhanced delimiter detection for Google Sheets copy-paste
+    const commaCount = (header.match(/,/g) || []).length;
+    const tabCount = (header.match(/\t/g) || []).length;
+    const multiSpaceCount = (header.match(/\s{2,}/g) || []).length; // 2+ consecutive spaces
     
-    for (let i = 0; i < header.length; i++) {
-      const char = header[i];
-      if (char === '"') {
-        if (inQuotes && i < header.length - 1 && header[i + 1] === '"') {
-          currentField += '"';
-          i++;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (char === ',' && !inQuotes) {
-        fields.push(currentField);
-        currentField = '';
-      } else {
-        currentField += char;
-      }
+    let delimiter = ',';
+    let isSpaceDelimited = false;
+    
+    // Priority: tabs > multiple spaces > commas
+    if (tabCount > 0) {
+      delimiter = '\t';
+    } else if (multiSpaceCount > 0 && multiSpaceCount >= commaCount) {
+      // Use regex-based splitting for multiple spaces
+      isSpaceDelimited = true;
+    } else {
+      delimiter = ',';
     }
-    fields.push(currentField);
+    
+    console.log(`Header delimiter detection - tabs: ${tabCount}, multi-spaces: ${multiSpaceCount}, commas: ${commaCount}, chosen: ${isSpaceDelimited ? 'multi-space' : delimiter}`);
+
+    let fields = [];
+    if (isSpaceDelimited) {
+      // Split on 2+ consecutive spaces, then trim each field
+      fields = header.split(/\s{2,}/).map(field => field.trim()).filter(field => field.length > 0);
+    } else {
+      // Standard delimiter parsing
+      let currentField = '';
+      let inQuotes = false;
+      
+      for (let i = 0; i < header.length; i++) {
+        const char = header[i];
+        if (char === '"') {
+          if (inQuotes && i < header.length - 1 && header[i + 1] === '"') {
+            currentField += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === delimiter && !inQuotes) {
+          fields.push(currentField.trim());
+          currentField = '';
+        } else {
+          currentField += char;
+        }
+      }
+      fields.push(currentField.trim());
+      fields = fields.filter(field => field.length > 0);
+    }
     
     console.log('Total fields parsed:', fields.length);
     console.log('Sample fields:', fields.slice(0, 5));
@@ -91,6 +150,46 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
     
     setTimeout(async () => {
       try {
+        // Detect data type first
+        const dataType = detectDataType(rawText);
+        console.log('Detected data type:', dataType);
+        
+        if (dataType === 'employee_roster') {
+          // Handle employee roster data import
+          console.log('Processing as employee roster data...');
+          
+          try {
+            const parsedEmployees = parseEmployeeCSV(rawText);
+            const validation = validateEmployeeData(parsedEmployees);
+            
+            if (!validation.valid) {
+              setError(`Data tidak valid:\n${validation.errors.join('\n')}`);
+              return;
+            }
+            
+            // Import employee roster data to database
+            await api.importEmployeesFromCSV(parsedEmployees);
+            
+            // Show success message
+            setError(null);
+            setRawText('');
+            
+            // Create a simple success notification for employee roster import
+            const successMessage = `✅ Berhasil mengimpor ${parsedEmployees.length} data pegawai ke database!\n\nSekarang Anda bisa mengimpor data kinerja yang menggunakan nama-nama pegawai ini.`;
+            alert(successMessage);
+            
+            return;
+          } catch (err) {
+            console.error('Employee roster import error:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+            setError(`Gagal mengimpor data pegawai: ${errorMessage}`);
+            return;
+          } finally {
+            setIsLoading(false);
+          }
+        }
+        
+        // Handle performance data (existing logic)
         // Extract employee names from performance data
         const employeeNamesInData = extractEmployeeNamesFromData(rawText);
         console.log('=== DEBUGGING EMPLOYEE MATCHING ===');
@@ -98,7 +197,7 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
         console.log('Total performance data employees:', employeeNamesInData.length);
         
         // Fetch organizational level mapping from database
-        let orgLevelMapping = {};
+        let orgLevelMapping: { [key: string]: string } = {};
         try {
           orgLevelMapping = await api.getEmployeeOrgLevelMapping();
           console.log('=== DATABASE EMPLOYEES ===');
@@ -260,7 +359,7 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
         // Automatically open save dialog and ask for month/year identifier
         const now = new Date();
         const defaultName = `${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
-        setDatasetName(defaultName);
+        setSessionName(defaultName);
         setShowSaveDialog(true);
         setRawText('');
       } catch (e) {
@@ -307,7 +406,7 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
           const sorted = parsed.sort((a, b) => a.name.localeCompare(b.name));
           onDataUpdate(sorted);
           setShowSaveDialog(true);
-          setDatasetName(`${new Date().getMonth() + 1}/${new Date().getFullYear()}`);
+          setSessionName(`${new Date().getMonth() + 1}/${new Date().getFullYear()}`);
           setRawText('');
         } catch (e) {
           console.error(e);
@@ -547,13 +646,20 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
           <textarea
             value={rawText}
             onChange={(e) => setRawText(e.target.value)}
-            placeholder="Paste CSV performance data here...
+            placeholder="Paste CSV data here...
 
-Expected format:
-- Header row with competencies and employee names in brackets
-- Example: '1. Competency Name [Employee Name]'
+Supported data types:
+
+🏢 EMPLOYEE ROSTER DATA:
+- Headers: No., Nama, NIP, Gol, Pangkat, Jabatan, Sub-Jabatan
+- Use this to import employee basic information first
+
+📊 PERFORMANCE DATA:
+- Headers with employee names in brackets: 'Competency [Employee Name]'  
 - Data rows with numeric scores (10, 65, 75, etc.)
-- Multiple assessment rows per employee are supported"
+- Multiple assessment rows per employee supported
+
+The system will auto-detect the data type and process accordingly."
             className="w-full h-60 p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-sm font-mono mb-4"
           />
           
@@ -774,7 +880,7 @@ Expected format:
               <button
                 onClick={() => {
                   setShowSaveDialog(false);
-                  setDatasetName('');
+                  setSessionName('');
                 }}
                 className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
               >

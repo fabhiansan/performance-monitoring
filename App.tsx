@@ -92,7 +92,7 @@ const App: React.FC = () => {
       <div className="min-h-screen bg-gray-100 dark:bg-gray-950 flex items-center justify-center">
         <div className="text-center">
           <IconSparkles className="w-16 h-16 mx-auto text-blue-500 animate-pulse mb-4" />
-          <p className="text-xl text-gray-600 dark:text-gray-400">Loading Performance Dashboard...</p>
+          <p className="text-xl text-gray-600 dark:text-gray-400">Memuat Dashboard Penilaian Kinerja Pegawai Dinas Sosial...</p>
         </div>
       </div>
     );
@@ -142,8 +142,8 @@ const App: React.FC = () => {
                       <IconSparkles className="w-16 h-16 mx-auto text-blue-500" />
                   </div>
                 </div>
-                <h1 className="text-4xl md:text-5xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-teal-400">
-                  Performance Dashboard
+                <h1 className="text-3xl md:text-4xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-teal-400">
+                  Dashboard Penilaian Kinerja Pegawai Dinas Sosial
                 </h1>
                 <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-8">
                   Start by importing employee data, then add performance data for comprehensive analytics

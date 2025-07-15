@@ -78,8 +78,8 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
   return (
     <div className="max-w-7xl mx-auto p-6 bg-white dark:bg-gray-900">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-          Laporan Penilaian Kinerja Pegawai
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4 text-center">
+          Laporan Penilaian Kinerja Pegawai Dinas Sosial
         </h1>
         
         <div className="flex flex-col sm:flex-row gap-4 mb-6">

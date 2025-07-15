@@ -22,7 +22,7 @@ const Sidebar: React.FC<SidebarProps> = ({ datasets, selectedDatasetId, onDatase
     { id: 'analytics', label: 'Analytics', icon: IconChartBar },
     { id: 'rekap-kinerja', label: 'Rekap Kinerja', icon: IconCalculator },
     { id: 'report', label: 'Laporan', icon: IconDocument },
-    { id: 'table', label: 'Data', icon: IconCog },
+    { id: 'data', label: 'Data', icon: IconCog },
   ];
 
   return (
