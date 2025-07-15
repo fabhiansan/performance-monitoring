@@ -371,7 +371,7 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
           if (e.message.includes('header row')) {
             errorMessage += '\n\nTips:\n• Ensure the first row contains column headers\n• Headers should include employee names in brackets like: "Competency [Employee Name]"';
           } else if (e.message.includes('numeric scores')) {
-            errorMessage += '\n\nTips:\n• Ensure data rows contain numeric scores (10, 65, 75, etc.) or string ratings\n• Supported string ratings: "Baik" (75), "Sangat Baik" (85), "Kurang Baik" (65)\n• Check for missing or invalid values in score columns';
+            errorMessage += '\n\nTips:\n• Ensure data rows contain numeric scores (10, 65, 75, etc.) or string ratings\n• Supported string ratings: \'Baik\' (75), \'Sangat Baik\' (85), \'Kurang Baik\' (65)\n• Check for missing or invalid values in score columns';
           } else if (e.message.includes('format')) {
             errorMessage += '\n\nSupported formats:\n• Standard CSV with quoted fields\n• Headers: "Competency [Employee Name]"\n• Multiple assessment rows per employee are supported';
           }
@@ -657,7 +657,7 @@ Supported data types:
 📊 PERFORMANCE DATA:
 - Headers with employee names in brackets: 'Competency [Employee Name]'  
 - Data rows with numeric scores (10, 65, 75, etc.) or string ratings
-- Supported string ratings: "Baik" (75), "Sangat Baik" (85), "Kurang Baik" (65)
+- Supported string ratings: 'Baik' (75), 'Sangat Baik' (85), 'Kurang Baik' (65)
 - Multiple assessment rows per employee supported
 
 The system will auto-detect the data type and process accordingly."
