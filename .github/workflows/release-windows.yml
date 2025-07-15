@@ -71,6 +71,8 @@ jobs:
         
       - name: Build application
         run: npm run dist:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
       - name: List build artifacts
         run: |
