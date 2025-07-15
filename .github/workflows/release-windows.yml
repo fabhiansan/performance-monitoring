@@ -51,17 +51,6 @@ jobs:
           node --version
           npm --version
           npm list electron
-          
-      - name: Rebuild native modules for Windows
-        run: |
-          npm run electron:rebuild:win
-        continue-on-error: true
-        
-      - name: Fallback native module rebuild
-        if: failure()
-        run: |
-          npm rebuild better-sqlite3
-          npx electron-rebuild -f -w better-sqlite3 --arch x64
         
       - name: Verify native modules
         run: |

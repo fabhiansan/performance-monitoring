@@ -16,16 +16,17 @@
     "dev:full": "concurrently \"npm run server:node\" \"npm run dev\"",
     "server:node": "npm run rebuild:node && node server/server.js",
     "rebuild:node": "npm rebuild better-sqlite3",
+    "postinstall": "electron-builder install-app-deps",
     "electron": "electron .",
     "electron:dev": "npm run electron:rebuild && wait-on http://localhost:5173 && NODE_ENV=development electron .",
     "electron:build": "npm run build && NODE_ENV=production electron .",
     "electron:rebuild": "npx electron-rebuild -f -w better-sqlite3",
     "electron:rebuild:win": "npm run electron:rebuild -- --arch x64",
     "rebuild:debug": "npm list electron && npx electron-rebuild -f -w better-sqlite3 --debug",
-    "dist": "npm run build && npm run electron:rebuild && electron-builder",
-    "dist:win": "npm run build && npm run electron:rebuild:win && electron-builder --win",
-    "dist:mac": "npm run build && npm run electron:rebuild && electron-builder --mac",
-    "dist:linux": "npm run build && npm run electron:rebuild && electron-builder --linux"
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:linux": "npm run build && electron-builder --linux"
   },
   "dependencies": {
     "@types/jspdf": "^1.3.3",
@@ -58,8 +59,8 @@
       "output": "release"
     },
     "publish": null,
-    "includeSubNodeModules": true,
     "afterPack": "./build-scripts.js",
+    "downloadAlternateFFmpeg": false,
     "files": [
       "dist/**/*",
       "server/**/*",
@@ -92,10 +93,7 @@
         }
       ],
       "requestedExecutionLevel": "asInvoker",
-      "forceCodeSigning": false,
-      "includeSubNodeModules": true,
-      "electronDist": "node_modules/electron/dist",
-      "electronVersion": "30.0.6"
+      "forceCodeSigning": false
     },
     "nsis": {
       "oneClick": false,
