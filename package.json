@@ -1,8 +1,8 @@
 {
-  "name": "employee-performance-analyzer",
-  "productName": "Employee Performance Analyzer",
-  "description": "A comprehensive dashboard for analyzing employee performance data",
-  "author": "Your Name",
+  "name": "dashboard-penilaian-kinerja-pegawai",
+  "productName": "Dashboard Penilaian Kinerja Pegawai Dinas Sosial",
+  "description": "Dashboard komprehensif untuk analisis kinerja pegawai Dinas Sosial",
+  "author": "Fabhianto Maoludyo",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -12,7 +12,7 @@
     "dev:vite": "vite",
     "dev": "concurrently \"npm:dev:vite\" \"npm:electron:dev\"",
     "build": "vite build",
-    "preview": "vite preview",    
+    "preview": "vite preview",
     "dev:full": "concurrently \"npm run server:node\" \"npm run dev\"",
     "server:node": "npm run rebuild:node && node server/server.js",
     "rebuild:node": "npm rebuild better-sqlite3",
@@ -37,6 +37,7 @@
     "recharts": "^3.1.0"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.1",
     "@types/node": "^22.14.0",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
@@ -44,13 +45,14 @@
     "concurrently": "^8.2.2",
     "electron": "^30.0.6",
     "electron-builder": "^26.0.12",
+    "electron-rebuild": "^3.2.9",
     "typescript": "~5.7.2",
     "vite": "^6.2.0",
     "wait-on": "^7.2.0"
   },
   "build": {
-    "appId": "com.yourcompany.employee-performance-analyzer",
-    "productName": "Employee Performance Analyzer",
+    "appId": "com.dinsos.dashboard-penilaian-kinerja-pegawai",
+    "productName": "Dashboard Penilaian Kinerja Pegawai Dinas Sosial",
     "directories": {
       "output": "release"
     },
@@ -96,7 +98,7 @@
       "allowElevation": false,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Employee Performance Analyzer",
+      "shortcutName": "Dashboard Penilaian Kinerja Pegawai Dinas Sosial",
       "menuCategory": "Business",
       "runAfterFinish": true,
       "deleteAppDataOnUninstall": false

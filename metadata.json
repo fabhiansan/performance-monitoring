@@ -1,5 +1,5 @@
 {
-  "name": "Employee Performance Analyzer",
-  "description": "An application to analyze employee performance data from a CSV file, visualize individual results, and generate AI-powered summaries using the Gemini API.",
+  "name": "Dashboard Penilaian Kinerja Pegawai Dinas Sosial",
+  "description": "Aplikasi dashboard untuk menganalisis data kinerja pegawai Dinas Sosial dari file CSV, memvisualisasikan hasil individual, dan menghasilkan ringkasan bertenaga AI menggunakan Gemini API.",
   "requestFramePermissions": []
 }

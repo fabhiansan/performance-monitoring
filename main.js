@@ -28,7 +28,7 @@ function createWindow() {
       webSecurity: true
     },
     icon: join(__dirname, 'icon.png'), // App icon
-    title: 'Employee Performance Analyzer',
+    title: 'Dashboard Penilaian Kinerja Pegawai Dinas Sosial',
     show: false // Don't show until ready
   });
 
@@ -193,7 +193,7 @@ function stopServer() {
 // App event handlers
 app.whenReady().then(async () => {
   try {
-    console.log('Starting Employee Performance Analyzer...');
+    console.log('Starting Dashboard Penilaian Kinerja Pegawai Dinas Sosial...');
     
     // Initialize config
     config = new ElectronConfig();
@@ -212,7 +212,7 @@ app.whenReady().then(async () => {
     // Show error dialog on Windows/production
     if (!isDev) {
       dialog.showErrorBox('Startup Failed', 
-        `Failed to start Employee Performance Analyzer:\n\n${error.message}\n\nPlease check if:\n- The application files are not corrupted\n- You have write permissions to the user data directory\n- No other instance is running`
+        `Failed to start Dashboard Penilaian Kinerja Pegawai Dinas Sosial:\n\n${error.message}\n\nPlease check if:\n- The application files are not corrupted\n- You have write permissions to the user data directory\n- No other instance is running`
       );
     }
     
