@@ -25,8 +25,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: '18'
           
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -36,17 +35,47 @@ jobs:
       - name: Install Visual Studio Build Tools
         uses: microsoft/setup-msbuild@v2
         
-      - name: Install dependencies
-        run: npm ci
-        
+      - name: Clean and install dependencies
+        run: |
+          if (Test-Path package-lock.json) { Remove-Item package-lock.json }
+          npm install
+          
+      - name: Check installed versions
+        run: |
+          node --version
+          npm --version
+          npm list electron
+          
       - name: Rebuild native modules for Windows
-        run: npm run electron:rebuild:win
+        run: |
+          npm run electron:rebuild:win
+        continue-on-error: true
+        
+      - name: Fallback native module rebuild
+        if: failure()
+        run: |
+          npm rebuild better-sqlite3 --arch=x64
+          npx electron-rebuild -f -w better-sqlite3
+        
+      - name: Verify native modules
+        run: |
+          if (Test-Path node_modules/better-sqlite3/build/Release/better_sqlite3.node) {
+            Write-Host "Native module built successfully"
+          } else {
+            Write-Host "Native module build failed"
+            exit 1
+          }
         
       - name: Build application
         run: npm run dist:win
         
       - name: List build artifacts
-        run: dir release
+        run: |
+          if (Test-Path release) { 
+            Get-ChildItem release -Recurse | Select-Object Name, Length, LastWriteTime 
+          } else { 
+            Write-Host "Release directory not found" 
+          }
         
       - name: Get version from tag or input
         id: version
