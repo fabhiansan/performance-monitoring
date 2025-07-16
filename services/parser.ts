@@ -122,9 +122,9 @@ const convertStringRatingToScore = (rating: string): number => {
 };
 
 /**
- * Parse employee data from CSV file to get names and golongan levels
+ * Parse employee data from CSV file to get names and position details
  * @param csvText - CSV content with employee data
- * @returns Object mapping employee names to eselon levels
+ * @returns Object mapping employee names to detailed position information
  */
 export const parseEmployeeData = (csvText: string): { [employeeName: string]: string } => {
   const lines = csvText.trim().split('\n').filter(line => line.trim().length > 1);
@@ -134,29 +134,75 @@ export const parseEmployeeData = (csvText: string): { [employeeName: string]: st
   for (let i = 1; i < lines.length; i++) {
     const values = parseCsvLine(lines[i]);
     
-    // Skip empty rows
-    if (values.length < 4 || !values[1] || !values[3]) continue;
+    // Skip empty rows - now expecting at least 6 columns for position and subPosition
+    if (values.length < 6 || !values[1] || !values[3]) continue;
     
     const name = values[1].trim();
     const golongan = values[3].trim();
+    const position = values[5]?.trim() || '';
+    const subPosition = values[6]?.trim() || '';
     
     if (name && golongan) {
       // Extract roman numeral from golongan (e.g., "IV/c" -> "IV", "III/d" -> "III")
       const romanNumeral = golongan.split('/')[0];
       
-      // Map roman numerals to eselon levels
-      let eselonLevel = 'Staff/Other';
-      if (romanNumeral === 'IV') {
-        eselonLevel = 'Eselon IV';
+      let detailedPosition = '';
+      
+      // Determine position based on roman numeral and position fields
+      if (romanNumeral === 'II') {
+        detailedPosition = 'Eselon II';
       } else if (romanNumeral === 'III') {
-        eselonLevel = 'Eselon III';
+        detailedPosition = 'Eselon III';
+      } else if (romanNumeral === 'IV') {
+        detailedPosition = 'Eselon IV';
+      } else {
+        // For staff positions, determine detailed role based on position and subPosition
+        detailedPosition = determineStaffPosition(position, subPosition, golongan);
       }
       
-      employeeMapping[name] = eselonLevel;
+      employeeMapping[name] = detailedPosition;
     }
   }
   
   return employeeMapping;
+};
+
+/**
+ * Determine detailed staff position based on position and subPosition fields
+ * @param position - Main position field (Jabatan)
+ * @param subPosition - Sub position field (Sub-Jabatan)
+ * @param golongan - Golongan field to determine ASN/Non-ASN status
+ * @returns Detailed staff position string
+ */
+const determineStaffPosition = (position: string, subPosition: string, golongan: string): string => {
+  const positionLower = position.toLowerCase();
+  const subPositionLower = subPosition.toLowerCase();
+  
+  // Determine ASN/Non-ASN status based on golongan
+  // ASN typically have structured golongan like "III/a", "II/b", etc.
+  // Non-ASN might have different patterns or be empty
+  const isASN = golongan && golongan.match(/^[IVX]+\/[a-d]$/i);
+  const asnStatus = isASN ? 'ASN' : 'Non ASN';
+  
+  // Determine department/bidang based on position and subPosition
+  if (positionLower.includes('sekretariat') || subPositionLower.includes('sekretariat')) {
+    return `Staff ${asnStatus} Sekretariat`;
+  } else if (positionLower.includes('hukum') || subPositionLower.includes('hukum')) {
+    return `Staff ${asnStatus} Bidang Hukum`;
+  } else if (positionLower.includes('pemberdayaan') || subPositionLower.includes('pemberdayaan')) {
+    return `Staff ${asnStatus} Bidang Pemberdayaan Sosial`;
+  } else if (positionLower.includes('rehabilitasi') || subPositionLower.includes('rehabilitasi')) {
+    return `Staff ${asnStatus} Bidang Rehabilitasi Sosial`;
+  } else if (positionLower.includes('perlindungan') || subPositionLower.includes('perlindungan') || 
+             positionLower.includes('jaminan') || subPositionLower.includes('jaminan')) {
+    return `Staff ${asnStatus} Bidang Perlindungan dan Jaminan Sosial`;
+  } else if (positionLower.includes('bencana') || subPositionLower.includes('bencana') ||
+             positionLower.includes('penanganan') || subPositionLower.includes('penanganan')) {
+    return `Staff ${asnStatus} Bidang Penanganan Bencana`;
+  } else {
+    // Default fallback for unrecognized positions
+    return `Staff ${asnStatus} Sekretariat`;
+  }
 };
 
 
