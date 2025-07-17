@@ -38,7 +38,7 @@ const PARAMETER_WEIGHTS = {
   // Parameter 5, 7, 8 for Staff - UPDATED WEIGHTS
   kualitasKerjaStaff: {
     // Staff: 50% for kualitas kinerja, 10% each for communication and social understanding
-    weights: [50, 10, 10], // Max total: 70 (unchanged for staff)
+    weights: [42.5, 8.5, 8.5], // Max total: 70 (unchanged for staff)
     parameters: [
       'kualitas kinerja',              // 50% (param 5)
       'kemampuan berkomunikasi',       // 10% (param 7)
@@ -51,7 +51,7 @@ const PARAMETER_WEIGHTS = {
  * Determines if employee is Eselon (II/III/IV) or Staff based on position
  */
 const getPositionType = (employee: Employee): 'eselon' | 'staff' => {
-  const position = employee.job?.toLowerCase() || '';
+  const position = employee.organizational_level?.toLowerCase() || '';
   
   // Check for Eselon II, III, and IV indicators
   if (position.includes('eselon ii') || 

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Employee, CompetencyScore } from '../types';
+import { Employee } from '../types';
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { IconUser, IconBriefcase } from './Icons';
 
@@ -45,13 +45,13 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee }) => {
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-4">
           <div className="flex-shrink-0 p-3 rounded-full" style={{ backgroundColor: `${primaryColor}20` }}>
-            <IconUser className="w-6 h-6" style={{ color: primaryColor }} />
+            <IconUser className={`w-6 h-6 text-[${primaryColor}]`} />
           </div>
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">{employee.name}</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center">
               <IconBriefcase className="w-4 h-4 mr-1.5" />
-              {employee.job}
+              {employee.organizational_level}
             </p>
           </div>
         </div>

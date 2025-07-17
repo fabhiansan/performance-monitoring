@@ -119,7 +119,7 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
 
   // Export final report as CSV
   const handleExportReport = useCallback(() => {
-    const headers = ['NO.', 'NAMA', 'POSITION', 'PERILAKU KINERJA (30%)', 'KUALITAS KERJA', 'PENILAIAN PIMPINAN', 'TOTAL NILAI'];
+    const headers = ['NO.', 'NAMA', 'POSITION', 'PERILAKU KINERJA (MAX 25.5)', 'KUALITAS KERJA', 'PENILAIAN PIMPINAN', 'TOTAL NILAI'];
     const csvData = [
       headers.join(','),
       ...filteredData.map((employee, index) => [
@@ -239,7 +239,7 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
           <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Avg Perilaku Kinerja</h3>
           <p className="text-2xl font-bold text-green-600 dark:text-green-400">{averageScores.perilaku.toFixed(2)}</p>
-          <p className="text-xs text-gray-500">Weight: 30%</p>
+          <p className="text-xs text-gray-500">Max: 25.5 pts (of 85)</p>
         </div>
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
           <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Avg Kualitas Kerja</h3>
@@ -321,13 +321,13 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
                   Position<br/><span className="text-gray-500 text-xs">Type</span>
                 </th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Perilaku Kinerja<br/><span className="text-green-600">(30%)</span>
+                  Perilaku Kinerja<br/><span className="text-green-600">(Max 25.5)</span>
                 </th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Kualitas Kerja<br/><span className="text-blue-600">(Eselon:50% | Staff:70%)</span>
                 </th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Penilaian Pimpinan<br/><span className="text-purple-600">(Eselon only: 20%)</span>
+                  Penilaian Pimpinan<br/><span className="text-purple-600">(Eselon only: max 17 pts)</span>
                 </th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Total Nilai
@@ -343,7 +343,7 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
                   <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">
                     <div>
                       <div className="font-medium">{employee.name}</div>
-                      <div className="text-gray-500 dark:text-gray-400 text-xs">{employee.job}</div>
+                      <div className="text-gray-500 dark:text-gray-400 text-xs">{employee.organizational_level}</div>
                     </div>
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-center">
@@ -418,14 +418,14 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
             <div className="space-y-3">
               <div>
                 <h5 className="font-medium text-green-700 dark:text-green-300 mb-1">
-                  1. Perilaku Kerja (30%)
+                  1. Perilaku Kerja (Max 25.5)
                 </h5>
                 <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
-                  <li>• Kehadiran dan Tepat Waktu: <span className="font-bold">4.25</span></li>
-                  <li>• Manajemen waktu kerja: <span className="font-bold">4.25</span></li>
-                  <li>• Kerja sama dan teamwork: <span className="font-bold">4.25</span></li>
-                  <li>• Inisiatif dan Flexibilitas: <span className="font-bold">4.25</span></li>
-                  <li>• Kepemimpinan (loyalitas): <span className="font-bold text-red-600">8.5</span> <span className="font-bold text-red-600">REVISED</span></li>
+                  <li>• Kehadiran dan Tepat Waktu: <span className="font-bold">5%</span></li>
+                  <li>• Manajemen waktu kerja: <span className="font-bold">5%</span></li>
+                  <li>• Kerja sama dan teamwork: <span className="font-bold">5%</span></li>
+                  <li>• Inisiatif dan Flexibilitas: <span className="font-bold">5%</span></li>
+                  <li>• Kepemimpinan (loyalitas): <span className="font-bold text-red-600">10%</span> <span className="font-bold text-red-600">REVISED</span></li>
                 </ul>
                 <p className="text-xs text-gray-500 mt-1"><span className="font-bold">Max: 25.5</span></p>
               </div>
@@ -435,8 +435,8 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
                 </h5>
                 <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
                   <li>• Kualitas Kinerja: <span className="font-bold">25.5</span></li>
-                  <li>• Kemampuan berkomunikasi: <span className="font-bold">8.5</span></li>
-                  <li>• Pemahaman urusan sosial: <span className="font-bold">8.5</span></li>
+                  <li>• Kemampuan berkomunikasi: <span className="font-bold">10%</span></li>
+                  <li>• Pemahaman urusan sosial: <span className="font-bold">10%</span></li>
                 </ul>
                 <p className="text-xs text-gray-500 mt-1"><span className="font-bold">Max: 42.5</span></p>
               </div>
@@ -457,25 +457,25 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
             <div className="space-y-3">
               <div>
                 <h5 className="font-medium text-green-700 dark:text-green-300 mb-1">
-                  1. Perilaku Kerja (30%)
+                  1. Perilaku Kerja (Max 25.5)
                 </h5>
                 <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
-                  <li>• Kehadiran dan Tepat Waktu: <span className="font-bold">4.25</span></li>
-                  <li>• Manajemen waktu kerja: <span className="font-bold">4.25</span></li>
-                  <li>• Kerja sama dan teamwork: <span className="font-bold">4.25</span></li>
-                  <li>• Inisiatif dan Flexibilitas: <span className="font-bold">4.25</span></li>
-                  <li>• Kepemimpinan (loyalitas): <span className="font-bold text-red-600">8.5</span> <span className="font-bold text-red-600">REVISED</span></li>
+                  <li>• Kehadiran dan Tepat Waktu: <span className="font-bold">5%</span></li>
+                  <li>• Manajemen waktu kerja: <span className="font-bold">5%</span></li>
+                  <li>• Kerja sama dan teamwork: <span className="font-bold">5%</span></li>
+                  <li>• Inisiatif dan Flexibilitas: <span className="font-bold">5%</span></li>
+                  <li>• Kepemimpinan (loyalitas): <span className="font-bold text-red-600">10%</span> <span className="font-bold text-red-600">REVISED</span></li>
                 </ul>
                 <p className="text-xs text-gray-500 mt-1"><span className="font-bold">Max: 25.5</span></p>
               </div>
               <div>
                 <h5 className="font-medium text-blue-700 dark:text-blue-300 mb-1">
-                  2. Kualitas Kinerja (70%) <span className="font-bold text-red-600">REVISED</span>
+                  2. Kualitas Kinerja (70%)
                 </h5>
                 <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
-                  <li>• Kualitas Kinerja: <span className="font-bold text-red-600">42.5</span> <span className="font-bold text-red-600">REVISED</span></li>
-                  <li>• Kemampuan berkomunikasi: <span className="font-bold">8.5</span></li>
-                  <li>• Pemahaman urusan sosial: <span className="font-bold">8.5</span></li>
+                  <li>• Kualitas Kinerja: <span className="font-bold">50%</span></li>
+                  <li>• Kemampuan berkomunikasi: <span className="font-bold">10%</span></li>
+                  <li>• Pemahaman urusan sosial: <span className="font-bold">10%</span></li>
                 </ul>
                 <p className="text-xs text-gray-500 mt-1"><span className="font-bold">Max: 59.5</span></p>
               </div>
@@ -531,7 +531,7 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
               {/* Perilaku Kinerja Breakdown */}
               <div className="border border-green-200 dark:border-green-800 p-4 rounded-lg">
                 <h4 className="font-medium text-green-700 dark:text-green-300 mb-3">
-                  Perilaku Kinerja (30% Weight)
+                  Perilaku Kinerja (25.5 pts)
                 </h4>
                 <div className="space-y-2 text-sm">
                   {selectedEmployee.performance.filter((p: CompetencyScore) => {
@@ -543,12 +543,13 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
                   }).map((perf: CompetencyScore, idx: number) => {
                     let weight = 4.25;
                     if (perf.name.toLowerCase().includes('kepemimpinan')) weight = 8.5;
-                    const weightedScore = (perf.score / 100) * weight;
+                    const weightPercent = (weight / 85) * 100;
+                     const weightedScore = (perf.score / 100) * weight;
                     return (
                       <div key={idx} className="flex justify-between">
                         <span className="text-gray-600 dark:text-gray-400">{perf.name}:</span>
                         <span className="font-medium">
-                          {perf.score}% × {weight} = {weightedScore.toFixed(2)}
+                          {perf.score}% × {weightPercent.toFixed(0)}% = {weightedScore.toFixed(2)}
                         </span>
                       </div>
                     );
@@ -579,7 +580,7 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
                       <div key={idx} className="flex justify-between">
                         <span className="text-gray-600 dark:text-gray-400">{perf.name}:</span>
                         <span className="font-medium">
-                          {perf.score}% × {weight} = {weightedScore.toFixed(2)}
+                          {perf.score}% × {(weight / 85) * 100}% = {weightedScore.toFixed(2)}
                         </span>
                       </div>
                     );
@@ -608,7 +609,7 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
                     <div className="flex justify-between">
                       <span className="text-gray-600 dark:text-gray-400">Penilaian Pimpinan:</span>
                       <span className="font-medium">
-                        {(manualScores[selectedEmployee.name] || 80)}% × 0.17 = {((selectedEmployee.performanceRecap.penilaianPimpinan / 100) * 17).toFixed(2)}
+                        {(manualScores[selectedEmployee.name] || 80)}% of 100 × 17 pts = {((selectedEmployee.performanceRecap.penilaianPimpinan / 100) * 17).toFixed(2)}
                       </span>
                     </div>
                   )}

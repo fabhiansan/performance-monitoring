@@ -3,6 +3,7 @@ import { Employee } from '../types';
 import { parsePerformanceData } from '../services/parser';
 import { parseEmployeeCSV, validateEmployeeData } from '../services/csvParser';
 import ResolveEmployeesDialog from './ResolveEmployeesDialog';
+import AddEmployeeForm from './AddEmployeeForm';
 import { api, UploadSession } from '../services/api';
 import { IconClipboardData, IconAnalyze, IconSparkles, IconUsers } from './Icons';
 
@@ -23,6 +24,10 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
   const [showMergeOptions, setShowMergeOptions] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [resolveModal, setResolveModal] = useState<{unknown: string[]; orgMap: Record<string, string>} | null>(null);
+  const [newEmployeeQueue, setNewEmployeeQueue] = useState<string[]>([]);
+  const [showAddEmployeeForm, setShowAddEmployeeForm] = useState(false);
+  const [currentNewEmployeeName, setCurrentNewEmployeeName] = useState<string>('');
+  const [resolveMapping, setResolveMapping] = useState<Record<string, { chosenName: string; orgLevel: string; isNew: boolean }> | null>(null);
 
   const detectDataType = (data: string): 'employee_roster' | 'performance_data' => {
     const lines = data.trim().split('\n').filter(line => line.trim().length > 1);
@@ -388,13 +393,24 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
 
   const handleResolveSubmit = async (mapping: Record<string, { chosenName: string; orgLevel: string; isNew: boolean }>) => {
     if (!resolveModal) return;
+    
+    // Check if there are new employees that need to be created
+    const newEmployees = Object.entries(mapping).filter(([_, value]) => value.isNew);
+    
+    if (newEmployees.length > 0) {
+      // Store the mapping and start the new employee creation workflow
+      setResolveMapping(mapping);
+      setNewEmployeeQueue(newEmployees.map(([, value]) => value.chosenName));
+      setCurrentNewEmployeeName(newEmployees[0][1].chosenName);
+      setShowAddEmployeeForm(true);
+      setResolveModal(null);
+      return;
+    }
+    
+    // If no new employees, proceed with original logic
     try {
-      // add new employees if needed
+      // map original column name to chosen org level for parsing
       for (const [orig, value] of Object.entries(mapping)) {
-        if (value.isNew) {
-          await api.addEmployee(value.chosenName, '-', 'N/A', '-', '-', '-', value.orgLevel);
-        }
-        // map original column name to chosen org level for parsing
         resolveModal.orgMap[orig] = value.orgLevel;
       }
       setResolveModal(null);
@@ -423,6 +439,64 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
 
   const handleResolveCancel = () => {
     setResolveModal(null);
+  };
+
+  const handleNewEmployeeAdded = () => {
+    // Remove the current employee from the queue
+    const remainingQueue = newEmployeeQueue.slice(1);
+    setNewEmployeeQueue(remainingQueue);
+    
+    if (remainingQueue.length > 0) {
+      // Move to the next employee
+      setCurrentNewEmployeeName(remainingQueue[0]);
+    } else {
+      // All new employees have been created, proceed with parsing
+      setShowAddEmployeeForm(false);
+      setCurrentNewEmployeeName('');
+      proceedWithParsing();
+    }
+  };
+
+  const handleNewEmployeeCancel = () => {
+    // Cancel the entire process
+    setShowAddEmployeeForm(false);
+    setCurrentNewEmployeeName('');
+    setNewEmployeeQueue([]);
+    setResolveMapping(null);
+    setError('Employee creation cancelled.');
+  };
+
+  const proceedWithParsing = async () => {
+    if (!resolveMapping) return;
+    
+    try {
+      setIsLoading(true);
+      
+      // Get the updated organizational level mapping
+      const orgLevelMapping = await api.getEmployeeOrgLevelMapping();
+      
+      // Re-run parsing with updated mapping
+      setTimeout(() => {
+        try {
+          const parsed = parsePerformanceData(rawText, undefined, orgLevelMapping);
+          const sorted = parsed.sort((a, b) => a.name.localeCompare(b.name));
+          onDataUpdate(sorted);
+          setShowSaveDialog(true);
+          setSessionName(`${new Date().getMonth() + 1}/${new Date().getFullYear()}`);
+          setRawText('');
+          setResolveMapping(null);
+        } catch (e) {
+          console.error(e);
+          setError('Failed after creating new employees.');
+        } finally {
+          setIsLoading(false);
+        }
+      }, 10);
+    } catch (e) {
+      console.error(e);
+      setError('Error while processing new employees.');
+      setIsLoading(false);
+    }
   };
 
   const handleFileUpload = (file: File) => {
@@ -459,7 +533,7 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
       const avgScore = emp.performance.reduce((s, p) => s + p.score, 0) / emp.performance.length;
       return {
         Name: emp.name,
-        Job: emp.job,
+        Job: emp.organizational_level,
         'Average Score': avgScore.toFixed(2),
         ...emp.performance.reduce((acc, perf) => ({
           ...acc,
@@ -726,7 +800,7 @@ The system will auto-detect the data type and process accordingly."
               {employees.map((emp, index) => (
                 <div key={index} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded">
                   <span className="font-medium text-gray-900 dark:text-white">{emp.name}</span>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">{emp.job}</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{emp.organizational_level}</span>
                 </div>
               ))}
             </div>
@@ -903,6 +977,24 @@ The system will auto-detect the data type and process accordingly."
         unknownEmployees={resolveModal.unknown}
         onSubmit={handleResolveSubmit}
         onCancel={handleResolveCancel}
+      />
+    )}
+    
+    {showAddEmployeeForm && (
+      <AddEmployeeForm
+        employee={{
+          id: 0,
+          name: currentNewEmployeeName,
+          nip: '',
+          gol: '',
+          pangkat: '',
+          position: '',
+          sub_position: '',
+          organizational_level: 'Staff/Other',
+        }}
+        isEditMode={false}
+        onEmployeeAdded={handleNewEmployeeAdded}
+        onCancel={handleNewEmployeeCancel}
       />
     )}
   </div>

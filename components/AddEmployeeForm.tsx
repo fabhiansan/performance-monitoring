@@ -271,8 +271,20 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeAdded, onCa
               disabled={isSubmitting}
             >
               <option value="Staff/Other">Staff/Other</option>
-              <option value="Eselon IV">Eselon IV</option>
+              <option value="Eselon II">Eselon II</option>
               <option value="Eselon III">Eselon III</option>
+              <option value="Eselon IV">Eselon IV</option>
+              <option value="Staff ASN Sekretariat">Staff ASN Sekretariat</option>
+              <option value="Staff Non ASN Sekretariat">Staff Non ASN Sekretariat</option>
+              <option value="Staff ASN Bidang Hukum">Staff ASN Bidang Hukum</option>
+              <option value="Staff ASN Bidang Pemberdayaan Sosial">Staff ASN Bidang Pemberdayaan Sosial</option>
+              <option value="Staff Non ASN Bidang Pemberdayaan Sosial">Staff Non ASN Bidang Pemberdayaan Sosial</option>
+              <option value="Staff ASN Bidang Rehabilitasi Sosial">Staff ASN Bidang Rehabilitasi Sosial</option>
+              <option value="Staff Non ASN Bidang Rehabilitasi Sosial">Staff Non ASN Bidang Rehabilitasi Sosial</option>
+              <option value="Staff ASN Bidang Perlindungan dan Jaminan Sosial">Staff ASN Bidang Perlindungan dan Jaminan Sosial</option>
+              <option value="Staff Non ASN Bidang Perlindungan dan Jaminan Sosial">Staff Non ASN Bidang Perlindungan dan Jaminan Sosial</option>
+              <option value="Staff ASN Bidang Penanganan Bencana">Staff ASN Bidang Penanganan Bencana</option>
+              <option value="Staff Non ASN Bidang Penanganan Bencana">Staff Non ASN Bidang Penanganan Bencana</option>
             </select>
             {errors.organizationalLevel && (
               <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.organizationalLevel}</p>

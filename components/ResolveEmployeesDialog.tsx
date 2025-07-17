@@ -54,12 +54,20 @@ const ResolveEmployeesDialog: React.FC<ResolveEmployeesDialogProps> = ({ unknown
 
   const handleSubmit = () => {
     const mapping: Record<string, { chosenName: string; orgLevel: string; isNew: boolean }> = {};
+    const newEmployeeNames: string[] = [];
+    
     unknownEmployees.forEach(name => {
       const chosen = selection[name] || '__NEW__';
       const isNew = chosen === '__NEW__';
       const orgLevel = isNew ? 'Staff/Other' : (suggestionsMap[name]?.find(s => s.name === chosen)?.organizational_level || 'Staff/Other');
       mapping[name] = { chosenName: isNew ? name : chosen, orgLevel, isNew };
+      
+      if (isNew) {
+        newEmployeeNames.push(name);
+      }
     });
+    
+    // Proceed with default behavior – parent will handle any new employee logic
     onSubmit(mapping);
   };
 

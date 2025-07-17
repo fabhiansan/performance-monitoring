@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Employee, CompetencyScore } from '../types';
+import { Employee } from '../types';
 
 interface TableViewProps {
   employees: Employee[];
@@ -12,8 +12,8 @@ const TableView: React.FC<TableViewProps> = ({ employees }) => {
   const [activeTab, setActiveTab] = useState<'all' | 'eselon' | 'staff'>('all');
 
   // Helper to categorize employees by organizational level
-  const categorizeEmployee = (job: string): 'Eselon III' | 'Eselon IV' | 'Staff' => {
-    const jobTrimmed = job.trim();
+  const categorizeEmployee = (level: string): 'Eselon III' | 'Eselon IV' | 'Staff' => {
+    const jobTrimmed = level.trim();
     if (jobTrimmed === 'Eselon III') return 'Eselon III';
     if (jobTrimmed === 'Eselon IV') return 'Eselon IV';
     return 'Staff';
@@ -27,18 +27,18 @@ const TableView: React.FC<TableViewProps> = ({ employees }) => {
     let relevantEmployees = employees;
     if (activeTab === 'eselon') {
       relevantEmployees = employees.filter(emp => {
-        const level = categorizeEmployee(emp.job);
+        const level = categorizeEmployee(emp.organizational_level);
         return level === 'Eselon III' || level === 'Eselon IV';
       });
     } else if (activeTab === 'staff') {
-      relevantEmployees = employees.filter(emp => categorizeEmployee(emp.job) === 'Staff');
+      relevantEmployees = employees.filter(emp => categorizeEmployee(emp.organizational_level) === 'Staff');
     }
     
     // Then filter by search term
     if (searchTerm) {
       relevantEmployees = relevantEmployees.filter(emp =>
         emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.job.toLowerCase().includes(searchTerm.toLowerCase())
+        emp.organizational_level.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
     
@@ -62,17 +62,17 @@ const TableView: React.FC<TableViewProps> = ({ employees }) => {
     // Filter by tab
     if (activeTab === 'eselon') {
       filtered = filtered.filter(emp => {
-        const level = categorizeEmployee(emp.job);
+        const level = categorizeEmployee(emp.organizational_level);
         return level === 'Eselon III' || level === 'Eselon IV';
       });
     } else if (activeTab === 'staff') {
-      filtered = filtered.filter(emp => categorizeEmployee(emp.job) === 'Staff');
+      filtered = filtered.filter(emp => categorizeEmployee(emp.organizational_level) === 'Staff');
     }
 
     // Filter by search term
-    filtered = filtered.filter(emp =>
+          filtered = filtered.filter(emp =>
       emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.job.toLowerCase().includes(searchTerm.toLowerCase())
+      emp.organizational_level.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return filtered.sort((a, b) => {
@@ -81,9 +81,9 @@ const TableView: React.FC<TableViewProps> = ({ employees }) => {
       if (sortColumn === 'name') {
         aValue = a.name;
         bValue = b.name;
-      } else if (sortColumn === 'job') {
-        aValue = a.job;
-        bValue = b.job;
+      } else if (sortColumn === 'organizational_level') {
+        aValue = a.organizational_level;
+        bValue = b.organizational_level;
       } else if (sortColumn === 'average') {
         aValue = a.performance.reduce((sum, comp) => sum + comp.score, 0) / a.performance.length;
         bValue = b.performance.reduce((sum, comp) => sum + comp.score, 0) / b.performance.length;
@@ -211,11 +211,11 @@ const TableView: React.FC<TableViewProps> = ({ employees }) => {
                 </th>
                 <th 
                   className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                  onClick={() => handleSort('job')}
+                  onClick={() => handleSort('organizational_level')}
                 >
                   <div className="flex items-center gap-2">
                     Position
-                    <SortIcon column="job" />
+                    <SortIcon column="organizational_level" />
                   </div>
                 </th>
                 <th 
@@ -254,7 +254,7 @@ const TableView: React.FC<TableViewProps> = ({ employees }) => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-700 dark:text-gray-300">
-                        {employee.job}
+                        {employee.organizational_level}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

@@ -9,20 +9,20 @@ interface EmployeeAnalyticsProps {
 
 const EmployeeAnalytics: React.FC<EmployeeAnalyticsProps> = ({ employees }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [jobFilter, setJobFilter] = useState('');
-  const [sortBy, setSortBy] = useState<'name' | 'performance' | 'job'>('name');
+  const [organizationalLevelFilter, setOrganizationalLevelFilter] = useState('');
+  const [sortBy, setSortBy] = useState<'name' | 'performance' | 'organizational_level'>('name');
   const [showFilters, setShowFilters] = useState(false);
 
   const uniqueJobs = useMemo(() => {
-    const jobs = [...new Set(employees.map(emp => emp.job))];
+    const jobs = [...new Set(employees.map(emp => emp.organizational_level))];
     return jobs.filter(job => job && job !== 'N/A').sort();
   }, [employees]);
 
   const filteredAndSortedEmployees = useMemo(() => {
     let filtered = employees.filter(emp => {
       const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           emp.job.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesJob = !jobFilter || emp.job === jobFilter;
+                           emp.organizational_level.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesJob = !organizationalLevelFilter || emp.organizational_level === organizationalLevelFilter;
       return matchesSearch && matchesJob;
     });
 
@@ -30,8 +30,8 @@ const EmployeeAnalytics: React.FC<EmployeeAnalyticsProps> = ({ employees }) => {
       switch (sortBy) {
         case 'name':
           return a.name.localeCompare(b.name);
-        case 'job':
-          return a.job.localeCompare(b.job);
+        case 'organizational_level':
+          return a.organizational_level.localeCompare(b.organizational_level);
         case 'performance':
           const aAvg = a.performance.reduce((s, p) => s + p.score, 0) / a.performance.length;
           const bAvg = b.performance.reduce((s, p) => s + p.score, 0) / b.performance.length;
@@ -40,7 +40,7 @@ const EmployeeAnalytics: React.FC<EmployeeAnalyticsProps> = ({ employees }) => {
           return 0;
       }
     });
-  }, [employees, searchTerm, jobFilter, sortBy]);
+  }, [employees, searchTerm, organizationalLevelFilter, sortBy]);
 
   const getPerformanceLevel = (score: number) => {
     if (score >= 90) return { label: 'Excellent', color: 'text-green-800 dark:text-green-200', bgColor: 'bg-green-50 dark:bg-green-900/30' };
@@ -94,14 +94,14 @@ const EmployeeAnalytics: React.FC<EmployeeAnalyticsProps> = ({ employees }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Filter by Job Title
+                Filter by Organizational Level
               </label>
               <select
-                value={jobFilter}
-                onChange={(e) => setJobFilter(e.target.value)}
+                value={organizationalLevelFilter}
+                onChange={(e) => setOrganizationalLevelFilter(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="">All Job Titles</option>
+                <option value="">All Organizational Levels</option>
                 {uniqueJobs.map(job => (
                   <option key={job} value={job}>{job}</option>
                 ))}
@@ -114,12 +114,12 @@ const EmployeeAnalytics: React.FC<EmployeeAnalyticsProps> = ({ employees }) => {
               </label>
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as 'name' | 'performance' | 'job')}
+                onChange={(e) => setSortBy(e.target.value as 'name' | 'performance' | 'organizational_level')}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="name">Name (A-Z)</option>
                 <option value="performance">Performance (High-Low)</option>
-                <option value="job">Job Title</option>
+                <option value="organizational_level">Organizational Level</option>
               </select>
             </div>
           </div>

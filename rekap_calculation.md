@@ -59,17 +59,20 @@ Baik        : 70,00-79,99
 Sangat baik : >80
 
 PENILAIAN STAFF
+for staff, please make the calculation looks like this
 
-1. Perilaku Kerja 30%*
-- Kehadiran dan Tepat Waktu 5% (2) 4,25
-- Managemen waktu kerja 5% (4 ) 4,25
-- Kerja sama dan teamwork 5% (3) 4,25
-- Inisiatif dan Flexibilitas 5% (1) 4,25
-- Kepemimpinan (loyalitas) 10% (6) 8,5
+1.⁠ ⁠Perilaku Kerja 30%*
+•⁠  ⁠Kehadiran dan Tepat Waktu 5%
+•⁠  ⁠Managemen waktu kerja 5% 
+•⁠  ⁠Kerja sama dan teamwork 5% 
+•⁠  ⁠Inisiatif dan Flexibilitas 5% 
+•⁠  ⁠Kepemimpinan (loyalitas) 10%
 nilai max : 25,5
 
-*2. Kualitas Kinerja 70%*
-- Kualitas Kinerja 50% (5) 
-- Kemampuan berkomunikasi 10% (7) 8,5
-- Pemahaman urusan sosial 10% (8) 8,5
-nilai max : 
+2. Kualitas Kinerja 70%
+•⁠  ⁠Kualitas Kinerja 50%
+•⁠  ⁠Kemampuan berkomunikasi 10% 
+•⁠  ⁠Pemahaman urusan sosial 10%
+nilai max : 59,5
+
+85 - 25,5 = 59.5

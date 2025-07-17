@@ -130,17 +130,24 @@ class SQLiteService {
   // Import employees from CSV data
   importEmployeesFromCSV(employeesData) {
     const transaction = this.db.transaction(() => {
-      // Clear existing data
-      this.db.prepare('DELETE FROM employee_database').run();
-      
-      // Insert new data
       const insertEmployee = this.db.prepare(`
         INSERT INTO employee_database (name, nip, gol, pangkat, position, sub_position, organizational_level) 
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
-      
+      const updateEmployee = this.db.prepare(`
+        UPDATE employee_database 
+        SET name = ?, gol = ?, pangkat = ?, position = ?, sub_position = ?, organizational_level = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE nip = ?
+      `);
+      const updateEmployeeByName = this.db.prepare(`
+        UPDATE employee_database 
+        SET nip = ?, gol = ?, pangkat = ?, position = ?, sub_position = ?, organizational_level = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE name = ?
+      `);
+      const findEmployeeByNip = this.db.prepare('SELECT id FROM employee_database WHERE nip = ?');
+      const findEmployeeByName = this.db.prepare('SELECT id FROM employee_database WHERE name = ?');
+
       for (const emp of employeesData) {
-        // Map golongan to organizational level
         let organizationalLevel = 'Staff/Other';
         if (emp.gol) {
           const romanNumeral = emp.gol.split('/')[0];
@@ -150,16 +157,47 @@ class SQLiteService {
             organizationalLevel = 'Eselon III';
           }
         }
+
+        let existingEmployee = null;
+        if (emp.nip && emp.nip !== '-') {
+          existingEmployee = findEmployeeByNip.get(emp.nip);
+        }
         
-        insertEmployee.run(
-          emp.name, 
-          emp.nip || '-', 
-          emp.gol, 
-          emp.pangkat || '-', 
-          emp.position || '-', 
-          emp.subPosition || '-', 
-          organizationalLevel
-        );
+        if (existingEmployee) {
+          updateEmployee.run(
+            emp.name, 
+            emp.gol, 
+            emp.pangkat || '-', 
+            emp.position || '-', 
+            emp.subPosition || '-', 
+            organizationalLevel,
+            emp.nip
+          );
+        } else {
+          // If NIP is not available or not found, try to find by name
+          existingEmployee = findEmployeeByName.get(emp.name);
+          if (existingEmployee) {
+            updateEmployeeByName.run(
+              emp.nip || '-', 
+              emp.gol, 
+              emp.pangkat || '-', 
+              emp.position || '-', 
+              emp.subPosition || '-', 
+              organizationalLevel,
+              emp.name
+            );
+          } else {
+            insertEmployee.run(
+              emp.name, 
+              emp.nip || '-', 
+              emp.gol, 
+              emp.pangkat || '-', 
+              emp.position || '-', 
+              emp.subPosition || '-', 
+              organizationalLevel
+            );
+          }
+        }
       }
     });
     

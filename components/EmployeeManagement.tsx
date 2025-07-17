@@ -17,7 +17,11 @@ interface Employee {
   updated_at: string;
 }
 
-const EmployeeManagement: React.FC = () => {
+interface EmployeeManagementProps {
+  onEmployeeUpdate?: () => void;
+}
+
+const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onEmployeeUpdate }) => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +31,10 @@ const EmployeeManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<keyof Employee>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [selectedEmployees, setSelectedEmployees] = useState<Set<number>>(new Set());
+  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [bulkEditField, setBulkEditField] = useState<string>('');
+  const [bulkEditValue, setBulkEditValue] = useState<string>('');
 
   const loadEmployees = async () => {
     try {
@@ -58,6 +66,9 @@ const EmployeeManagement: React.FC = () => {
     try {
       await api.deleteEmployee(id);
       await loadEmployees();
+      if (onEmployeeUpdate) {
+        onEmployeeUpdate();
+      }
       
       // Show success message briefly
       const successMessage = `Pegawai "${name}" berhasil dihapus.`;
@@ -76,6 +87,123 @@ const EmployeeManagement: React.FC = () => {
     } else {
       setSortField(field);
       setSortDirection('asc');
+    }
+  };
+
+  const handleSelectEmployee = (employeeId: number) => {
+    const newSelected = new Set(selectedEmployees);
+    if (newSelected.has(employeeId)) {
+      newSelected.delete(employeeId);
+    } else {
+      newSelected.add(employeeId);
+    }
+    setSelectedEmployees(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedEmployees.size === sortedEmployees.length) {
+      setSelectedEmployees(new Set());
+    } else {
+      setSelectedEmployees(new Set(sortedEmployees.map(emp => emp.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedEmployees.size === 0) return;
+    
+    const employeeNames = employees.filter(emp => selectedEmployees.has(emp.id)).map(emp => emp.name);
+    const isConfirmed = window.confirm(
+      `Apakah Anda yakin ingin menghapus ${selectedEmployees.size} pegawai berikut?\n\n${employeeNames.join(', ')}\n\nData yang dihapus tidak dapat dikembalikan.`
+    );
+    
+    if (!isConfirmed) return;
+
+    try {
+      setIsLoading(true);
+      for (const employeeId of selectedEmployees) {
+        await api.deleteEmployee(employeeId);
+      }
+      setSelectedEmployees(new Set());
+      await loadEmployees();
+      if (onEmployeeUpdate) {
+        onEmployeeUpdate();
+      }
+      setError(null);
+    } catch (err) {
+      setError('Gagal menghapus pegawai. Silakan coba lagi.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBulkEdit = async () => {
+    if (selectedEmployees.size === 0 || !bulkEditField || !bulkEditValue) return;
+    
+    const isConfirmed = window.confirm(
+      `Apakah Anda yakin ingin mengubah ${bulkEditField} untuk ${selectedEmployees.size} pegawai terpilih menjadi "${bulkEditValue}"?`
+    );
+    
+    if (!isConfirmed) return;
+
+    try {
+      setIsLoading(true);
+      for (const employeeId of selectedEmployees) {
+        const employee = employees.find(emp => emp.id === employeeId);
+        if (employee) {
+          const updatedData = {
+            name: employee.name,
+            nip: employee.nip,
+            gol: employee.gol,
+            pangkat: employee.pangkat,
+            position: employee.position,
+            subPosition: employee.sub_position,
+            organizationalLevel: employee.organizational_level
+          };
+          
+          // Update specific field
+          switch (bulkEditField) {
+            case 'gol':
+              updatedData.gol = bulkEditValue;
+              break;
+            case 'pangkat':
+              updatedData.pangkat = bulkEditValue;
+              break;
+            case 'position':
+              updatedData.position = bulkEditValue;
+              break;
+            case 'sub_position':
+              updatedData.subPosition = bulkEditValue;
+              break;
+            case 'organizational_level':
+              updatedData.organizationalLevel = bulkEditValue;
+              break;
+          }
+          
+          await api.updateEmployee(
+            employeeId,
+            updatedData.name,
+            updatedData.nip,
+            updatedData.gol,
+            updatedData.pangkat,
+            updatedData.position,
+            updatedData.subPosition,
+            updatedData.organizationalLevel
+          );
+        }
+      }
+      setSelectedEmployees(new Set());
+      setShowBulkActions(false);
+      setBulkEditField('');
+      setBulkEditValue('');
+      await loadEmployees();
+      if (onEmployeeUpdate) {
+        onEmployeeUpdate();
+      }
+      setError(null);
+    } catch (err) {
+      setError('Gagal mengubah data pegawai. Silakan coba lagi.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -115,6 +243,9 @@ const EmployeeManagement: React.FC = () => {
           onImportComplete={() => {
             setShowImport(false);
             loadEmployees();
+            if (onEmployeeUpdate) {
+              onEmployeeUpdate();
+            }
           }}
         />
       </div>
@@ -148,6 +279,15 @@ const EmployeeManagement: React.FC = () => {
             <IconPlus className="w-5 h-5 mr-2"/>
             Tambah Pegawai
           </button>
+          {selectedEmployees.size > 0 && (
+            <button
+              onClick={() => setShowBulkActions(!showBulkActions)}
+              className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              <IconEdit className="w-5 h-5 mr-2"/>
+              Bulk Actions ({selectedEmployees.size})
+            </button>
+          )}
         </div>
       </div>
 
@@ -180,6 +320,94 @@ const EmployeeManagement: React.FC = () => {
           <div className="bg-red-100 dark:bg-red-900/50 border-l-4 border-red-500 text-red-700 dark:text-red-300 p-4 rounded-lg mb-6">
             <p className="font-bold">Error</p>
             <p>{error}</p>
+          </div>
+        )}
+
+        {showBulkActions && selectedEmployees.size > 0 && (
+          <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-lg p-4 mb-6">
+            <h3 className="text-lg font-semibold text-purple-900 dark:text-purple-100 mb-4">
+              Bulk Actions ({selectedEmployees.size} pegawai terpilih)
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-purple-700 dark:text-purple-300 mb-2">
+                  Field yang akan diubah
+                </label>
+                <select
+                  value={bulkEditField}
+                  onChange={(e) => setBulkEditField(e.target.value)}
+                  className="w-full px-3 py-2 border border-purple-300 dark:border-purple-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                >
+                  <option value="">Pilih field...</option>
+                  <option value="gol">Golongan</option>
+                  <option value="pangkat">Pangkat</option>
+                  <option value="position">Jabatan</option>
+                  <option value="sub_position">Sub-Jabatan</option>
+                  <option value="organizational_level">Tingkat Organisasi</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-purple-700 dark:text-purple-300 mb-2">
+                  Nilai baru
+                </label>
+                {bulkEditField === 'organizational_level' ? (
+                  <select
+                    value={bulkEditValue}
+                    onChange={(e) => setBulkEditValue(e.target.value)}
+                    className="w-full px-3 py-2 border border-purple-300 dark:border-purple-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  >
+                    <option value="">Pilih tingkat organisasi...</option>
+                    <option value="Eselon II">Eselon II</option>
+                    <option value="Eselon III">Eselon III</option>
+                    <option value="Eselon IV">Eselon IV</option>
+                    <option value="Staff ASN Sekretariat">Staff ASN Sekretariat</option>
+                    <option value="Staff Non ASN Sekretariat">Staff Non ASN Sekretariat</option>
+                    <option value="Staff ASN Bidang Hukum">Staff ASN Bidang Hukum</option>
+                    <option value="Staff ASN Bidang Pemberdayaan Sosial">Staff ASN Bidang Pemberdayaan Sosial</option>
+                    <option value="Staff Non ASN Bidang Pemberdayaan Sosial">Staff Non ASN Bidang Pemberdayaan Sosial</option>
+                    <option value="Staff ASN Bidang Rehabilitasi Sosial">Staff ASN Bidang Rehabilitasi Sosial</option>
+                    <option value="Staff Non ASN Bidang Rehabilitasi Sosial">Staff Non ASN Bidang Rehabilitasi Sosial</option>
+                    <option value="Staff ASN Bidang Perlindungan dan Jaminan Sosial">Staff ASN Bidang Perlindungan dan Jaminan Sosial</option>
+                    <option value="Staff Non ASN Bidang Perlindungan dan Jaminan Sosial">Staff Non ASN Bidang Perlindungan dan Jaminan Sosial</option>
+                    <option value="Staff ASN Bidang Penanganan Bencana">Staff ASN Bidang Penanganan Bencana</option>
+                    <option value="Staff Non ASN Bidang Penanganan Bencana">Staff Non ASN Bidang Penanganan Bencana</option>
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={bulkEditValue}
+                    onChange={(e) => setBulkEditValue(e.target.value)}
+                    placeholder="Masukkan nilai baru..."
+                    className="w-full px-3 py-2 border border-purple-300 dark:border-purple-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  />
+                )}
+              </div>
+            </div>
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={handleBulkEdit}
+                disabled={!bulkEditField || !bulkEditValue}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+              >
+                Terapkan Perubahan
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Hapus Terpilih
+              </button>
+              <button
+                onClick={() => {
+                  setShowBulkActions(false);
+                  setBulkEditField('');
+                  setBulkEditValue('');
+                }}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                Batal
+              </button>
+            </div>
           </div>
         )}
 
@@ -219,6 +447,14 @@ const EmployeeManagement: React.FC = () => {
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-800">
                 <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <input
+                      type="checkbox"
+                      checked={selectedEmployees.size === sortedEmployees.length && sortedEmployees.length > 0}
+                      onChange={handleSelectAll}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </th>
                   <th 
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                     onClick={() => handleSort('name')}
@@ -257,6 +493,14 @@ const EmployeeManagement: React.FC = () => {
               <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                 {sortedEmployees.map((emp) => (
                   <tr key={emp.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={selectedEmployees.has(emp.id)}
+                        onChange={() => handleSelectEmployee(emp.id)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="font-medium text-gray-900 dark:text-white">
                         {emp.name}
@@ -320,6 +564,9 @@ const EmployeeManagement: React.FC = () => {
             setShowAddForm(false);
             setEditingEmployee(null);
             loadEmployees();
+            if (onEmployeeUpdate) {
+              onEmployeeUpdate();
+            }
           }}
           onCancel={() => {
             setShowAddForm(false);

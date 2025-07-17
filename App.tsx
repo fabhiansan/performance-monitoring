@@ -21,6 +21,7 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState('overview');
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
+  
 
   const handleDataUpdate = useCallback(async (newEmployeeData: Employee[], sessionName?: string) => {
     setEmployeeData(newEmployeeData);
@@ -41,7 +42,17 @@ const App: React.FC = () => {
     }
   }, [activeView]);
 
-
+  const refreshEmployeeData = useCallback(async () => {
+    try {
+      if (selectedSessionId) {
+        const employeeData = await api.getEmployeeDataBySession(selectedSessionId);
+        setEmployeeData(employeeData);
+        
+      }
+    } catch (error) {
+      console.error('Failed to refresh employee data:', error);
+    }
+  }, [selectedSessionId]);
 
   // Load data on app start
   useEffect(() => {
@@ -113,7 +124,7 @@ const App: React.FC = () => {
       case 'table':
         return <TableView employees={employeeData} />;
       case 'employee-management':
-        return <EmployeeManagement />;
+        return <EmployeeManagement onEmployeeUpdate={refreshEmployeeData} />;
       case 'data':
         return <DataManagement employees={employeeData} onDataUpdate={handleDataUpdate} />;
       default:

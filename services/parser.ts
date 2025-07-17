@@ -4,7 +4,7 @@ import { Employee } from '../types';
 interface ScoreMap {
   [employeeName: string]: {
     scores: { [competency: string]: number[] };
-    job: string | null;
+    organizational_level: string | null;
   };
 }
 
@@ -247,7 +247,7 @@ export const parsePerformanceData = (text: string, employeeDataCsv?: string, org
     if (employeeName && competency) {
       // Initialize employee if not exists
       if (!scoreData[employeeName]) {
-        scoreData[employeeName] = { scores: {}, job: null };
+        scoreData[employeeName] = { scores: {}, organizational_level: null };
         console.log('Initialized employee:', employeeName);
       }
       
@@ -287,9 +287,9 @@ export const parsePerformanceData = (text: string, employeeDataCsv?: string, org
     
     // For score rows, we don't need job info
     // For mixed rows, extract position/job info from the row (usually in column 3 or 4)
-    let rowJobInfo = '';
+    let rowOrganizationalLevelInfo = '';
     if (!isScoreRow && values.length > 3 && values[3] && values[3].trim()) {
-      rowJobInfo = values[3].trim();
+      rowOrganizationalLevelInfo = values[3].trim();
     }
     
     // Process each column that has a competency-employee mapping
@@ -330,11 +330,11 @@ export const parsePerformanceData = (text: string, employeeDataCsv?: string, org
           if (!isNaN(score) && score >= 0 && score <= 100) {
             scoreData[mapping.employee].scores[mapping.competency].push(score);
             
-            // Set job info if not already set
-            if (!scoreData[mapping.employee].job) {
-              scoreData[mapping.employee].job = dynamicEmployeeMapping[mapping.employee] || 
+            // Set organizational_level info if not already set
+            if (!scoreData[mapping.employee].organizational_level) {
+              scoreData[mapping.employee].organizational_level = dynamicEmployeeMapping[mapping.employee] || 
                                                 employeeOrgLevelMapping[mapping.employee] || 
-                                                rowJobInfo ||
+                                                rowOrganizationalLevelInfo ||
                                                 'Staff/Other';
             }
           }
@@ -357,12 +357,25 @@ export const parsePerformanceData = (text: string, employeeDataCsv?: string, org
       };
     }).filter(p => p !== null) as Array<{ name: string; score: number }>;
 
+    // Resolve the most accurate organizational_level.
+    const organizationalLevelCandidates: string[] = [
+      dynamicEmployeeMapping[name],
+      employeeOrgLevelMapping[name],
+      data.organizational_level,
+    ].filter(Boolean) as string[];
+
+    // Prefer any candidate that contains the word "eselon" (covers II/III/IV) over staff placeholders
+    const preferredOrganizationalLevel = organizationalLevelCandidates.find(j => /eselon/i.test(j)) || organizationalLevelCandidates[0] || 'Staff/Other';
+
     return {
+      id: 0, // Placeholder, as ID is usually from database
       name,
-      job: data.job || 
-           dynamicEmployeeMapping[name] || 
-           employeeOrgLevelMapping[name] || 
-           'Staff/Other',
+      nip: '', // Placeholder
+      gol: '', // Placeholder
+      pangkat: '', // Placeholder
+      position: '', // Placeholder
+      sub_position: '', // Placeholder
+      organizational_level: preferredOrganizationalLevel,
       performance,
     };
   });
