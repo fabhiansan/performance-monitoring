@@ -69,7 +69,10 @@ jobs:
       - name: List build artifacts
         run: |
           if (Test-Path release) { 
-            Get-ChildItem release -Recurse | Select-Object Name, Length, LastWriteTime 
+            Write-Host "=== Release Directory Contents ==="
+            Get-ChildItem release -Recurse | Select-Object Name, FullName, Length, LastWriteTime 
+            Write-Host "=== Looking for .exe files ==="
+            Get-ChildItem release -Recurse -Filter "*.exe" | ForEach-Object { Write-Host "Found EXE: $($_.FullName)" }
           } else { 
             Write-Host "Release directory not found" 
           }
@@ -110,16 +113,24 @@ jobs:
           ---
           Built with Electron and packaged with NSIS installer."
           
-          # Upload installer
-          if [ -f "./release/Employee Performance Analyzer Setup ${{ steps.version.outputs.version }}.exe" ]; then
+          # Find and upload all .exe files in release directory
+          find ./release -name "*.exe" -type f | while read file; do
+            filename=$(basename "$file")
+            echo "Found executable: $file -> $filename"
+            gh release upload ${{ steps.version.outputs.version }} "$file" || echo "Failed to upload $file"
+          done
+          
+          # Also try to upload specific expected files
+          # Upload NSIS installer
+          if [ -f "./release/Dashboard Penilaian Kinerja Pegawai Dinas Sosial-Setup-${{ steps.version.outputs.version }}.exe" ]; then
             gh release upload ${{ steps.version.outputs.version }} \
-              "./release/Employee Performance Analyzer Setup ${{ steps.version.outputs.version }}.exe#EmployeePerformanceAnalyzer-${{ steps.version.outputs.version }}-windows-setup.exe"
+              "./release/Dashboard Penilaian Kinerja Pegawai Dinas Sosial-Setup-${{ steps.version.outputs.version }}.exe"
           fi
           
-          # Upload portable executable if it exists
-          if [ -f "./release/win-unpacked/Employee Performance Analyzer.exe" ]; then
+          # Upload portable executable
+          if [ -f "./release/Dashboard Penilaian Kinerja Pegawai Dinas Sosial-${{ steps.version.outputs.version }}-portable.exe" ]; then
             gh release upload ${{ steps.version.outputs.version }} \
-              "./release/win-unpacked/Employee Performance Analyzer.exe#EmployeePerformanceAnalyzer-${{ steps.version.outputs.version }}-windows-portable.exe"
+              "./release/Dashboard Penilaian Kinerja Pegawai Dinas Sosial-${{ steps.version.outputs.version }}-portable.exe"
           fi
         
       - name: Upload build artifacts to workflow

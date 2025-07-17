@@ -87,10 +87,17 @@
           "arch": [
             "x64"
           ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "requestedExecutionLevel": "asInvoker",
-      "forceCodeSigning": false
+      "forceCodeSigning": false,
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -101,7 +108,11 @@
       "shortcutName": "Dashboard Penilaian Kinerja Pegawai Dinas Sosial",
       "menuCategory": "Business",
       "runAfterFinish": true,
-      "deleteAppDataOnUninstall": false
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.${ext}"
     },
     "linux": {
       "target": [
