@@ -10,6 +10,8 @@ interface ReportProps {
 const Report: React.FC<ReportProps> = ({ employees }) => {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [semester, setSemester] = useState<number>(1);
+  const [year, setYear] = useState<number>(new Date().getFullYear());
   const reportRef = useRef<HTMLDivElement>(null);
 
   const generatePDF = async () => {
@@ -25,7 +27,7 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
       });
 
       const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('portrait', 'mm', 'a4');
+      const pdf = new jsPDF('landscape', 'mm', 'a4');
       
       const imgWidth = 210;
       const pageHeight = 295;
@@ -44,7 +46,7 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
         heightLeft -= pageHeight;
       }
 
-      pdf.save(`Laporan_Kinerja_${selectedEmployee.name.replace(/\s+/g, '_')}_2024.pdf`);
+      pdf.save(`Laporan_Kinerja_${selectedEmployee.name.replace(/\s+/g, '_')}_Semester_${semester === 1 ? 'I' : 'II'}_${year}.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Terjadi kesalahan saat menghasilkan PDF');
@@ -53,10 +55,25 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
     }
   };
 
+  const calculatePerilakuKerjaScore = () => {
+    if (!selectedEmployee) return 0;
+    const perilakuKerja = selectedEmployee.performance.slice(0, 5).reduce((sum, perf) => sum + perf.score, 0);
+    return (perilakuKerja / 5) * 0.3;
+  };
+
+  const calculateKualitasKinerjaScore = () => {
+    if (!selectedEmployee) return 0;
+    const kualitasKinerja = selectedEmployee.performance.slice(5, 8).reduce((sum, perf) => sum + perf.score, 0);
+    return (kualitasKinerja / 3) * 0.5;
+  };
+
+  const getPenilaianPimpinanScore = () => {
+    return 17.0; // Fixed 20% weight = 17.00
+  };
+
   const calculateTotalScore = () => {
     if (!selectedEmployee) return 0;
-    const total = selectedEmployee.performance.reduce((sum, perf) => sum + perf.score, 0);
-    return total;
+    return calculatePerilakuKerjaScore() + calculateKualitasKinerjaScore() + getPenilaianPimpinanScore();
   };
 
   const getPerformanceLevel = (score: number) => {
@@ -82,7 +99,7 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
           Laporan Penilaian Kinerja Pegawai Dinas Sosial
         </h1>
         
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="flex flex-col lg:flex-row gap-4 mb-6">
           <div className="flex-1">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Pilih Pegawai:
@@ -101,24 +118,54 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
               ))}
             </select>
           </div>
-          
-          <div className="flex items-end">
-            <button
-              onClick={generatePDF}
-              disabled={!selectedEmployee || isGenerating}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {isGenerating ? (
-                <>
-                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                  Menghasilkan PDF...
-                </>
-              ) : (
-                <>
-                  📄 Unduh PDF
-                </>
-              )}
-            </button>
+
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Semester:
+              </label>
+              <select
+                value={semester}
+                onChange={(e) => setSemester(Number(e.target.value))}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              >
+                <option value={1}>I</option>
+                <option value={2}>II</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Tahun:
+              </label>
+              <input
+                type="number"
+                value={year}
+                onChange={(e) => setYear(Number(e.target.value))}
+                min="2020"
+                max="2030"
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-24"
+              />
+            </div>
+
+            <div className="flex items-end">
+              <button
+                onClick={generatePDF}
+                disabled={!selectedEmployee || isGenerating}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isGenerating ? (
+                  <>
+                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                    Menghasilkan PDF...
+                  </>
+                ) : (
+                  <>
+                    📄 Unduh PDF
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -146,7 +193,7 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
                     <td className="border border-gray-300 dark:border-gray-500 p-2 font-semibold text-gray-900 dark:text-white">PERILAKU KERJA (30%)</td>
                     <td className="border border-gray-300 dark:border-gray-500 p-2 text-center font-semibold text-gray-900 dark:text-white">25.50</td>
                     <td className="border border-gray-300 dark:border-gray-500 p-2 text-center font-semibold text-gray-900 dark:text-white">
-                      {(selectedEmployee.performance.slice(0, 5).reduce((sum, perf) => sum + perf.score, 0) * 0.3 / 5).toFixed(2)}
+                      {calculatePerilakuKerjaScore().toFixed(2)}
                     </td>
                   </tr>
                   {selectedEmployee.performance.slice(0, 5).map((perf, index) => (
@@ -162,7 +209,7 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
                     <td className="border border-gray-300 dark:border-gray-500 p-2 font-semibold text-gray-900 dark:text-white">KUALITAS KINERJA (50%)</td>
                     <td className="border border-gray-300 dark:border-gray-500 p-2 text-center font-semibold text-gray-900 dark:text-white">42.50</td>
                     <td className="border border-gray-300 dark:border-gray-500 p-2 text-center font-semibold text-gray-900 dark:text-white">
-                      {(selectedEmployee.performance.slice(5, 8).reduce((sum, perf) => sum + perf.score, 0) * 0.5 / 3).toFixed(2)}
+                      {calculateKualitasKinerjaScore().toFixed(2)}
                     </td>
                   </tr>
                   {selectedEmployee.performance.slice(5, 8).map((perf, index) => (
@@ -177,7 +224,7 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
                     <td className="border border-gray-300 dark:border-gray-500 p-2 font-semibold text-gray-900 dark:text-white">III.</td>
                     <td className="border border-gray-300 dark:border-gray-500 p-2 font-semibold text-gray-900 dark:text-white">PENILAIAN PIMPINAN (20%)</td>
                     <td className="border border-gray-300 dark:border-gray-500 p-2 text-center font-semibold text-gray-900 dark:text-white">17.00</td>
-                    <td className="border border-gray-300 dark:border-gray-500 p-2 text-center font-semibold text-gray-900 dark:text-white">17.00</td>
+                    <td className="border border-gray-300 dark:border-gray-500 p-2 text-center font-semibold text-gray-900 dark:text-white">{getPenilaianPimpinanScore().toFixed(2)}</td>
                   </tr>
                   <tr className="bg-yellow-100 dark:bg-yellow-900">
                     <td className="border border-gray-300 dark:border-gray-500 p-2 font-bold text-gray-900 dark:text-white" colSpan={2}>NILAI AKHIR</td>
@@ -197,8 +244,8 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
             ref={reportRef}
             className="bg-white p-8 border border-gray-300"
             style={{ 
-              width: '210mm', 
-              minHeight: '297mm',
+              width: '297mm', 
+              minHeight: '210mm',
               margin: '0 auto',
               fontFamily: 'Times, serif',
               fontSize: '12px',
@@ -225,7 +272,7 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
             <div className="border-t-2 border-black pt-4">
               <h3 className="font-bold text-sm mb-2">
                 HASIL PENILAIAN KINERJA PEGAWAI DINAS SOSIAL PROVINSI<br />
-                KALIMANTAN SELATAN SEMESTER I TAHUN 2024
+                KALIMANTAN SELATAN SEMESTER {semester === 1 ? 'I' : 'II'} TAHUN {year}
               </h3>
             </div>
           </div>
@@ -234,7 +281,7 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
           <div className="mb-6">
             <p className="text-xs mb-4 text-justify">
               Penilaian Kinerja oleh seluruh pegawai Dinas Sosial Provinsi 
-              Kalimantan Selatan sesuai dengan Semester I Tahun 2024 berdasarkan dari 
+              Kalimantan Selatan sesuai dengan Semester {semester === 1 ? 'I' : 'II'} Tahun {year} berdasarkan dari 
               Kualitas Kinerja dengan melalui form yang disediakan tiap akhir semester, 
               dengan penilaian terdapat sebagai berikut:
             </p>
@@ -296,9 +343,9 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
             <div className="flex-1">
               <div className="mb-4">
                 <h4 className="font-bold text-xs mb-2 text-center">
-                  KERTAS KERJA EVALUASI PENGUKURAN KINERJA ESELON IV<br />
-                  DINAS SOSIAL PROVINSI KALIMANTAN SELATAN SEMESTER I<br />
-                  TAHUN 2024
+                  KERTAS KERJA EVALUASI PENGUKURAN KINERJA {selectedEmployee.organizational_level?.toUpperCase() || 'ESELON III'}<br />
+                  DINAS SOSIAL PROVINSI KALIMANTAN SELATAN SEMESTER {semester === 1 ? 'I' : 'II'}<br />
+                  TAHUN {year}
                 </h4>
               </div>
 
@@ -316,7 +363,7 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
                     <td className="border border-black p-2 text-center font-bold">I.</td>
                     <td className="border border-black p-2 font-bold">PERILAKU KERJA (30%)</td>
                     <td className="border border-black p-2 text-center font-bold">25.50</td>
-                    <td className="border border-black p-2 text-center font-bold">23.65</td>
+                    <td className="border border-black p-2 text-center font-bold">{calculatePerilakuKerjaScore().toFixed(2)}</td>
                   </tr>
                   {selectedEmployee.performance.slice(0, 5).map((perf, index) => (
                     <tr key={index}>
@@ -331,7 +378,7 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
                     <td className="border border-black p-2 text-center font-bold">II.</td>
                     <td className="border border-black p-2 font-bold">KUALITAS KINERJA (50%)</td>
                     <td className="border border-black p-2 text-center font-bold">42.50</td>
-                    <td className="border border-black p-2 text-center font-bold">39.45</td>
+                    <td className="border border-black p-2 text-center font-bold">{calculateKualitasKinerjaScore().toFixed(2)}</td>
                   </tr>
                   {selectedEmployee.performance.slice(5, 8).map((perf, index) => (
                     <tr key={index + 5}>
@@ -346,7 +393,7 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
                     <td className="border border-black p-2 text-center font-bold">III.</td>
                     <td className="border border-black p-2 font-bold">PENILAIAN PIMPINAN (20%)</td>
                     <td className="border border-black p-2 text-center font-bold">17.00</td>
-                    <td className="border border-black p-2 text-center font-bold">17.00</td>
+                    <td className="border border-black p-2 text-center font-bold">{getPenilaianPimpinanScore().toFixed(2)}</td>
                   </tr>
                   
                   <tr>
@@ -365,10 +412,9 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
               <strong>Predikat Skor akhir penilaian Penilaian Pegawai dengan kinerja terbaik sebagai berikut:</strong>
             </p>
             <div className="ml-4 mb-4">
-              <p>a. <strong>SANGAT BAIK</strong> : ≥ 90.00</p>
+              <p>a. <strong>SANGAT BAIK</strong> : ≥ 80.00</p>
               <p>b. <strong>BAIK</strong> : 70.00 - 79.99</p>
               <p>c. <strong>KURANG BAIK</strong> : 65.00 - 69.99</p>
-              <p>d. <strong>SANGAT KURANG</strong> : &lt; 65.00</p>
             </div>
             <p className="mb-4">
               Kepala Sub Bagian Perencanaan dan Pelaporan <strong>HANDAYATI EKA WARDANI, SE, MM</strong> memperoleh predikat <strong>"{getPerformanceLevel(calculateTotalScore())}"</strong> dengan nilai <strong>{calculateTotalScore().toFixed(2)}</strong>.
@@ -379,9 +425,9 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
           <div className="flex justify-end mt-8">
             <div className="text-center text-xs">
               <p className="mb-16">Banjarmasin, {getCurrentDate()}</p>
-              <p className="font-bold">MUHAMMAD UN, A.KS, M.LKom</p>
-              <p className="font-bold">Pj. KEPALA DINAS SOSIAL</p>
-              <p className="font-bold">PROVINSI KALIMANTAN SELATAN</p>
+              <p className="font-bold">MUHAMMAD FARHANIE, SP., MM</p>
+              <p className="font-bold">Pembina Tingkat 1, IV/b</p>
+              <p className="font-bold">NIP. 19700513 199003 1 007 </p>
             </div>
           </div>
         </div>

@@ -30,8 +30,9 @@ const Sidebar: React.FC<SidebarProps> = ({ datasets, selectedDatasetId, onDatase
       <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center space-x-3">
         <img src={LogoIcon} alt="Logo" className="w-8 h-8" />
         <div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Performance Dashboard</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Employee Analytics</p>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Dashboard Penilaian Kinerja</h2>
+          {/* <h2 className="text-xl font-bold text-gray-900 dark:text-white">Pegawai Dinas Sosial</h2> */}
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Dinas Sosial</p>
         </div>
       </div>
       
@@ -76,12 +77,12 @@ const Sidebar: React.FC<SidebarProps> = ({ datasets, selectedDatasetId, onDatase
         </div>
       )}
       
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+      {/* <div className="p-4 border-t border-gray-200 dark:border-gray-700">
         <div className="bg-gradient-to-r from-blue-500 to-teal-400 p-4 rounded-lg text-white">
           <h3 className="font-semibold text-sm">Employee Performance</h3>
           <p className="text-xs opacity-90 mt-1">Analytics Dashboard</p>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };
