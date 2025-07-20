@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import { Employee } from '../types';
 
 
@@ -17,7 +18,13 @@ interface EmployeeWithSession extends Employee {
 
 
 class ApiService {
-  private baseUrl = 'http://localhost:3001/api';
+  private baseUrl: string;
+
+  constructor() {
+    // Prefer environment variable if provided; fallback to localhost
+    // This ensures packaged desktop app still communicates with the bundled backend
+    this.baseUrl = (import.meta.env?.VITE_API_BASE_URL as string) || 'http://localhost:3002/api';
+  }
 
   async checkHealth(): Promise<boolean> {
     try {

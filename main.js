@@ -27,7 +27,7 @@ function createWindow() {
       contextIsolation: true,
       webSecurity: true
     },
-    icon: join(__dirname, 'icon.png'), // App icon
+    icon: join(__dirname, 'assets/icon.png'), // App icon
     title: 'Dashboard Penilaian Kinerja Pegawai Dinas Sosial',
     show: false // Don't show until ready
   });
@@ -199,8 +199,10 @@ app.whenReady().then(async () => {
     config = new ElectronConfig();
     console.log('Config loaded from:', config.getConfigPath());
     
-    // Start the Express server first
-    await startServer();
+    // Start the Express server first (only in production)
+    if (!isDev) {
+      await startServer();
+    }
     
     // Then create the window
     createWindow();
@@ -218,7 +220,7 @@ app.whenReady().then(async () => {
     
     // Show error page in window if it exists
     if (mainWindow && !mainWindow.isDestroyed()) {
-      const errorPath = join(__dirname, 'error.html');
+      const errorPath = join(__dirname, 'assets/error.html');
       if (existsSync(errorPath)) {
         mainWindow.loadFile(errorPath);
         mainWindow.show();

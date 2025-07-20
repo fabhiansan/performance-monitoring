@@ -66,13 +66,11 @@ const parseCsvLine = (line: string): string[] => {
 
 export function parseEmployeeCSV(csvText: string): EmployeeData[] {
   try {
-    console.log('Starting CSV parse with text:', csvText.substring(0, 200) + '...');
     const lines = csvText.trim().split('\n');
     const employees: EmployeeData[] = [];
     
     // Filter out empty lines
     const dataLines = lines.filter(line => line.trim().length > 0);
-    console.log('Data lines count:', dataLines.length);
     if (dataLines.length === 0) {
       return employees;
     }
@@ -81,17 +79,13 @@ export function parseEmployeeCSV(csvText: string): EmployeeData[] {
     const firstLine = dataLines[0].toLowerCase();
     const hasHeader = firstLine.includes('nama') || firstLine.includes('nip') || firstLine.includes('gol');
     const startIndex = hasHeader ? 1 : 0;
-    console.log('Has header:', hasHeader, 'Start index:', startIndex);
     
     for (let i = startIndex; i < dataLines.length; i++) {
       const line = dataLines[i].trim();
       if (!line) continue;
       
-      console.log(`Processing line ${i}:`, line);
-      
       // Use the robust CSV parser to handle comma-separated values with quotes
       const columns = parseCsvLine(line).map(col => col.trim());
-      console.log(`Parsed columns (${columns.length}):`, columns);
       
       // Expect at least 7 columns: No, Nama, NIP, Gol, Pangkat, Jabatan, Sub-Jabatan
       if (columns.length >= 7 && columns[1].trim()) { // Check that name is not empty
@@ -104,14 +98,9 @@ export function parseEmployeeCSV(csvText: string): EmployeeData[] {
           subPosition: columns[6]?.trim() || '-'    // Sub-Jabatan (index 6) - default to "-"
         };
         
-        console.log('Created employee object:', employee);
-        
         // Only add if name and gol are not empty (minimum required fields)
         if (employee.name && employee.gol) {
           employees.push(employee);
-          console.log('Added employee:', employee.name);
-        } else {
-          console.log('Skipped employee due to missing name or gol:', employee);
         }
       } else if (columns.length >= 6 && !columns[0].match(/^\d+$/) && columns[0].trim()) {
         // Fallback: if no number column, assume format: Nama, NIP, Gol, Pangkat, Jabatan, Sub-Jabatan
@@ -124,21 +113,13 @@ export function parseEmployeeCSV(csvText: string): EmployeeData[] {
           subPosition: columns[5]?.trim() || '-'
         };
         
-        console.log('Created fallback employee object:', employee);
-        
         // Only add if name and gol are not empty (minimum required fields)
         if (employee.name && employee.gol) {
           employees.push(employee);
-          console.log('Added fallback employee:', employee.name);
-        } else {
-          console.log('Skipped fallback employee due to missing name or gol:', employee);
         }
-      } else {
-        console.log('Skipped line due to insufficient columns or empty name:', columns);
       }
     }
     
-    console.log('Final employees array:', employees);
     return employees;
   } catch (error) {
     console.error('Error parsing CSV:', error);
@@ -187,7 +168,7 @@ export function validateEmployeeData(employees: EmployeeData[]): { valid: boolea
   
   // Log warnings to console but don't include them in errors
   if (warnings.length > 0) {
-    console.log('Data warnings:', warnings);
+    console.warn('Data warnings:', warnings);
   }
   
   return { valid: errors.length === 0, errors };

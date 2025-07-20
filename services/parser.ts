@@ -34,7 +34,6 @@ const parseCsvLine = (line: string): string[] => {
     delimiter = ',';
   }
   
-  console.log(`Delimiter detection - tabs: ${tabCount}, multi-spaces: ${multiSpaceCount}, commas: ${commaCount}, chosen: ${isSpaceDelimited ? 'multi-space' : delimiter}`);
 
   if (isSpaceDelimited) {
     // Split on 2+ consecutive spaces, then trim each field
@@ -70,29 +69,23 @@ const parseCsvLine = (line: string): string[] => {
 
 
 const cleanCompetencyName = (rawName: string): string => {
-  console.log(`Cleaning competency name from: "${rawName}"`);
   const cleaned = rawName
     .replace(/^\d+\s*[.]?\s*/, '') // Remove leading numbers like "1. " or "1 "
     .replace(/\s*\[.*\]\s*/, '') // Remove the employee name in brackets
     .replace(/^\s+|\s+$/g, '') // Trim whitespace
     .replace(/\s+/g, ' ') // Normalize internal whitespace
     .trim();
-  console.log(`Cleaned competency name: "${cleaned}"`);
   return cleaned;
 };
 
 const extractEmployeeName = (rawHeader: string): string | null => {
-  console.log(`Extracting employee name from: "${rawHeader}"`);
   const match = rawHeader.match(/\[(.*?)\]/);
   if (!match) {
-    console.log(`No bracket match found in: "${rawHeader}"`);
     return null;
   }
   let name = match[1].trim();
-  console.log(`Found name in brackets: "${name}"`);
   // Remove leading numbering like "1." or "6 " inside brackets
   name = name.replace(/^\d+\.\s*/,'').replace(/^\d+\s+/,'');
-  console.log(`Final cleaned name: "${name}"`);
   return name;
 };
 
@@ -207,7 +200,6 @@ const determineStaffPosition = (position: string, subPosition: string, golongan:
 
 
 export const parsePerformanceData = (text: string, employeeDataCsv?: string, orgLevelMapping?: { [employeeName: string]: string }): Employee[] => {
-  console.log('Starting parsePerformanceData with text length:', text.length);
   
   // Parse employee data if provided, otherwise use empty mapping
   const dynamicEmployeeMapping = employeeDataCsv ? parseEmployeeData(employeeDataCsv) : {};
@@ -220,35 +212,26 @@ export const parsePerformanceData = (text: string, employeeDataCsv?: string, org
     return trimmed.length > 1 && !/^[,\s]*$/.test(trimmed);
   });
   
-  console.log('Filtered lines count:', lines.length);
-  
   if (lines.length < 2) {
     throw new Error('Data must have a header row and at least one data row.');
   }
 
   const header = parseCsvLine(lines[0]);
-  console.log('Header parsed, columns count:', header.length);
-  console.log('First few header columns:', header.slice(0, 5));
   
   const dataRows = lines.slice(1);
-  console.log('Data rows count:', dataRows.length);
 
   const scoreData: ScoreMap = {};
   const competencyEmployeeMap: { [key: string]: { competency: string; employee: string } } = {};
 
   // Pre-populate employees and map column indices to competency-employee pairs
   header.forEach((h, index) => {
-    console.log(`Processing header field ${index}: "${h}"`);
     const employeeName = extractEmployeeName(h);
     const competency = cleanCompetencyName(h);
-    
-    console.log(`Field ${index} - Employee: "${employeeName}", Competency: "${competency}"`);
     
     if (employeeName && competency) {
       // Initialize employee if not exists
       if (!scoreData[employeeName]) {
         scoreData[employeeName] = { scores: {}, organizational_level: null };
-        console.log('Initialized employee:', employeeName);
       }
       
       // Map column index to competency-employee pair
@@ -258,18 +241,12 @@ export const parsePerformanceData = (text: string, employeeDataCsv?: string, org
       if (!scoreData[employeeName].scores[competency]) {
         scoreData[employeeName].scores[competency] = [];
       }
-    } else {
-      console.log(`Skipping field ${index} - missing employee name or competency`);
     }
   });
-  
-  console.log('Employees found in header:', Object.keys(scoreData));
-  console.log('Competency-employee mappings:', Object.keys(competencyEmployeeMap).length);
 
   // Process each data row
   dataRows.forEach((line, rowIndex) => {
     const values = parseCsvLine(line);
-    console.log(`Processing row ${rowIndex + 1}, values count:`, values.length);
     
     // Check if this is a pure score row (all numeric values or string ratings)
     const isScoreRow = values.length > 0 && values.every(val => {
@@ -277,11 +254,8 @@ export const parsePerformanceData = (text: string, employeeDataCsv?: string, org
       return trimmed === '' || !isNaN(Number(trimmed)) || isStringRating(trimmed);
     });
     
-    console.log(`Row ${rowIndex + 1} is score row:`, isScoreRow);
-    
     // Skip rows that don't have any values
     if (values.length === 0) {
-      console.log(`Skipping row ${rowIndex + 1} - no values`);
       return;
     }
     
@@ -304,7 +278,6 @@ export const parsePerformanceData = (text: string, employeeDataCsv?: string, org
           // Handle string ratings first
           if (isStringRating(scoreValue)) {
             score = convertStringRatingToScore(scoreValue);
-            console.log(`Converted string rating "${scoreValue}" to score ${score}`);
           } else if (!isNaN(Number(scoreValue))) {
             score = parseInt(scoreValue, 10);
             
@@ -323,7 +296,6 @@ export const parsePerformanceData = (text: string, employeeDataCsv?: string, org
             }
           } else {
             // Skip invalid values
-            console.log(`Skipping invalid score value: "${scoreValue}"`);
             return;
           }
           
@@ -342,8 +314,6 @@ export const parsePerformanceData = (text: string, employeeDataCsv?: string, org
       }
     });
   });
-  
-  console.log('Score processing completed');
 
   // Generate final employee data
   const employees: Employee[] = Object.entries(scoreData).map(([name, data]) => {
@@ -382,9 +352,6 @@ export const parsePerformanceData = (text: string, employeeDataCsv?: string, org
   
   // Filter out employees with no performance data
   const validEmployees = employees.filter(e => e.performance.length > 0);
-  
-  console.log('Valid employees generated:', validEmployees.length);
-  console.log('Employee names:', validEmployees.map(e => e.name));
 
   if (validEmployees.length === 0) {
     throw new Error("No valid employee performance data could be parsed. Check that headers are in 'Competency [Employee Name]' format and data rows contain numeric scores.");

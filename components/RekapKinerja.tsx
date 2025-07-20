@@ -129,7 +129,7 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
         employee.performanceRecap.perilakuKinerja.toFixed(2),
         employee.performanceRecap.kualitasKerja.toFixed(2),
         employee.performanceRecap.positionType === 'eselon' 
-          ? ((employee.performanceRecap.penilaianPimpinan / 100) * 17).toFixed(2)
+          ? (employee.performanceRecap.penilaianPimpinan * 0.20).toFixed(2)
           : 'N/A',
         employee.performanceRecap.totalNilai.toFixed(2)
       ].join(','))
@@ -377,7 +377,7 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
                           className="w-16 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-center"
                         />
                         <span className="text-xs text-purple-600 dark:text-purple-400">
-                          ({((employee.performanceRecap.penilaianPimpinan / 100) * 17).toFixed(2)})
+                          ({(employee.performanceRecap.penilaianPimpinan * 0.20).toFixed(2)})
                         </span>
                       </div>
                     ) : (
@@ -408,7 +408,7 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
 
       {/* Scoring Information */}
       <div className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Revised Scoring System Information</h3>
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Scoring System Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Eselon Scoring */}
           <div className="border border-indigo-200 dark:border-indigo-800 p-4 rounded-lg">
@@ -425,7 +425,7 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
                   <li>• Manajemen waktu kerja: <span className="font-bold">5%</span></li>
                   <li>• Kerja sama dan teamwork: <span className="font-bold">5%</span></li>
                   <li>• Inisiatif dan Flexibilitas: <span className="font-bold">5%</span></li>
-                  <li>• Kepemimpinan (loyalitas): <span className="font-bold text-red-600">10%</span> <span className="font-bold text-red-600">REVISED</span></li>
+                  <li>• Kepemimpinan (loyalitas): <span className="font-bold">10%</span></li>
                 </ul>
                 <p className="text-xs text-gray-500 mt-1"><span className="font-bold">Max: 25.5</span></p>
               </div>
@@ -464,7 +464,7 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
                   <li>• Manajemen waktu kerja: <span className="font-bold">5%</span></li>
                   <li>• Kerja sama dan teamwork: <span className="font-bold">5%</span></li>
                   <li>• Inisiatif dan Flexibilitas: <span className="font-bold">5%</span></li>
-                  <li>• Kepemimpinan (loyalitas): <span className="font-bold text-red-600">10%</span> <span className="font-bold text-red-600">REVISED</span></li>
+                  <li>• Kepemimpinan (loyalitas): <span className="font-bold">10%</span></li>
                 </ul>
                 <p className="text-xs text-gray-500 mt-1"><span className="font-bold">Max: 25.5</span></p>
               </div>
@@ -609,7 +609,7 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
                     <div className="flex justify-between">
                       <span className="text-gray-600 dark:text-gray-400">Penilaian Pimpinan:</span>
                       <span className="font-medium">
-                        {(manualScores[selectedEmployee.name] || 80)}% of 100 × 17 pts = {((selectedEmployee.performanceRecap.penilaianPimpinan / 100) * 17).toFixed(2)}
+                        {(manualScores[selectedEmployee.name] || 80)} × 20% = {(selectedEmployee.performanceRecap.penilaianPimpinan * 0.20).toFixed(2)}
                       </span>
                     </div>
                   )}

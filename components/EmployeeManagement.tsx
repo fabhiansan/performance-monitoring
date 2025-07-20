@@ -74,8 +74,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onEmployeeUpdat
       const successMessage = `Pegawai "${name}" berhasil dihapus.`;
       setError(null);
       
-      // You could add a success state here if needed
-      console.log(successMessage);
+      // Success - employee deleted
     } catch (err) {
       setError(`Gagal menghapus pegawai "${name}". Silakan coba lagi.`);
     }

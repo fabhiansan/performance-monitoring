@@ -31,22 +31,60 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees }) => {
   };
 
   // Helper to categorize employees by organizational level
-  // Supports Eselon II, III, IV and Staff
-  const categorizeEmployee = (level: string | undefined | null): 'Eselon II' | 'Eselon III' | 'Eselon IV' | 'Staff' => {
-    const normalized = (level || '').trim().toLowerCase();
-    if (normalized.includes('eselon ii')) return 'Eselon II';
-    if (normalized.includes('eselon iii')) return 'Eselon III';
-    if (normalized.includes('eselon iv')) return 'Eselon IV';
-    return 'Staff';
+  // Supports all 13 organizational positions
+  const categorizeEmployee = (level: string | undefined | null): string => {
+    if (!level) return 'Other';
+    const normalized = level.trim();
+    
+    // Return exact match for all 13 predefined positions
+    if (predefinedLevels.includes(normalized)) {
+      return normalized;
+    }
+    
+    // Fallback categorization for legacy data
+    const normalizedLower = normalized.toLowerCase();
+    if (normalizedLower.includes('eselon ii')) return 'Eselon II';
+    if (normalizedLower.includes('eselon iii')) return 'Eselon III';
+    if (normalizedLower.includes('eselon iv')) return 'Eselon IV';
+    
+    return 'Other';
   };
 
   const [searchTerm, setSearchTerm] = useState('');
   const [levelFilter, setLevelFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
+  // Predefined organizational levels
+  const predefinedLevels = [
+    'Eselon II',
+    'Eselon III', 
+    'Eselon IV',
+    'Staff ASN Sekretariat',
+    'Staff Non ASN Sekretariat',
+    'Staff ASN Bidang Pemberdayaan Sosial',
+    'Staff Non ASN Bidang Pemberdayaan Sosial',
+    'Staff ASN Bidang Rehabilitasi Sosial',
+    'Staff Non ASN Bidang Rehabilitasi Sosial',
+    'Staff ASN Bidang Perlindungan dan Jaminan Sosial',
+    'Staff Non ASN Bidang Perlindungan dan Jaminan Sosial',
+    'Staff ASN Bidang Penanganan Bencana',
+    'Staff Non ASN Bidang Penanganan Bencana'
+  ];
+
   const uniqueLevels = useMemo(() => {
-    const lvls = [...new Set(employees.map(emp => emp.organizational_level))];
-    return lvls.filter(l => l && l !== 'N/A').sort();
+    // Get actual levels from employee data
+    const actualLevels = [...new Set(employees.map(emp => emp.organizational_level))];
+    const filteredActualLevels = actualLevels.filter(l => l && l !== 'N/A');
+    
+    // Combine predefined levels with any additional levels from data
+    const allLevels = [...predefinedLevels];
+    filteredActualLevels.forEach(level => {
+      if (!allLevels.includes(level)) {
+        allLevels.push(level);
+      }
+    });
+    
+    return allLevels.sort();
   }, [employees]);
 
   const filteredEmployees = useMemo(() => {
@@ -58,12 +96,27 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees }) => {
     });
   }, [employees, searchTerm, levelFilter]);
 
-  const employeesByLevel = {
-    'Eselon II': filteredEmployees.filter(emp => categorizeEmployee(emp.organizational_level) === 'Eselon II'),
-    'Eselon III': filteredEmployees.filter(emp => categorizeEmployee(emp.organizational_level) === 'Eselon III'),
-    'Eselon IV': filteredEmployees.filter(emp => categorizeEmployee(emp.organizational_level) === 'Eselon IV'),
-    'Staff': filteredEmployees.filter(emp => categorizeEmployee(emp.organizational_level) === 'Staff')
-  };
+  // Group employees by their exact organizational level
+  const employeesByLevel = useMemo(() => {
+    const grouped: Record<string, Employee[]> = {};
+    
+    // Initialize all predefined levels
+    predefinedLevels.forEach(level => {
+      grouped[level] = [];
+    });
+    grouped['Other'] = [];
+    
+    // Group employees
+    filteredEmployees.forEach(emp => {
+      const category = categorizeEmployee(emp.organizational_level);
+      if (!grouped[category]) {
+        grouped[category] = [];
+      }
+      grouped[category].push(emp);
+    });
+    
+    return grouped;
+  }, [filteredEmployees]);
 
   const totalEmployees = filteredEmployees.length;
   
@@ -119,6 +172,28 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees }) => {
     else scoreRanges[3].value++;
   });
 
+  // Group organizational levels by major categories for display
+  const organizationalSummary = useMemo(() => {
+    const eselonCount = (employeesByLevel['Eselon II']?.length || 0) + 
+                       (employeesByLevel['Eselon III']?.length || 0) + 
+                       (employeesByLevel['Eselon IV']?.length || 0);
+    
+    const asnStaffCount = Object.keys(employeesByLevel)
+      .filter(key => key.includes('Staff ASN'))
+      .reduce((sum, key) => sum + (employeesByLevel[key]?.length || 0), 0);
+    
+    const nonAsnStaffCount = Object.keys(employeesByLevel)
+      .filter(key => key.includes('Staff Non ASN'))
+      .reduce((sum, key) => sum + (employeesByLevel[key]?.length || 0), 0);
+    
+    return {
+      eselon: eselonCount,
+      asnStaff: asnStaffCount,
+      nonAsnStaff: nonAsnStaffCount,
+      other: employeesByLevel['Other']?.length || 0
+    };
+  }, [employeesByLevel]);
+
   const kpiCards = [
     {
       title: 'Total Employees',
@@ -128,47 +203,41 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees }) => {
       bgColor: 'bg-blue-50 dark:bg-blue-900/30'
     },
     {
-      title: 'Eselon II',
-      value: employeesByLevel['Eselon II'].length.toString(),
+      title: 'Eselon (II-IV)',
+      value: organizationalSummary.eselon.toString(),
+      detail: `II: ${employeesByLevel['Eselon II']?.length || 0}, III: ${employeesByLevel['Eselon III']?.length || 0}, IV: ${employeesByLevel['Eselon IV']?.length || 0}`,
       icon: IconUsers,
-      color: 'text-yellow-800 dark:text-yellow-200',
-      bgColor: 'bg-yellow-50 dark:bg-yellow-900/30'
+      color: 'text-purple-800 dark:text-purple-200',
+      bgColor: 'bg-purple-50 dark:bg-purple-900/30'
     },
     {
-      title: 'Eselon III',
-      value: employeesByLevel['Eselon III'].length.toString(),
-      icon: IconUsers,
-      color: 'text-red-800 dark:text-red-200',
-      bgColor: 'bg-red-50 dark:bg-red-900/30'
-    },
-    {
-      title: 'Eselon IV',
-      value: employeesByLevel['Eselon IV'].length.toString(),
-      icon: IconUsers,
-      color: 'text-orange-800 dark:text-orange-200',
-      bgColor: 'bg-orange-50 dark:bg-orange-900/30'
-    },
-    {
-      title: 'Staff',
-      value: employeesByLevel['Staff'].length.toString(),
+      title: 'Staff ASN',
+      value: organizationalSummary.asnStaff.toString(),
       icon: IconUsers,
       color: 'text-green-800 dark:text-green-200',
       bgColor: 'bg-green-50 dark:bg-green-900/30'
     },
     {
+      title: 'Staff Non ASN',
+      value: organizationalSummary.nonAsnStaff.toString(),
+      icon: IconUsers,
+      color: 'text-orange-800 dark:text-orange-200',
+      bgColor: 'bg-orange-50 dark:bg-orange-900/30'
+    },
+    {
       title: 'Average Score',
       value: `${averageScore.toFixed(1)}`,
       icon: IconChartBar,
-      color: 'text-purple-800 dark:text-purple-200',
-      bgColor: 'bg-purple-50 dark:bg-purple-900/30'
+      color: 'text-indigo-800 dark:text-indigo-200',
+      bgColor: 'bg-indigo-50 dark:bg-indigo-900/30'
     },
     {
       title: 'Top Performer',
       value: topPerformer ? topPerformer.name : 'N/A',
       score: topPerformer ? (topPerformer.performance.reduce((s, p) => s + p.score, 0) / topPerformer.performance.length).toFixed(1) : null,
       icon: IconSparkles,
-      color: 'text-indigo-800 dark:text-indigo-200',
-      bgColor: 'bg-indigo-50 dark:bg-indigo-900/30'
+      color: 'text-yellow-800 dark:text-yellow-200',
+      bgColor: 'bg-yellow-50 dark:bg-yellow-900/30'
     }
   ];
 
@@ -212,17 +281,20 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees }) => {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {kpiCards.map((card, index) => {
           const Icon = card.icon;
           const isTopPerformer = card.title === 'Top Performer';
+          const hasDetail = 'detail' in card;
+          
           return (
-            <div key={index} className={`bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 ${isTopPerformer ? 'xl:col-span-2' : ''}`}>
+            <div key={index} className={`bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 ${isTopPerformer ? 'lg:col-span-2' : ''}`}>
               <div className="flex items-center justify-between">
                 <div className={isTopPerformer ? 'flex-1 pr-4' : ''}>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                     {card.title}
                   </p>
+                  
                   {isTopPerformer && card.score ? (
                     <div className="mt-2">
                       <p className="text-lg font-bold text-gray-900 dark:text-white break-words">
@@ -236,12 +308,19 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees }) => {
                       </div>
                     </div>
                   ) : (
-                    <p className={`${isTopPerformer ? 'text-lg' : 'text-3xl'} font-bold text-gray-900 dark:text-white mt-2 ${isTopPerformer ? 'break-words' : ''}`}>
-                      {card.value}
-                    </p>
+                    <div className="mt-2">
+                      <p className={`${isTopPerformer ? 'text-lg' : 'text-3xl'} font-bold text-gray-900 dark:text-white ${isTopPerformer ? 'break-words' : ''}`}>
+                        {card.value}
+                      </p>
+                      {hasDetail && (card as any).detail && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {(card as any).detail}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
-                <div className={`${card.bgColor} p-3 rounded-lg`}>
+                <div className={`${card.bgColor} p-3 rounded-lg flex-shrink-0`}>
                   <Icon className={`w-6 h-6 ${card.color}`} />
                 </div>
               </div>
@@ -252,33 +331,74 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees }) => {
 
       {competencyData.length > 0 && (
         <div className="space-y-6">
+          {/* Organizational Level Overview */}
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
+              Employee Distribution by Organizational Level
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {Object.entries(employeesByLevel)
+                .filter(([_, employees]) => employees.length > 0)
+                .sort(([a], [b]) => {
+                  // Sort order: Eselon levels first, then Staff levels, then Other
+                  if (a.includes('Eselon') && !b.includes('Eselon')) return -1;
+                  if (!a.includes('Eselon') && b.includes('Eselon')) return 1;
+                  if (a.includes('Staff') && b === 'Other') return -1;
+                  if (a === 'Other' && b.includes('Staff')) return 1;
+                  return a.localeCompare(b);
+                })
+                .map(([level, employees]) => (
+                  <div key={level} className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                    <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                      {level}
+                    </h4>
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {employees.length}
+                      </span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        {((employees.length / totalEmployees) * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                    {employees.length > 0 && (
+                      <div className="mt-2">
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          Avg Score: {(employees.reduce((sum, emp) => sum + (emp.performance.reduce((s, p) => s + p.score, 0) / emp.performance.length), 0) / employees.length).toFixed(1)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+            </div>
+          </div>
+
+          {/* Competency Performance Charts - Now showing top 3 organizational levels by size */}
           {competencyData.map((competency, competencyIndex) => {
-            const levelEmployees = {
-              'Eselon III': filteredEmployees.filter(emp => categorizeEmployee(emp.organizational_level) === 'Eselon III'),
-              'Eselon IV': filteredEmployees.filter(emp => categorizeEmployee(emp.organizational_level) === 'Eselon IV'),
-              'Staff': filteredEmployees.filter(emp => categorizeEmployee(emp.organizational_level) === 'Staff')
-            };
+            const topLevels = Object.entries(employeesByLevel)
+              .filter(([_, employees]) => employees.length > 0)
+              .sort(([, a], [, b]) => b.length - a.length)
+              .slice(0, 3);
 
             return (
               <div key={competencyIndex} className="space-y-4">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                  {competency.competency}
+                  {competency.competency} - Top 3 Organizational Levels
                 </h3>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-[400px]">
-                  {(['Eselon III', 'Eselon IV', 'Staff'] as const).map((level, levelIndex) => {
-                    const employeeScores = levelEmployees[level].map(emp => {
+                  {topLevels.map(([level, levelEmployees], levelIndex) => {
+                    const employeeScores = levelEmployees.map(emp => {
                       const score = emp.performance.find(p => p.name === competency.competency)?.score || 0;
                       return {
-                        name: emp.name,
+                        name: emp.name.length > 15 ? emp.name.substring(0, 15) + '...' : emp.name,
                         score: score
                       };
                     }).filter(emp => emp.score > 0).sort((a, b) => b.score - a.score);
 
                     if (employeeScores.length === 0) return (
-                      <div className="flex-1 flex items-center justify-center text-gray-500 dark:text-gray-400">
+                      <div key={levelIndex} className="flex-1 flex items-center justify-center text-gray-500 dark:text-gray-400">
                         <div className="text-center">
                           <div className="text-6xl mb-4 opacity-20">📊</div>
-                          <p>No employees in this level</p>
+                          <p>No data for {level}</p>
                         </div>
                       </div>
                     );
@@ -286,14 +406,14 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees }) => {
                     return (
                       <div key={levelIndex} className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 flex flex-col min-h-[400px]">
                         <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                          {level} ({employeeScores.length})
+                          {level.length > 25 ? level.substring(0, 25) + '...' : level} ({employeeScores.length})
                         </h4>
                         <div className="flex-1 min-h-[320px]">
                           <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={employeeScores} layout="vertical" margin={{ top: 10, right: 30, left: 20, bottom: 5 }}>
+                            <BarChart data={employeeScores.slice(0, 10)} layout="vertical" margin={{ top: 10, right: 30, left: 20, bottom: 5 }}>
                               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                               <XAxis type="number" stroke="#6b7280" domain={[0, 100]} />
-                              <YAxis dataKey="name" type="category" width={100} stroke="#6b7280" />
+                              <YAxis dataKey="name" type="category" width={120} stroke="#6b7280" />
                               <Tooltip
                                 contentStyle={{
                                   backgroundColor: '#ffffff',
@@ -307,8 +427,8 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees }) => {
                                 formatter={(value: number) => [`${value} (${getScoreLabel(value)})`, 'Score']}
                               />
                               <Bar dataKey="score" radius={[0, 4, 4, 0]}>
-                                <LabelList dataKey="name" position="insideLeft" style={{ fill: '#111827', fontSize: 10 }} />
-                                {employeeScores.map((entry, index) => (
+                                <LabelList dataKey="name" position="insideLeft" style={{ fill: '#111827', fontSize: 9 }} />
+                                {employeeScores.slice(0, 10).map((entry, index) => (
                                   <Cell key={`cell-${index}`} fill={getScoreColor(entry.score)} />
                                 ))}
                               </Bar>
@@ -322,7 +442,6 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees }) => {
               </div>
             );
           })}
-
         </div>
       )}
     </div>

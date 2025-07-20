@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 
 interface Employee {
@@ -30,6 +30,20 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeAdded, onCa
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; nip?: string; gol?: string; pangkat?: string; position?: string; subPosition?: string; organizationalLevel?: string }>({});
 
+  // Update form fields when employee prop changes (for queue processing)
+  useEffect(() => {
+    if (employee) {
+      setName(employee.name || '');
+      setNip(employee.nip || '');
+      setGol(employee.gol || '');
+      setPangkat(employee.pangkat || '');
+      setPosition(employee.position || '');
+      setSubPosition(employee.sub_position || '');
+      setOrganizationalLevel(employee.organizational_level || 'Staff/Other');
+      setErrors({});
+    }
+  }, [employee]);
+
   const validateForm = () => {
     const newErrors: { name?: string; nip?: string; gol?: string; pangkat?: string; position?: string; subPosition?: string } = {};
     
@@ -42,22 +56,7 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeAdded, onCa
       newErrors.gol = 'Golongan wajib diisi';
     }
     
-    // Optional field validation (no errors, just warnings in console)
-    if (!nip.trim()) {
-      console.log('Warning: NIP is empty, will be set to "-"');
-    }
-    
-    if (!pangkat.trim()) {
-      console.log('Warning: Pangkat is empty, will be set to "-"');
-    }
-    
-    if (!position.trim()) {
-      console.log('Warning: Position is empty, will be set to "-"');
-    }
-    
-    if (!subPosition.trim()) {
-      console.log('Warning: Sub-Position is empty, will be set to "-"');
-    }
+    // Optional field validation - empty fields will be set to "-"
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;

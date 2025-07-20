@@ -24,11 +24,8 @@ const EmployeeImport: React.FC<EmployeeImportProps> = ({ onImportComplete }) => 
 
     try {
       setError(null);
-      console.log('Raw text:', rawText);
       const employees = parseEmployeeCSV(rawText);
-      console.log('Parsed employees:', employees);
       const validation = validateEmployeeData(employees);
-      console.log('Validation result:', validation);
       
       if (!validation.valid) {
         setError(`Data tidak valid:\n${validation.errors.join('\n')}`);

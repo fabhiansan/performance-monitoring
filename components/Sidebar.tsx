@@ -1,5 +1,5 @@
 import React from 'react';
-import LogoIcon from '../icon.png';
+import LogoIcon from '../assets/icon.png';
 import { IconDashboard, IconChartBar, IconUsers, IconCog, IconCalculator, IconDocument } from './Icons';
 
 interface Dataset {

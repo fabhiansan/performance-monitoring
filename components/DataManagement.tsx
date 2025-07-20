@@ -46,31 +46,24 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
     
     // If 3+ employee roster keywords found, it's employee roster data
     if (foundEmployeeKeywords.length >= 3) {
-      console.log('Detected employee roster data based on keywords:', foundEmployeeKeywords);
       return 'employee_roster';
     }
     
     // If bracketed names found, it's performance data
     if (hasBracketedNames) {
-      console.log('Detected performance data based on bracketed names');
       return 'performance_data';
     }
     
     // Default to performance data if unclear
-    console.log('Could not clearly detect data type, defaulting to performance data');
     return 'performance_data';
   };
 
   const extractEmployeeNamesFromData = (data: string): string[] => {
-    console.log('=== EXTRACTING EMPLOYEE NAMES ===');
-    console.log('Raw data length:', data.length);
-    console.log('First 200 chars:', data.substring(0, 200));
     
     const lines = data.trim().split('\n').filter(line => line.trim().length > 1);
     if (lines.length < 1) return [];
     
     const header = lines[0];
-    console.log('Header line:', header.substring(0, 300) + '...');
     const employeeNames: string[] = [];
     
     // Enhanced delimiter detection for Google Sheets copy-paste
@@ -90,8 +83,6 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
     } else {
       delimiter = ',';
     }
-    
-    console.log(`Header delimiter detection - tabs: ${tabCount}, multi-spaces: ${multiSpaceCount}, commas: ${commaCount}, chosen: ${isSpaceDelimited ? 'multi-space' : delimiter}`);
 
     let fields = [];
     if (isSpaceDelimited) {
@@ -122,9 +113,6 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
       fields = fields.filter(field => field.length > 0);
     }
     
-    console.log('Total fields parsed:', fields.length);
-    console.log('Sample fields:', fields.slice(0, 5));
-    
     // Extract employee names from headers like "Competency [Employee Name]"
     fields.forEach(field => {
       const match = field.match(/\[(.*?)\]/);
@@ -137,10 +125,6 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
         }
       }
     });
-    
-    console.log('=== EXTRACTION COMPLETE ===');
-    console.log('Total employees found:', employeeNames.length);
-    console.log('Employee names:', employeeNames);
     
     return employeeNames;
   };
@@ -157,11 +141,9 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
       try {
         // Detect data type first
         const dataType = detectDataType(rawText);
-        console.log('Detected data type:', dataType);
         
         if (dataType === 'employee_roster') {
           // Handle employee roster data import
-          console.log('Processing as employee roster data...');
           
           try {
             const parsedEmployees = parseEmployeeCSV(rawText);
@@ -197,34 +179,19 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
         // Handle performance data (existing logic)
         // Extract employee names from performance data
         const employeeNamesInData = extractEmployeeNamesFromData(rawText);
-        console.log('=== DEBUGGING EMPLOYEE MATCHING ===');
-        console.log('Employee names found in performance data:', employeeNamesInData);
-        console.log('Total performance data employees:', employeeNamesInData.length);
         
         // Fetch organizational level mapping from database
         let orgLevelMapping: { [key: string]: string } = {};
         try {
           orgLevelMapping = await api.getEmployeeOrgLevelMapping();
-          console.log('=== DATABASE EMPLOYEES ===');
-          console.log('Employee names in database:', Object.keys(orgLevelMapping));
-          console.log('Total employees in database:', Object.keys(orgLevelMapping).length);
-          console.log('Full organizational mapping:', orgLevelMapping);
           
           if (Object.keys(orgLevelMapping).length === 0) {
             console.warn('WARNING: No employee data found in employee_database table!');
-            console.log('Make sure to import employee data first via "Manage Employees" page');
           }
           
-          // Test direct matching for first few employees
-          console.log('=== DIRECT MATCHING TEST ===');
-          employeeNamesInData.slice(0, 5).forEach(name => {
-            const directMatch = orgLevelMapping[name];
-            console.log(`Testing "${name}": ${directMatch ? '✅ FOUND' : '❌ NOT FOUND'} (${directMatch || 'none'})`);
-          });
           
         } catch (mappingError) {
           console.error('Error fetching organizational level mapping:', mappingError);
-          console.log('No organizational level mapping available, using defaults');
         }
         
         // Helper function to normalize names for comparison
@@ -300,14 +267,12 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
           
           // Direct exact match
           if (orgLevelMapping[name]) {
-            console.log(`✅ Exact match: "${name}"`);
             return;
           }
           
           // Normalized exact match
           if (normalizedOrgMapping[normalizedName]) {
             fuzzyMatchedEmployees[name] = normalizedOrgMapping[normalizedName];
-            console.log(`🔄 Normalized match: "${name}" -> "${originalToNormalizedMap[normalizedName]}"`);
             return;
           }
           
@@ -328,17 +293,12 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
           
           if (bestMatch) {
             fuzzyMatchedEmployees[name] = orgLevelMapping[bestMatch];
-            console.log(`🎯 Fuzzy match (${(bestSimilarity * 100).toFixed(1)}%): "${name}" -> "${bestMatch}"`);
             return;
           }
           
           // No match found
-          console.log(`❌ No match found for: "${name}" (normalized: "${normalizedName}")`);
           unknownEmployees.push(name);
         });
-        
-        console.log('Unknown employees after fuzzy matching:', unknownEmployees);
-        console.log('Fuzzy matched employees:', fuzzyMatchedEmployees);
         
         // Add fuzzy matches to the orgLevelMapping
         Object.entries(fuzzyMatchedEmployees).forEach(([originalName, orgLevel]) => {
@@ -356,9 +316,7 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
           orgLevelMapping[name] = 'Staff/Other';
         });
         
-        console.log('Starting performance data parsing...');
         const parsedData = parsePerformanceData(rawText, undefined, orgLevelMapping);
-        console.log('Parsing completed successfully:', parsedData.length, 'employees');
         const sortedData = parsedData.sort((a, b) => a.name.localeCompare(b.name));
         onDataUpdate(sortedData);
         // Automatically open save dialog and ask for month/year identifier

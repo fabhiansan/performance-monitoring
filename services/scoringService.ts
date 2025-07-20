@@ -3,7 +3,7 @@ import { Employee, CompetencyScore } from '../types';
 export interface PerformanceRecap {
   perilakuKinerja: number; // Max 25.5% (30% allocated but capped)
   kualitasKerja: number;   // Max 42.5% for Eselon, 70% for Staff
-  penilaianPimpinan: number; // Max 17% for Eselon (from 20%), 0% for Staff (manual input)
+  penilaianPimpinan: number; // 20% of raw score for Eselon (e.g., 85 → 17), 0% for Staff (manual input)
   totalNilai: number;
   positionType: 'eselon' | 'staff'; // Track position type for evaluation
 }
@@ -156,8 +156,8 @@ export const calculateTotalScore = (
   positionType: 'eselon' | 'staff'
 ): number => {
   if (positionType === 'eselon') {
-    // Eselon II, III & IV: Sum weighted scores + Penilaian Pimpinan weighted by 17 (max from 20%)
-    const penilaianPimpinanWeighted = (penilaianPimpinan / 100) * 17; // Max 17 for 20%
+    // Eselon II, III & IV: Sum weighted scores + Penilaian Pimpinan at 20% of raw score
+    const penilaianPimpinanWeighted = (penilaianPimpinan * 0.20); // 20% of raw score (e.g., 85 → 17)
     const total = perilakuKinerja + kualitasKerja + penilaianPimpinanWeighted;
     // Cap at 85% as per task requirements
     const cappedTotal = Math.min(total, 85);
@@ -206,7 +206,7 @@ export const generateAllEmployeeRecaps = (
   manualScores: Record<string, number> = {}
 ): RecapEmployee[] => {
   return employees.map(employee => {
-    const penilaianPimpinan = manualScores[employee.name] || 80; // Default 80 (16 points out of 20)
+    const penilaianPimpinan = manualScores[employee.name] || 80; // Default 80 (16 points at 20%)
     return generateEmployeeRecap(employee, penilaianPimpinan);
   });
 };

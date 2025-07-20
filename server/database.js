@@ -37,11 +37,19 @@ class SQLiteService {
         upload_session TEXT NOT NULL,
         employee_name TEXT NOT NULL,
         job_title TEXT,
+        organizational_level TEXT DEFAULT 'Staff/Other',
         competency_name TEXT NOT NULL,
         competency_score REAL NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `;
+    
+    // Add organizational_level column if it doesn't exist (for existing databases)
+    try {
+      this.db.exec('ALTER TABLE employee_data ADD COLUMN organizational_level TEXT DEFAULT "Staff/Other"');
+    } catch (e) {
+      // Column already exists or other error - ignore
+    }
 
     // Create upload_sessions table for metadata
     const createUploadSessionsTable = `
@@ -359,8 +367,8 @@ class SQLiteService {
       // Insert employee data
       const insertData = this.db.prepare(`
         INSERT INTO employee_data 
-        (upload_session, upload_timestamp, employee_name, job_title, competency_name, competency_score)
-        VALUES (?, ?, ?, ?, ?, ?)
+        (upload_session, upload_timestamp, employee_name, job_title, organizational_level, competency_name, competency_score)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
       
       for (const employee of employees) {
@@ -370,6 +378,7 @@ class SQLiteService {
             timestamp,
             employee.name,
             employee.job,
+            employee.organizational_level || 'Staff/Other',
             performance.name,
             performance.score
           );
@@ -404,9 +413,10 @@ class SQLiteService {
   // Get employee data by timestamp range
   getEmployeeDataByTimeRange(startTime = null, endTime = null) {
     let query = `
-      SELECT ed.*, us.session_name
+      SELECT ed.*, us.session_name, edb.organizational_level
       FROM employee_data ed
       JOIN upload_sessions us ON ed.upload_session = us.session_id
+      LEFT JOIN employee_database edb ON ed.employee_name = edb.name
     `;
     const params = [];
     
@@ -434,6 +444,7 @@ class SQLiteService {
         employeesMap.set(key, {
           name: row.employee_name,
           job: row.job_title,
+          organizational_level: row.organizational_level || 'Staff/Other', // Use organizational level from employee_database
           uploadSession: row.upload_session,
           uploadTimestamp: row.upload_timestamp,
           sessionName: row.session_name,
@@ -485,6 +496,7 @@ class SQLiteService {
         employeesMap.set(row.employee_name, {
           name: row.employee_name,
           job: row.job_title,
+          organizational_level: row.organizational_level || 'Staff/Other', // Use stored organizational level from employee_data
           uploadSession: row.upload_session,
           uploadTimestamp: row.upload_timestamp,
           sessionName: row.session_name,

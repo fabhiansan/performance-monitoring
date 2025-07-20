@@ -3,7 +3,7 @@ import cors from 'cors';
 import SQLiteService from './database.js';
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = process.env.PORT || 3002;
 
 // Initialize database with optional custom path
 const dbPath = process.env.DB_PATH || null;

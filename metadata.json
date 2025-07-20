@@ -1,5 +1,0 @@
-{
-  "name": "Dashboard Penilaian Kinerja Pegawai Dinas Sosial",
-  "description": "Aplikasi dashboard untuk menganalisis data kinerja pegawai Dinas Sosial dari file CSV, memvisualisasikan hasil individual, dan menghasilkan ringkasan bertenaga AI menggunakan Gemini API.",
-  "requestFramePermissions": []
-}

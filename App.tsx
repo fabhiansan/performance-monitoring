@@ -21,6 +21,7 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState('overview');
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   
 
   const handleDataUpdate = useCallback(async (newEmployeeData: Employee[], sessionName?: string) => {
@@ -48,6 +49,8 @@ const App: React.FC = () => {
         const employeeData = await api.getEmployeeDataBySession(selectedSessionId);
         setEmployeeData(employeeData);
         
+        // Force component refresh to update organizational mappings
+        setRefreshKey(prev => prev + 1);
       }
     } catch (error) {
       console.error('Failed to refresh employee data:', error);
@@ -112,23 +115,23 @@ const App: React.FC = () => {
   const renderActiveView = () => {
     switch (activeView) {
       case 'overview':
-        return <DashboardOverview employees={employeeData} />;
+        return <DashboardOverview key={refreshKey} employees={employeeData} />;
       case 'analytics':
-        return <EmployeeAnalytics employees={employeeData} />;
+        return <EmployeeAnalytics key={refreshKey} employees={employeeData} />;
       case 'rekap-kinerja':
-        return <RekapKinerja employees={employeeData} />;
+        return <RekapKinerja key={refreshKey} employees={employeeData} />;
       case 'employees':
-        return <EmployeeAnalytics employees={employeeData} />;
+        return <EmployeeAnalytics key={refreshKey} employees={employeeData} />;
       case 'report':
-        return <Report employees={employeeData} />;
+        return <Report key={refreshKey} employees={employeeData} />;
       case 'table':
-        return <TableView employees={employeeData} />;
+        return <TableView key={refreshKey} employees={employeeData} />;
       case 'employee-management':
         return <EmployeeManagement onEmployeeUpdate={refreshEmployeeData} />;
       case 'data':
         return <DataManagement employees={employeeData} onDataUpdate={handleDataUpdate} />;
       default:
-        return <DashboardOverview employees={employeeData} />;
+        return <DashboardOverview key={refreshKey} employees={employeeData} />;
     }
   };
 
