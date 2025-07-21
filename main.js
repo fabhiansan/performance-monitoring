@@ -3,7 +3,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { fork } from 'child_process';
 import { existsSync } from 'fs';
-import ElectronConfig from './electron-config.js';
+// ElectronConfig will be dynamically imported in app.whenReady()
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -110,24 +110,47 @@ function startServer() {
         GEMINI_API_KEY: apiKey
       };
 
-      // Determine server path depending on environment with better Windows support
+      // In packaged apps, ensure NODE_PATH includes the unpacked modules
+      if (app.isPackaged) {
+        const unpackedNodeModules = join(process.resourcesPath, 'app.asar.unpacked', 'node_modules');
+        env.NODE_PATH = env.NODE_PATH ? `${env.NODE_PATH}:${unpackedNodeModules}` : unpackedNodeModules;
+        console.log('Set NODE_PATH for packaged app:', env.NODE_PATH);
+      }
+
+      // Determine server path depending on environment with better cross-platform support
       let serverPath;
       if (isDev) {
         serverPath = join(__dirname, 'server', 'server.js');
       } else {
-        // Try multiple possible paths for better Windows compatibility
+        // Try multiple possible paths for cross-platform compatibility
         const possiblePaths = [
-          join(process.resourcesPath, 'server', 'server.js'),
+          join(process.resourcesPath, 'app.asar.unpacked', 'server', 'server.js'), // Primary asar unpacked path
           join(process.resourcesPath, 'app', 'server', 'server.js'),
+          join(process.resourcesPath, 'server', 'server.js'),
           join(__dirname, 'server', 'server.js'),
-          join(__dirname, 'resources', 'server', 'server.js')
+          join(__dirname, 'resources', 'server', 'server.js'),
+          join(__dirname, '..', 'server', 'server.js'), // Go up one level
+          join(process.cwd(), 'server', 'server.js'), // Current working directory
+          join(app.getAppPath(), 'server', 'server.js') // App path fallback
         ];
+        
+        console.log('Searching for server in the following paths:');
+        possiblePaths.forEach((path, index) => {
+          const exists = existsSync(path);
+          console.log(`${index + 1}. ${path} - ${exists ? '✅ EXISTS' : '❌ NOT FOUND'}`);
+        });
         
         serverPath = possiblePaths.find(path => existsSync(path));
         
         if (!serverPath) {
           console.error('Server file not found in any of these locations:', possiblePaths);
-          throw new Error(`Server file not found. Searched paths: ${possiblePaths.join(', ')}`);
+          console.error('Debug info:');
+          console.error('  __dirname:', __dirname);
+          console.error('  process.cwd():', process.cwd());
+          console.error('  process.resourcesPath:', process.resourcesPath);
+          console.error('  app.getAppPath():', app.getAppPath());
+          console.error('  app.isPackaged:', app.isPackaged);
+          throw new Error(`Server file not found. Searched ${possiblePaths.length} paths.`);
         }
       }
 
@@ -138,13 +161,43 @@ function startServer() {
         throw new Error(`Server file not found at: ${serverPath}`);
       }
 
-      serverProcess = fork(serverPath, [], {
+      // Fork options for ES modules and cross-platform compatibility
+      const forkOptions = {
         env,
         silent: false,
-        execArgv: [] // Clear execArgv to avoid issues with ES modules
+        execArgv: [], // Clear execArgv - Node.js should handle ES modules automatically
+        stdio: ['pipe', 'pipe', 'pipe', 'ipc'] // Ensure proper stdio for Windows
+      };
+
+      // In packaged apps, set the working directory to the unpacked location
+      if (app.isPackaged) {
+        forkOptions.cwd = join(process.resourcesPath, 'app.asar.unpacked');
+        console.log('Set working directory for packaged app:', forkOptions.cwd);
+      }
+
+      console.log('Forking server with options:', {
+        serverPath,
+        args: [],
+        options: { ...forkOptions, env: '...' } // Don't log full env for security
       });
 
+      serverProcess = fork(serverPath, [], forkOptions);
+
+      // Capture stdout/stderr for better error diagnosis
+      if (serverProcess.stdout) {
+        serverProcess.stdout.on('data', (data) => {
+          console.log(`Server stdout: ${data}`);
+        });
+      }
+
+      if (serverProcess.stderr) {
+        serverProcess.stderr.on('data', (data) => {
+          console.error(`Server stderr: ${data}`);
+        });
+      }
+
       serverProcess.on('message', (message) => {
+        console.log('Server message received:', message);
         if (message === 'server-ready') {
           console.log('Express server is ready');
           resolve();
@@ -159,10 +212,11 @@ function startServer() {
         reject(error);
       });
 
-      serverProcess.on('exit', (code) => {
-        console.log(`Server process exited with code ${code}`);
+      serverProcess.on('exit', (code, signal) => {
+        console.log(`Server process exited with code ${code}, signal ${signal}`);
         if (code !== 0) {
-          const errorMsg = `Server exited with code ${code}`;
+          const errorMsg = `Server exited with code ${code}${signal ? ` (signal: ${signal})` : ''}`;
+          console.error(errorMsg);
           if (!isDev) {
             dialog.showErrorBox('Server Exit', errorMsg);
           }
@@ -195,17 +249,71 @@ app.whenReady().then(async () => {
   try {
     console.log('Starting Dashboard Penilaian Kinerja Pegawai Dinas Sosial...');
     
+    // Dynamically import ElectronConfig with proper path handling
+    let ElectronConfig;
+    if (app.isPackaged) {
+      // In packaged app, files are unpacked to app.asar.unpacked
+      const { pathToFileURL } = await import('url');
+      const unpackedPath = join(process.resourcesPath, 'app.asar.unpacked', 'electron-config.js');
+      console.log('Loading ElectronConfig from unpacked path:', unpackedPath);
+      ElectronConfig = (await import(pathToFileURL(unpackedPath).href)).default;
+    } else {
+      // In development, use relative import
+      console.log('Loading ElectronConfig from relative path in development');
+      ElectronConfig = (await import('./electron-config.js')).default;
+    }
+    
     // Initialize config
     config = new ElectronConfig();
     console.log('Config loaded from:', config.getConfigPath());
     
-    // Start the Express server first (only in production)
+    // Start the Express server (always in production, conditionally in dev)
+    // In development, the server might be running separately
+    let serverStarted = false;
     if (!isDev) {
-      await startServer();
+      console.log('Production mode: Starting embedded server...');
+      try {
+        await startServer();
+        serverStarted = true;
+        console.log('✅ Embedded server started successfully');
+      } catch (error) {
+        console.error('❌ Failed to start embedded server:', error.message);
+        console.error('Will show error information in the application window');
+        serverStarted = false;
+      }
+    } else {
+      console.log('Development mode: Assuming external server is running or will be started separately');
+      serverStarted = true; // Assume it's handled externally in dev
     }
     
-    // Then create the window
+    // Always create the window, even if server failed
     createWindow();
+    
+    // If server failed to start, show error info to user after window is ready
+    if (!isDev && !serverStarted) {
+      mainWindow.once('ready-to-show', () => {
+        setTimeout(() => {
+          mainWindow.webContents.executeJavaScript(`
+            console.error('Server failed to start. Please restart the application.');
+            if (window.location.pathname !== '/error') {
+              document.body.innerHTML = '<div style="padding: 40px; font-family: Arial, sans-serif; text-align: center;">' +
+                '<h2 style="color: #e74c3c;">🔧 Server Error</h2>' +
+                '<p>The backend server failed to start.</p>' +
+                '<p>Please:</p>' +
+                '<ul style="text-align: left; display: inline-block;">' +
+                '<li>Restart the application</li>' +
+                '<li>Check if another instance is running</li>' +
+                '<li>Verify you have write permissions to the user data directory</li>' +
+                '</ul>' +
+                '<button onclick="require(\\'electron\\').remote.app.relaunch(); require(\\'electron\\').remote.app.exit()" ' +
+                'style="margin-top: 20px; padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;">' +
+                'Restart Application</button>' +
+                '</div>';
+            }
+          `);
+        }, 2000);
+      });
+    }
 
     console.log('Application ready!');
   } catch (error) {
@@ -262,4 +370,12 @@ process.on('SIGINT', () => {
   console.log('Received SIGINT, shutting down gracefully...');
   stopServer();
   app.quit();
+});
+
+// Handle restart request from renderer
+ipcMain.on('restart-app', () => {
+  console.log('Restart requested by user');
+  stopServer();
+  app.relaunch();
+  app.exit(0);
 });

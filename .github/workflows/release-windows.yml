@@ -52,10 +52,17 @@ jobs:
           npm --version
           npm list electron
         
+      - name: Rebuild native modules for Electron
+        run: |
+          Write-Host "Rebuilding native modules for Electron..."
+          npx electron-rebuild --verbose
+          
       - name: Verify native modules
         run: |
           if (Test-Path node_modules/better-sqlite3/build/Release/better_sqlite3.node) {
             Write-Host "Native module built successfully"
+            # Test if the module loads correctly with Electron's Node.js version
+            node -e "try { require('better-sqlite3'); console.log('✅ better-sqlite3 loads correctly'); } catch(e) { console.error('❌ better-sqlite3 failed to load:', e.message); process.exit(1); }"
           } else {
             Write-Host "Native module build failed"
             exit 1

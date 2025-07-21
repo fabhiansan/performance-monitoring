@@ -16,7 +16,10 @@
     "dev:full": "concurrently \"npm run server:node\" \"npm run dev\"",
     "server:node": "npm run rebuild:node && node server/server.js",
     "rebuild:node": "npm rebuild better-sqlite3",
+    "rebuild:electron": "npx electron-rebuild",
     "postinstall": "electron-builder install-app-deps",
+    "preelectron": "npm run rebuild:electron",
+    "predist": "npm run rebuild:electron",
     "electron": "electron .",
     "electron:dev": "wait-on http://localhost:5173 && NODE_ENV=development electron .",
     "electron:build": "npm run build && NODE_ENV=production electron .",
@@ -58,6 +61,12 @@
     },
     "publish": null,
     "afterPack": "./build-scripts.cjs",
+    "asarUnpack": [
+      "server/**/*",
+      "main.js",
+      "electron-config.js",
+      "node_modules/better-sqlite3/**/*"
+    ],
     "files": [
       "dist/**/*",
       "server/**/*",
@@ -97,7 +106,13 @@
       ],
       "requestedExecutionLevel": "asInvoker",
       "forceCodeSigning": false,
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "extraFiles": [
+        {
+          "from": "server",
+          "to": "resources/server"
+        }
+      ]
     },
     "nsis": {
       "oneClick": false,
