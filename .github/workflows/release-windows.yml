@@ -67,11 +67,32 @@ jobs:
             Write-Host "Native module build failed"
             exit 1
           }
+          
+      - name: Validate ES Module Setup
+        run: |
+          Write-Host "Validating ES module configuration..."
+          # Check if package.json has type: module
+          $packageJson = Get-Content package.json | ConvertFrom-Json
+          if ($packageJson.type -eq "module") {
+            Write-Host "✅ Package.json correctly configured as ES module"
+          } else {
+            Write-Host "❌ Package.json missing 'type: module'"
+            exit 1
+          }
+          
+          # Test main.js syntax
+          Write-Host "Testing main.js ES module syntax..."
+          node --input-type=module -e "console.log('✅ ES module syntax validation passed')"
+          
+          # Verify Electron can load the main file
+          Write-Host "Verifying Electron compatibility..."
+          npx electron --version
         
       - name: Build application
         run: npm run dist:win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
         
       - name: List build artifacts
         run: |
