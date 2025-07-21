@@ -68,21 +68,37 @@ jobs:
             exit 1
           }
           
-      - name: Validate ES Module Setup
+      - name: Validate Main Entry Point
         run: |
-          Write-Host "Validating ES module configuration..."
-          # Check if package.json has type: module
-          $packageJson = Get-Content package.json | ConvertFrom-Json
-          if ($packageJson.type -eq "module") {
-            Write-Host "✅ Package.json correctly configured as ES module"
+          Write-Host "Validating main entry point configuration..."
+          # Check if main.cjs exists
+          if (Test-Path main.cjs) {
+            Write-Host "✅ CommonJS wrapper (main.cjs) found"
           } else {
-            Write-Host "❌ Package.json missing 'type: module'"
+            Write-Host "❌ main.cjs not found"
             exit 1
           }
           
-          # Test main.js syntax
-          Write-Host "Testing main.js ES module syntax..."
-          node --input-type=module -e "console.log('✅ ES module syntax validation passed')"
+          # Check if main.js (ES module) exists
+          if (Test-Path main.js) {
+            Write-Host "✅ ES module main.js found"
+          } else {
+            Write-Host "❌ main.js not found"
+            exit 1
+          }
+          
+          # Verify package.json points to main.cjs
+          $packageJson = Get-Content package.json | ConvertFrom-Json
+          if ($packageJson.main -eq "main.cjs") {
+            Write-Host "✅ Package.json correctly configured to use main.cjs"
+          } else {
+            Write-Host "❌ Package.json main should point to main.cjs, found: $($packageJson.main)"
+            exit 1
+          }
+          
+          # Test CommonJS syntax
+          Write-Host "Testing CommonJS wrapper syntax..."
+          node -e "console.log('✅ CommonJS syntax validation passed')"
           
           # Verify Electron can load the main file
           Write-Host "Verifying Electron compatibility..."
