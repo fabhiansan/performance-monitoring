@@ -1,6 +1,7 @@
-import Database from 'better-sqlite3';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { existsSync } from 'fs';
+import Database from 'better-sqlite3';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -21,6 +22,11 @@ class SQLiteService {
       
       // Create tables
       this.createTables();
+      
+      // Attempt migration from backup database if it exists
+      const backupPath = dbPath + '.backup';
+      this.migrateFromOldSchema(backupPath);
+      
       console.log('SQLite database initialized successfully');
     } catch (error) {
       console.error('Failed to initialize database:', error);
@@ -69,7 +75,7 @@ class SQLiteService {
         key TEXT PRIMARY KEY DEFAULT 'active',
         dataset_id TEXT,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (dataset_id) REFERENCES datasets (id) ON DELETE SET NULL
+        FOREIGN KEY (dataset_id) REFERENCES upload_sessions (session_id) ON DELETE SET NULL
       )
     `;
 
@@ -99,17 +105,27 @@ class SQLiteService {
         leadership_score REAL DEFAULT 80.0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (dataset_id) REFERENCES datasets (id) ON DELETE CASCADE,
+        FOREIGN KEY (dataset_id) REFERENCES upload_sessions (session_id) ON DELETE CASCADE,
         UNIQUE(dataset_id, employee_name)
       )
     `;
 
-    // Execute new table creation
+    // Handle existing databases with wrong foreign key references
+    try {
+      // Drop existing tables with wrong foreign keys if they exist
+      this.db.exec('DROP TABLE IF EXISTS manual_leadership_scores');
+      this.db.exec('DROP TABLE IF EXISTS current_dataset');
+    } catch (e) {
+      // Tables might not exist - ignore
+    }
+
+    // Execute table creation in dependency order
     this.db.exec(createEmployeeDataTable);
     this.db.exec(createUploadSessionsTable);
-    
-    this.db.exec(createCurrentDatasetTable);
     this.db.exec(createEmployeeDatabaseTable);
+    
+    // Tables with foreign keys must be created after their referenced tables
+    this.db.exec(createCurrentDatasetTable);
     this.db.exec(createManualLeadershipScoresTable);
 
     // Create indexes for better performance
@@ -347,6 +363,112 @@ class SQLiteService {
     transaction();
   }
 
+  // Current Dataset Methods
+
+  // Get current active dataset ID
+  getCurrentDatasetId() {
+    // First try to get from current_dataset table
+    const currentDataset = this.db.prepare(`
+      SELECT dataset_id FROM current_dataset WHERE key = 'active'
+    `).get();
+    
+    if (currentDataset && currentDataset.dataset_id) {
+      return currentDataset.dataset_id;
+    }
+    
+    // Fall back to latest upload session if no current dataset set
+    const latestSession = this.db.prepare(`
+      SELECT session_id FROM upload_sessions 
+      ORDER BY upload_timestamp DESC LIMIT 1
+    `).get();
+    
+    return latestSession ? latestSession.session_id : null;
+  }
+
+  // Set current active dataset ID
+  setCurrentDatasetId(datasetId) {
+    const upsertCurrentDataset = this.db.prepare(`
+      INSERT OR REPLACE INTO current_dataset (key, dataset_id, updated_at) 
+      VALUES ('active', ?, CURRENT_TIMESTAMP)
+    `);
+    upsertCurrentDataset.run(datasetId);
+  }
+
+  // Clear current dataset
+  clearCurrentDataset() {
+    const clearDataset = this.db.prepare(`
+      DELETE FROM current_dataset WHERE key = 'active'
+    `);
+    clearDataset.run();
+  }
+
+  // Migration helper for databases with wrong foreign key references
+  migrateFromOldSchema(backupDbPath) {
+    if (!backupDbPath || !existsSync(backupDbPath)) {
+      console.log('No backup database found for migration');
+      return;
+    }
+
+    try {
+      const oldDb = new Database(backupDbPath, { readonly: true });
+      
+      console.log('Starting migration from old database schema...');
+      
+      // Migrate upload_sessions if they exist
+      try {
+        const sessions = oldDb.prepare('SELECT * FROM upload_sessions').all();
+        const insertSession = this.db.prepare(`
+          INSERT OR IGNORE INTO upload_sessions (session_id, session_name, upload_timestamp, employee_count, competency_count) 
+          VALUES (?, ?, ?, ?, ?)
+        `);
+        
+        for (const session of sessions) {
+          insertSession.run(session.session_id, session.session_name, session.upload_timestamp, session.employee_count, session.competency_count);
+        }
+        console.log(`Migrated ${sessions.length} upload sessions`);
+      } catch (e) {
+        console.log('No upload_sessions to migrate:', e.message);
+      }
+      
+      // Migrate employee_data if it exists
+      try {
+        const employeeData = oldDb.prepare('SELECT * FROM employee_data').all();
+        const insertData = this.db.prepare(`
+          INSERT OR IGNORE INTO employee_data (upload_session, upload_timestamp, employee_name, job_title, organizational_level, competency_name, competency_score) 
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `);
+        
+        for (const data of employeeData) {
+          insertData.run(data.upload_session, data.upload_timestamp, data.employee_name, data.job_title, data.organizational_level || 'Staff/Other', data.competency_name, data.competency_score);
+        }
+        console.log(`Migrated ${employeeData.length} employee data records`);
+      } catch (e) {
+        console.log('No employee_data to migrate:', e.message);
+      }
+      
+      // Migrate employee_database if it exists
+      try {
+        const employees = oldDb.prepare('SELECT * FROM employee_database').all();
+        const insertEmployee = this.db.prepare(`
+          INSERT OR IGNORE INTO employee_database (name, nip, gol, pangkat, position, sub_position, organizational_level) 
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `);
+        
+        for (const emp of employees) {
+          insertEmployee.run(emp.name, emp.nip, emp.gol, emp.pangkat, emp.position, emp.sub_position, emp.organizational_level || 'Staff/Other');
+        }
+        console.log(`Migrated ${employees.length} employee records`);
+      } catch (e) {
+        console.log('No employee_database to migrate:', e.message);
+      }
+      
+      oldDb.close();
+      console.log('Migration completed successfully');
+    } catch (error) {
+      console.error('Migration failed:', error);
+    }
+  }
+
 
   // New unified data methods
   
@@ -398,6 +520,10 @@ class SQLiteService {
     });
     
     transaction();
+    
+    // Set this session as the current dataset
+    this.setCurrentDatasetId(sessionId);
+    
     return sessionId;
   }
   

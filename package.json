@@ -6,7 +6,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "main": "main.cjs",
+  "main": "main.js",
   "homepage": "./",
   "scripts": {
     "dev:vite": "vite",
@@ -64,7 +64,6 @@
     "asarUnpack": [
       "server/**/*",
       "main.js",
-      "main.cjs",
       "electron-config.js",
       "node_modules/better-sqlite3/**/*"
     ],
@@ -72,7 +71,6 @@
       "dist/**/*",
       "server/**/*",
       "main.js",
-      "main.cjs",
       "electron-config.js",
       "assets/error.html",
       "assets/icon.png",

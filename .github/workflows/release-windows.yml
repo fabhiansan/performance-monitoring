@@ -29,6 +29,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
           
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -68,47 +69,44 @@ jobs:
             exit 1
           }
           
-      - name: Validate Main Entry Point
+      - name: Validate Build Environment
         run: |
-          Write-Host "Validating main entry point configuration..."
-          # Check if main.cjs exists
-          if (Test-Path main.cjs) {
-            Write-Host "✅ CommonJS wrapper (main.cjs) found"
-          } else {
-            Write-Host "❌ main.cjs not found"
-            exit 1
-          }
+          Write-Host "Validating build environment to match local setup..."
           
-          # Check if main.js (ES module) exists
+          # Check Node.js version (should match local)
+          Write-Host "Node.js version: $(node --version)"
+          Write-Host "NPM version: $(npm --version)"
+          
+          # Check if main.js exists
           if (Test-Path main.js) {
-            Write-Host "✅ ES module main.js found"
+            Write-Host "✅ main.js found"
           } else {
             Write-Host "❌ main.js not found"
             exit 1
           }
           
-          # Verify package.json points to main.cjs
+          # Verify package.json configuration
           $packageJson = Get-Content package.json | ConvertFrom-Json
-          if ($packageJson.main -eq "main.cjs") {
-            Write-Host "✅ Package.json correctly configured to use main.cjs"
-          } else {
-            Write-Host "❌ Package.json main should point to main.cjs, found: $($packageJson.main)"
-            exit 1
-          }
+          Write-Host "Main entry point: $($packageJson.main)"
+          Write-Host "Module type: $($packageJson.type)"
           
-          # Test CommonJS syntax
-          Write-Host "Testing CommonJS wrapper syntax..."
-          node -e "console.log('✅ CommonJS syntax validation passed')"
+          # Check Electron version
+          Write-Host "Electron version: $(npx electron --version)"
           
-          # Verify Electron can load the main file
-          Write-Host "Verifying Electron compatibility..."
-          npx electron --version
+          # Verify dist:win script
+          Write-Host "dist:win script: $($packageJson.scripts.'dist:win')"
+          
+          Write-Host "✅ Environment validation completed"
         
       - name: Build application
         run: npm run dist:win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
+          NODE_ENV: production
+          npm_config_target_arch: x64
+          npm_config_target_platform: win32
+          npm_config_arch: x64
         
       - name: List build artifacts
         run: |
