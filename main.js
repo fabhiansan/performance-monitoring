@@ -13,7 +13,7 @@ let serverProcess;
 let config;
 // Determine if we are running in development mode
 const isDev = process.env.NODE_ENV === 'development' && !app.isPackaged;
-const port = 3001;
+const port = 3002;
 
 function createWindow() {
   // Create the browser window
