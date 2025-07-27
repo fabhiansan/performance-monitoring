@@ -120,10 +120,32 @@ function startServer() {
       // Determine server path depending on environment with better cross-platform support
       let serverPath;
       if (isDev) {
-        serverPath = join(__dirname, 'server', 'server.js');
+        // In development, prefer .mjs for explicit ES module support, then wrapper, then fallback to .js
+        const mjsPath = join(__dirname, 'server', 'server.mjs');
+        const wrapperPath = join(__dirname, 'server', 'server-wrapper.cjs');
+        const jsPath = join(__dirname, 'server', 'server.js');
+        
+        if (existsSync(mjsPath)) {
+          serverPath = mjsPath;
+        } else if (existsSync(wrapperPath)) {
+          serverPath = wrapperPath;
+        } else {
+          serverPath = jsPath;
+        }
       } else {
         // Try multiple possible paths for cross-platform compatibility
         const possiblePaths = [
+          // First try .mjs files for explicit ES module support
+          join(process.resourcesPath, 'app.asar.unpacked', 'server', 'server.mjs'),
+          join(process.resourcesPath, 'app', 'server', 'server.mjs'),
+          join(process.resourcesPath, 'server', 'server.mjs'),
+          join(__dirname, 'server', 'server.mjs'),
+          // Then try CommonJS wrapper for ES modules
+          join(process.resourcesPath, 'app.asar.unpacked', 'server', 'server-wrapper.cjs'),
+          join(process.resourcesPath, 'app', 'server', 'server-wrapper.cjs'),
+          join(process.resourcesPath, 'server', 'server-wrapper.cjs'),
+          join(__dirname, 'server', 'server-wrapper.cjs'),
+          // Then fallback to .js files
           join(process.resourcesPath, 'app.asar.unpacked', 'server', 'server.js'), // Primary asar unpacked path
           join(process.resourcesPath, 'app', 'server', 'server.js'),
           join(process.resourcesPath, 'server', 'server.js'),
@@ -165,14 +187,21 @@ function startServer() {
       const forkOptions = {
         env,
         silent: false,
-        execArgv: [], // Clear execArgv - Node.js should handle ES modules automatically
+        execArgv: [], // Clear execArgv to use default Node.js module resolution
         stdio: ['pipe', 'pipe', 'pipe', 'ipc'] // Ensure proper stdio for Windows
       };
 
       // In packaged apps, set the working directory to the unpacked location
       if (app.isPackaged) {
-        forkOptions.cwd = join(process.resourcesPath, 'app.asar.unpacked');
+        const unpackedDir = join(process.resourcesPath, 'app.asar.unpacked');
+        forkOptions.cwd = unpackedDir;
         console.log('Set working directory for packaged app:', forkOptions.cwd);
+        
+        // For ES modules in packaged apps, we need to ensure package.json is accessible
+        // and the module type is properly recognized
+        const packageJsonPath = join(unpackedDir, 'package.json');
+        console.log('Package.json path in packaged app:', packageJsonPath);
+        console.log('Package.json exists in unpacked dir:', existsSync(packageJsonPath));
       }
 
       console.log('Forking server with options:', {

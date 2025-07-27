@@ -107,6 +107,8 @@ jobs:
           npm_config_target_arch: x64
           npm_config_target_platform: win32
           npm_config_arch: x64
+          # For Windows builds on Windows runner, this will work without wine
+          CSC_IDENTITY_AUTO_DISCOVERY: false
         
       - name: List build artifacts
         run: |
