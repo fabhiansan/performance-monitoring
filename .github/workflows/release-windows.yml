@@ -45,6 +45,7 @@ jobs:
           $env:npm_config_target_arch = "x64"
           $env:npm_config_target_platform = "win32"
           $env:npm_config_arch = "x64"
+          $env:NODE_ENV = "production"
           npm install
           
       - name: Check installed versions
@@ -62,124 +63,19 @@ jobs:
         run: |
           if (Test-Path node_modules/better-sqlite3/build/Release/better_sqlite3.node) {
             Write-Host "Native module built successfully"
-            # Test if the module loads correctly with Electron's Node.js version
             node -e "try { require('better-sqlite3'); console.log('✅ better-sqlite3 loads correctly'); } catch(e) { console.error('❌ better-sqlite3 failed to load:', e.message); process.exit(1); }"
           } else {
             Write-Host "Native module build failed"
             exit 1
           }
           
-      - name: Validate Build Environment
-        run: |
-          Write-Host "Validating build environment to match local setup..."
-          
-          # Check Node.js version (should match local)
-          Write-Host "Node.js version: $(node --version)"
-          Write-Host "NPM version: $(npm --version)"
-          
-          # Check if main.js exists
-          if (Test-Path main.js) {
-            Write-Host "✅ main.js found"
-          } else {
-            Write-Host "❌ main.js not found"
-            exit 1
-          }
-          
-          # Verify package.json configuration
-          $packageJson = Get-Content package.json | ConvertFrom-Json
-          Write-Host "Main entry point: $($packageJson.main)"
-          Write-Host "Module type: $($packageJson.type)"
-          
-          # Check Electron version
-          Write-Host "Electron version: $(npx electron --version)"
-          
-          # Verify dist:win script
-          Write-Host "dist:win script: $($packageJson.scripts.'dist:win')"
-          
-          Write-Host "✅ Environment validation completed"
-        
       - name: Build application
-        run: npm run dist:win
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
           NODE_ENV: production
-          npm_config_target_arch: x64
-          npm_config_target_platform: win32
-          npm_config_arch: x64
-          # For Windows builds on Windows runner, this will work without wine
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-        
-      - name: List build artifacts
-        run: |
-          if (Test-Path release) { 
-            Write-Host "=== Release Directory Contents ==="
-            Get-ChildItem release -Recurse | Select-Object Name, FullName, Length, LastWriteTime 
-            Write-Host "=== Looking for .exe files ==="
-            Get-ChildItem release -Recurse -Filter "*.exe" | ForEach-Object { Write-Host "Found EXE: $($_.FullName)" }
-          } else { 
-            Write-Host "Release directory not found" 
-          }
-        
-      - name: Get version from tag or input
-        id: version
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          else
-            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-          fi
-          
-      - name: Create Release and Upload Assets
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Create release with GitHub CLI
-          gh release create ${{ steps.version.outputs.version }} \
-            --title "Employee Performance Analyzer ${{ steps.version.outputs.version }}" \
-            --notes "## Windows Release ${{ steps.version.outputs.version }}
+        run: npm run dist:win
 
-          ### What's New
-          - Windows x64 desktop application
-          - Includes installer and portable executable
-
-          ### Installation
-          1. Download the installer (.exe file)
-          2. Run the installer and follow the setup wizard
-          3. Launch \"Employee Performance Analyzer\" from Start Menu or Desktop
-
-          ### Requirements
-          - Windows 10 or later
-          - 64-bit architecture
-
-          ---
-          Built with Electron and packaged with NSIS installer."
-          
-          # Find and upload all .exe files in release directory
-          find ./release -name "*.exe" -type f | while read file; do
-            filename=$(basename "$file")
-            echo "Found executable: $file -> $filename"
-            gh release upload ${{ steps.version.outputs.version }} "$file" || echo "Failed to upload $file"
-          done
-          
-          # Also try to upload specific expected files
-          # Upload NSIS installer
-          if [ -f "./release/Dashboard Penilaian Kinerja Pegawai Dinas Sosial-Setup-${{ steps.version.outputs.version }}.exe" ]; then
-            gh release upload ${{ steps.version.outputs.version }} \
-              "./release/Dashboard Penilaian Kinerja Pegawai Dinas Sosial-Setup-${{ steps.version.outputs.version }}.exe"
-          fi
-          
-          # Upload portable executable
-          if [ -f "./release/Dashboard Penilaian Kinerja Pegawai Dinas Sosial-${{ steps.version.outputs.version }}-portable.exe" ]; then
-            gh release upload ${{ steps.version.outputs.version }} \
-              "./release/Dashboard Penilaian Kinerja Pegawai Dinas Sosial-${{ steps.version.outputs.version }}-portable.exe"
-          fi
-        
-      - name: Upload build artifacts to workflow
-        uses: actions/upload-artifact@v4
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
         with:
-          name: windows-release-${{ steps.version.outputs.version }}
-          path: release/
-          retention-days: 30
+          name: windows-build
+          path: release/*.exe
