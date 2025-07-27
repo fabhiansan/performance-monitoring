@@ -21,7 +21,7 @@ class ElectronConfig {
     // Return default config
     return {
       geminiApiKey: '',
-      serverPort: 3001,
+      serverPort: 3002,
       version: '1.0.0'
     };
   }

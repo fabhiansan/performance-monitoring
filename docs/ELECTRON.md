@@ -57,7 +57,7 @@ File hasil packaging akan tersimpan di folder `release/`.
 ```json
 {
   "geminiApiKey": "YOUR_GEMINI_API_KEY_HERE",
-  "serverPort": 3001,
+  "serverPort": 3002,
   "version": "1.0.0"
 }
 ```

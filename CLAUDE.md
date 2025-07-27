@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Web Development
 - **Start frontend only**: `npm run dev:vite` (Vite dev server on port 5173)
-- **Start backend server**: `npm run server:node` (Express server on port 3001)
+- **Start backend server**: `npm run server:node` (Express server on port 3002)
 - **Start both frontend and backend**: `npm run dev:full` (requires concurrently)
 - **Build for production**: `npm run build`
 - **Preview production build**: `npm run preview`
@@ -29,7 +29,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Web Development
 - Create `.env.local` file with `GEMINI_API_KEY` for AI-powered performance summaries
 - The app uses Vite's environment loading to inject the API key at build time
-- Backend server runs on port 3001 and creates a SQLite database for data persistence
+- Backend server runs on port 3002 and creates a SQLite database for data persistence
 
 ### Electron Desktop App
 - API keys are managed through Electron's configuration system (`electron-config.js`)
@@ -142,7 +142,7 @@ This is a full-stack dashboard application with React + TypeScript frontend and 
 ### Web Application
 1. **Install dependencies**: `npm install`
 2. **Set up environment**: Create `.env.local` with `GEMINI_API_KEY`
-3. **Start the backend server**: `npm run server:node` (runs on port 3001)
+3. **Start the backend server**: `npm run server:node` (runs on port 3002)
 4. **Start the frontend**: `npm run dev:vite` (runs on port 5173)
 5. **Or start both**: `npm run dev:full` (requires concurrently package)
 6. **Import your CSV data** in the Data Management section
