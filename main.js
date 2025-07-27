@@ -235,9 +235,7 @@ function startServer() {
 
       serverProcess.on('error', (error) => {
         console.error('Server process error:', error);
-        if (!isDev) {
-          dialog.showErrorBox('Server Error', `Server process failed to start: ${error.message}`);
-        }
+        dialog.showErrorBox('Server Error', `Server process failed to start: ${error.message}`);
         reject(error);
       });
 
@@ -246,9 +244,7 @@ function startServer() {
         if (code !== 0) {
           const errorMsg = `Server exited with code ${code}${signal ? ` (signal: ${signal})` : ''}`;
           console.error(errorMsg);
-          if (!isDev) {
-            dialog.showErrorBox('Server Exit', errorMsg);
-          }
+          dialog.showErrorBox('Server Exit', errorMsg);
           reject(new Error(errorMsg));
         }
       });
@@ -296,30 +292,24 @@ app.whenReady().then(async () => {
     config = new ElectronConfig();
     console.log('Config loaded from:', config.getConfigPath());
     
-    // Start the Express server (always in production, conditionally in dev)
-    // In development, the server might be running separately
+    // Start the Express server (always start in both development and production)
     let serverStarted = false;
-    if (!isDev) {
-      console.log('Production mode: Starting embedded server...');
-      try {
-        await startServer();
-        serverStarted = true;
-        console.log('✅ Embedded server started successfully');
-      } catch (error) {
-        console.error('❌ Failed to start embedded server:', error.message);
-        console.error('Will show error information in the application window');
-        serverStarted = false;
-      }
-    } else {
-      console.log('Development mode: Assuming external server is running or will be started separately');
-      serverStarted = true; // Assume it's handled externally in dev
+    console.log(`${isDev ? 'Development' : 'Production'} mode: Starting embedded server...`);
+    try {
+      await startServer();
+      serverStarted = true;
+      console.log('✅ Embedded server started successfully');
+    } catch (error) {
+      console.error('❌ Failed to start embedded server:', error.message);
+      console.error('Will show error information in the application window');
+      serverStarted = false;
     }
     
     // Always create the window, even if server failed
     createWindow();
     
     // If server failed to start, show error info to user after window is ready
-    if (!isDev && !serverStarted) {
+    if (!serverStarted) {
       mainWindow.once('ready-to-show', () => {
         setTimeout(() => {
           mainWindow.webContents.executeJavaScript(`
@@ -348,12 +338,10 @@ app.whenReady().then(async () => {
   } catch (error) {
     console.error('Failed to start application:', error);
     
-    // Show error dialog on Windows/production
-    if (!isDev) {
-      dialog.showErrorBox('Startup Failed', 
-        `Failed to start Dashboard Penilaian Kinerja Pegawai Dinas Sosial:\n\n${error.message}\n\nPlease check if:\n- The application files are not corrupted\n- You have write permissions to the user data directory\n- No other instance is running`
-      );
-    }
+    // Show error dialog on startup failure
+    dialog.showErrorBox('Startup Failed', 
+      `Failed to start Dashboard Penilaian Kinerja Pegawai Dinas Sosial:\n\n${error.message}\n\nPlease check if:\n- The application files are not corrupted\n- You have write permissions to the user data directory\n- No other instance is running`
+    );
     
     // Show error page in window if it exists
     if (mainWindow && !mainWindow.isDestroyed()) {
