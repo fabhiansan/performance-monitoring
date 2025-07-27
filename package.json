@@ -1,13 +1,4 @@
 {
-  "name": "dashboard-penilaian-kinerja-pegawai",
-  "productName": "Dashboard Penilaian Kinerja Pegawai Dinas Sosial",
-  "description": "Dashboard komprehensif untuk analisis kinerja pegawai Dinas Sosial",
-  "author": "Fabhianto Maoludyo",
-  "private": true,
-  "version": "1.0.0",
-  "type": "module",
-  "main": "main.js",
-  "homepage": "./",
   "scripts": {
     "dev:vite": "vite",
     "dev": "concurrently \"npm:dev:vite\" \"npm:electron:dev\"",
@@ -53,93 +44,5 @@
     "typescript": "~5.7.2",
     "vite": "^5.2.0",
     "wait-on": "^7.2.0"
-  },
-  "build": {
-    "appId": "com.dinsos.dashboard-penilaian-kinerja-pegawai",
-    "productName": "Dashboard Penilaian Kinerja Pegawai Dinas Sosial",
-    "directories": {
-      "output": "release"
-    },
-    "publish": null,
-    "afterPack": "./build-scripts.cjs",
-    "asarUnpack": [
-      "server/**/*",
-      "main.js",
-      "electron-config.js",
-      "package.json",
-      "node_modules/better-sqlite3/**/*"
-    ],
-    "files": [
-      "dist/**/*",
-      "server/**/*",
-      "main.js",
-      "electron-config.js",
-      "assets/error.html",
-      "assets/icon.png",
-      "package.json",
-      "node_modules/**/*"
-    ],
-    "mac": {
-      "category": "public.app-category.business",
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        }
-      ]
-    },
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "requestedExecutionLevel": "asInvoker",
-      "forceCodeSigning": false,
-      "artifactName": "${productName}-${version}-${arch}.${ext}",
-      "extraFiles": [
-        {
-          "from": "server",
-          "to": "resources/server"
-        }
-      ]
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "allowElevation": false,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "Dashboard Penilaian Kinerja Pegawai Dinas Sosial",
-      "menuCategory": "Business",
-      "runAfterFinish": true,
-      "deleteAppDataOnUninstall": false,
-      "artifactName": "${productName}-Setup-${version}.${ext}"
-    },
-    "portable": {
-      "artifactName": "${productName}-${version}-portable.${ext}"
-    },
-    "linux": {
-      "target": [
-        {
-          "target": "AppImage",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    }
   }
 }
