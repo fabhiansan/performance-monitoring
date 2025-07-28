@@ -7,18 +7,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Web Development
 - **Start frontend only**: `npm run dev:vite` (Vite dev server on port 5173)
 - **Start backend server**: `npm run server:node` (Express server on port 3002)
-- **Start both frontend and backend**: `npm run dev:full` (requires concurrently)
+- **Start both frontend and backend**: `npm run dev:full` (web app development - frontend + backend)
 - **Build for production**: `npm run build`
 - **Preview production build**: `npm run preview`
 - **Install dependencies**: `npm install`
 - **Rebuild native modules**: `npm run rebuild:node` (for better-sqlite3 in web mode)
 
 ### Electron Desktop App
-- **Development mode**: `npm run dev` (runs both Vite and Electron with concurrently)
-- **Individual Electron dev**: `npm run electron:dev` (requires Vite running separately)
+- **Development mode**: `npm run dev` (Electron app with embedded server - auto-rebuilds native modules)
+- **Individual Electron dev**: `npm run electron:dev` (requires Vite running separately, auto-rebuilds for Electron)
 - **Production mode**: `npm run electron:build` (run after `npm run build`)
 - **Build distributables**: `npm run dist` / `npm run dist:mac` / `npm run dist:win` / `npm run dist:linux`
-- **Rebuild native modules**: Use `npm run rebuild:node` for web mode or `postinstall` script for Electron
+- **Rebuild native modules**: Use `npm run rebuild:node` for web mode or `npm run rebuild:electron` for Electron
 
 ### TypeScript
 - **Type checking**: `tsc --noEmit` (no specific script configured)
@@ -189,7 +189,9 @@ This is a full-stack dashboard application with React + TypeScript frontend and 
 - Dataset versioning and current dataset management
 
 ### Electron Troubleshooting
-- **Native module errors**: Reinstall with `npm install` (triggers `postinstall` script)
+- **Native module errors**: Use `npm run rebuild:electron` for Electron or `npm run rebuild:node` for web development
+- **Better-sqlite3 binding errors**: Run the correct rebuild command for your target environment (Node.js vs Electron)
+- **Wrong development mode**: Use `npm run dev` for Electron app, `npm run dev:full` for web app (they are different!)
 - **Database issues**: Check userData directory permissions
 - **Server startup failures**: Verify server/server.js exists and DB_PATH is writable
 - **Build issues**: Ensure `npm run build` completes successfully before Electron build
