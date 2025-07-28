@@ -1,4 +1,10 @@
 {
+  "name": "performance-monitoring",
+  "version": "1.0.0",
+  "description": "Dashboard Penilaian Kinerja Pegawai Dinas Sosial - Employee Performance Monitoring Dashboard",
+  "author": "FE Developer",
+  "type": "module",
+  "main": "main.js",
   "scripts": {
     "dev:vite": "vite",
     "dev": "concurrently \"npm:dev:vite\" \"npm:electron:dev\"",
@@ -7,7 +13,7 @@
     "dev:full": "concurrently \"npm run server:node\" \"npm run dev\"",
     "server:node": "npm run rebuild:node && node server/server.js",
     "rebuild:node": "npm rebuild better-sqlite3",
-    "rebuild:electron": "npx electron-rebuild",
+    "rebuild:electron": "npx @electron/rebuild",
     "postinstall": "electron-builder install-app-deps",
     "preelectron": "npm run rebuild:electron",
     "predist": "npm run rebuild:electron",
@@ -40,9 +46,68 @@
     "cross-env": "^7.0.3",
     "electron": "^30.0.6",
     "electron-builder": "^26.0.12",
-    "electron-rebuild": "^3.2.9",
     "typescript": "~5.7.2",
     "vite": "^5.2.0",
     "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.dinsos.performance-monitoring",
+    "productName": "Dashboard Penilaian Kinerja Pegawai Dinas Sosial",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "main.js",
+      "server/**/*",
+      "electron-config.js",
+      "assets/**/*",
+      "node_modules/**/*"
+    ],
+    "asarUnpack": [
+      "server/**/*",
+      "node_modules/better-sqlite3/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.png",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.${ext}"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "icon": "assets/icon.png"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.png"
+    }
   }
 }
