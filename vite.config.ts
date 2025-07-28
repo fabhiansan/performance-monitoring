@@ -12,9 +12,17 @@ export default defineConfig(({ mode }) => {
         }
       },
       build: {
+        chunkSizeWarningLimit: 1000, // Increase limit to 1000kb to reduce warnings
         rollupOptions: {
           input: {
             main: path.resolve(__dirname, 'index.html')
+          },
+          output: {
+            manualChunks: {
+              vendor: ['react', 'react-dom'],
+              charts: ['recharts'],
+              utils: ['html2canvas', 'jspdf']
+            }
           }
         }
       }
