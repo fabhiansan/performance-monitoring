@@ -1,6 +1,6 @@
-import { app } from 'electron';
-import { join } from 'path';
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+const { app } = require('electron');
+const { join } = require('path');
+const { readFileSync, writeFileSync, existsSync } = require('fs');
 
 class ElectronConfig {
   constructor() {
@@ -58,4 +58,4 @@ class ElectronConfig {
   }
 }
 
-export default ElectronConfig;
+module.exports = ElectronConfig;

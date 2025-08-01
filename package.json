@@ -64,11 +64,11 @@
       "dist/**/*",
       "main.js",
       "server/**/*",
-      "electron-config.mjs",
+      "electron-config.js",
       "assets/**/*"
     ],
     "asarUnpack": [
-      "electron-config.mjs",
+      "electron-config.js",
       "server/**/*",
       "scripts/**/*",
       "node_modules/better-sqlite3/**/*",
