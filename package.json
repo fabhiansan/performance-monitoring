@@ -68,6 +68,7 @@
       "assets/**/*"
     ],
     "asarUnpack": [
+      "electron-config.js",
       "server/**/*",
       "scripts/**/*",
       "node_modules/better-sqlite3/**/*",
