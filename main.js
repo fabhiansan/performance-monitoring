@@ -1,5 +1,5 @@
 import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { dirname, join } from 'path';
 import { fork } from 'child_process';
 import { existsSync } from 'fs';
@@ -92,8 +92,9 @@ app.whenReady().then(async () => {
   try {
     // Dynamically import the ElectronConfig class
     const configPath = join(__dirname, 'electron-config.mjs');
-    console.log('Dynamically importing ElectronConfig from:', configPath);
-    const { default: Config } = await import(configPath);
+    const configUrl = pathToFileURL(configPath).href;
+    console.log('Dynamically importing ElectronConfig from:', configUrl);
+    const { default: Config } = await import(configUrl);
     config = new Config();
     console.log('ElectronConfig loaded successfully');
 
