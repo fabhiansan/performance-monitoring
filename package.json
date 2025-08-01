@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Dashboard Penilaian Kinerja Pegawai Dinas Sosial - Employee Performance Monitoring Dashboard",
   "author": "FE Developer",
-  "type": "module",
   "main": "main.js",
   "scripts": {
     "dev:vite": "vite",
