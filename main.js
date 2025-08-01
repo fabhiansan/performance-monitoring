@@ -4,6 +4,7 @@ import { dirname, join } from 'path';
 import { fork } from 'child_process';
 import { existsSync } from 'fs';
 // ElectronConfig will be dynamically imported in app.whenReady()
+let ElectronConfig;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -86,6 +87,28 @@ function createWindow() {
     mainWindow = null;
   });
 }
+
+app.whenReady().then(async () => {
+  try {
+    // Dynamically import the ElectronConfig class
+    const configPath = join(__dirname, 'electron-config.mjs');
+    console.log('Dynamically importing ElectronConfig from:', configPath);
+    const { default: Config } = await import(configPath);
+    config = new Config();
+    console.log('ElectronConfig loaded successfully');
+
+    // Start the server and create the window
+    await startServer();
+    createWindow();
+  } catch (error) {
+    console.error('Failed to start application:', error);
+    dialog.showErrorBox(
+      'Startup Failed',
+      `Failed to start Dashboard Penilaian Kinerja Pegawai Dinas Sosial: ${error.message}`
+    );
+    app.quit();
+  }
+});
 
 async function runServerHealthCheck() {
   try {
