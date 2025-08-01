@@ -1,28 +1,26 @@
 {
-  "name": "dashboard-penilaian-kinerja-pegawai",
-  "productName": "Dashboard Penilaian Kinerja Pegawai Dinas Sosial",
-  "description": "Dashboard komprehensif untuk analisis kinerja pegawai Dinas Sosial",
-  "author": "Fabhianto Maoludyo",
-  "private": true,
+  "name": "performance-monitoring",
   "version": "1.0.0",
+  "description": "Dashboard Penilaian Kinerja Pegawai Dinas Sosial - Employee Performance Monitoring Dashboard",
+  "author": "FE Developer",
   "type": "module",
   "main": "main.js",
-  "homepage": "./",
   "scripts": {
     "dev:vite": "vite",
     "dev": "concurrently \"npm:dev:vite\" \"npm:electron:dev\"",
     "build": "vite build",
     "preview": "vite preview",
-    "dev:full": "concurrently \"npm run server:node\" \"npm run dev\"",
+    "dev:full": "concurrently \"npm run server:node\" \"npm run dev:vite\"",
     "server:node": "npm run rebuild:node && node server/server.js",
     "rebuild:node": "npm rebuild better-sqlite3",
-    "rebuild:electron": "npx electron-rebuild",
+    "rebuild:electron": "npx @electron/rebuild",
     "postinstall": "electron-builder install-app-deps",
     "preelectron": "npm run rebuild:electron",
+    "preelectron:dev": "npm run rebuild:electron",
     "predist": "npm run rebuild:electron",
     "electron": "electron .",
-    "electron:dev": "wait-on http://localhost:5173 && NODE_ENV=development electron .",
-    "electron:build": "npm run build && NODE_ENV=production electron .",
+    "electron:dev": "wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .",
+    "electron:build": "npm run build && cross-env NODE_ENV=production electron .",
     "dist": "npm run build && electron-builder",
     "dist:win": "npm run build && electron-builder --win",
     "dist:mac": "npm run build && electron-builder --mac",
@@ -46,98 +44,71 @@
     "@types/react-dom": "^18.2.7",
     "@vitejs/plugin-react": "^4.6.0",
     "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
     "electron": "^30.0.6",
     "electron-builder": "^26.0.12",
-    "electron-rebuild": "^3.2.9",
     "typescript": "~5.7.2",
     "vite": "^5.2.0",
     "wait-on": "^7.2.0"
   },
   "build": {
-    "appId": "com.dinsos.dashboard-penilaian-kinerja-pegawai",
+    "appId": "com.dinsos.performance-monitoring",
     "productName": "Dashboard Penilaian Kinerja Pegawai Dinas Sosial",
     "directories": {
       "output": "release"
     },
-    "publish": null,
-    "afterPack": "./build-scripts.cjs",
-    "asarUnpack": [
-      "server/**/*",
-      "main.js",
-      "electron-config.js",
-      "node_modules/better-sqlite3/**/*"
-    ],
     "files": [
       "dist/**/*",
-      "server/**/*",
       "main.js",
+      "server/**/*",
       "electron-config.js",
-      "assets/error.html",
-      "assets/icon.png",
-      "package.json",
+      "assets/**/*",
       "node_modules/**/*"
     ],
-    "mac": {
-      "category": "public.app-category.business",
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        }
-      ]
-    },
+    "asarUnpack": [
+      "server/**/*",
+      "node_modules/better-sqlite3/**/*"
+    ],
     "win": {
       "target": [
         {
           "target": "nsis",
-          "arch": [
-            "x64"
-          ]
+          "arch": ["x64"]
         },
         {
           "target": "portable",
-          "arch": [
-            "x64"
-          ]
+          "arch": ["x64"]
         }
       ],
-      "requestedExecutionLevel": "asInvoker",
-      "forceCodeSigning": false,
-      "artifactName": "${productName}-${version}-${arch}.${ext}",
-      "extraFiles": [
-        {
-          "from": "server",
-          "to": "resources/server"
-        }
-      ]
+      "icon": "assets/icon.png",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "allowElevation": false,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "Dashboard Penilaian Kinerja Pegawai Dinas Sosial",
-      "menuCategory": "Business",
-      "runAfterFinish": true,
-      "deleteAppDataOnUninstall": false,
-      "artifactName": "${productName}-Setup-${version}.${ext}"
+      "createStartMenuShortcut": true
     },
     "portable": {
       "artifactName": "${productName}-${version}-portable.${ext}"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "icon": "assets/icon.png"
     },
     "linux": {
       "target": [
         {
           "target": "AppImage",
-          "arch": [
-            "x64"
-          ]
+          "arch": ["x64"]
         }
-      ]
+      ],
+      "icon": "assets/icon.png"
     }
   }
 }
