@@ -87,9 +87,35 @@ function createWindow() {
   });
 }
 
+async function runServerHealthCheck() {
+  try {
+    // Dynamic import of health check module
+    const { checkServerHealth } = await import('./server/server-health-check.js');
+    const healthResult = await checkServerHealth();
+    console.log('Server health check result:', healthResult);
+    return healthResult;
+  } catch (error) {
+    console.warn('Health check module not available, proceeding with startup:', error.message);
+    return { healthy: false, reason: 'health-check-unavailable', details: error.message };
+  }
+}
+
 function startServer() {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     try {
+      // Run server health check first
+      console.log('Running server health check...');
+      const healthCheck = await runServerHealthCheck();
+      
+      if (!healthCheck.healthy && healthCheck.reason === 'native-module-error') {
+        console.error('Native module error detected:', healthCheck.details);
+        const errorMsg = `Native module compilation issue detected:\n${healthCheck.details}\n\nPlease run: npm run rebuild:native`;
+        
+        dialog.showErrorBox('Native Module Error', errorMsg);
+        reject(new Error(`Native module error: ${healthCheck.details}`));
+        return;
+      }
+      
       // Set database path to userData directory
       const userDataPath = app.getPath('userData');
       const dbPath = join(userDataPath, 'performance_analyzer.db');
@@ -235,16 +261,58 @@ function startServer() {
 
       serverProcess.on('error', (error) => {
         console.error('Server process error:', error);
-        dialog.showErrorBox('Server Error', `Server process failed to start: ${error.message}`);
+        
+        // Provide detailed error analysis
+        let errorDetails = `Server process failed to start: ${error.message}`;
+        let suggestions = [];
+        
+        if (error.code === 'ENOENT') {
+          errorDetails += '\n\nServer file not found or not executable.';
+          suggestions.push('Verify the server files are properly built');
+          suggestions.push('Run "npm run build" to rebuild the application');
+        } else if (error.message.includes('better-sqlite3') || error.message.includes('native')) {
+          errorDetails += '\n\nNative module loading error detected.';
+          suggestions.push('Run "npm run rebuild:native" to rebuild native modules');
+          suggestions.push('Ensure native modules are compiled for Electron');
+        }
+        
+        if (suggestions.length > 0) {
+          errorDetails += '\n\nSuggested fixes:\n' + suggestions.map(s => `• ${s}`).join('\n');
+        }
+        
+        dialog.showErrorBox('Server Error', errorDetails);
         reject(error);
       });
 
       serverProcess.on('exit', (code, signal) => {
         console.log(`Server process exited with code ${code}, signal ${signal}`);
         if (code !== 0) {
-          const errorMsg = `Server exited with code ${code}${signal ? ` (signal: ${signal})` : ''}`;
+          let errorMsg = `Server exited with code ${code}${signal ? ` (signal: ${signal})` : ''}`;
+          let suggestions = [];
+          
+          // Analyze exit codes for better error reporting
+          if (code === 1) {
+            errorMsg += '\n\nThis is typically caused by:';
+            suggestions.push('Native module compilation issues (better-sqlite3)');
+            suggestions.push('Missing dependencies or incorrect module paths');
+            suggestions.push('Database permission issues');
+            
+            errorMsg += '\n\nSuggested fixes:';
+            suggestions.push('Run "npm run rebuild:native" to rebuild native modules');
+            suggestions.push('Check write permissions to user data directory');
+            suggestions.push('Verify all dependencies are properly installed');
+          } else if (code === 3221225477 || code === -1073741819) { // Windows access violation
+            errorMsg += '\n\nWindows access violation detected.';
+            suggestions.push('Run "npm run rebuild:electron" to rebuild for Electron');
+            suggestions.push('Close any other instances of the application');
+          }
+          
+          if (suggestions.length > 0) {
+            errorMsg += '\n' + suggestions.map(s => `• ${s}`).join('\n');
+          }
+          
           console.error(errorMsg);
-          dialog.showErrorBox('Server Exit', errorMsg);
+          dialog.showErrorBox('Server Exit Error', errorMsg);
           reject(new Error(errorMsg));
         }
       });

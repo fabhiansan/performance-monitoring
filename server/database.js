@@ -1,7 +1,56 @@
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { existsSync } from 'fs';
-import Database from 'better-sqlite3';
+
+// Enhanced import with error handling for better-sqlite3
+let Database;
+let nativeModuleError = null;
+
+try {
+  // Attempt to import better-sqlite3
+  const betterSqlite3 = await import('better-sqlite3');
+  Database = betterSqlite3.default;
+  
+  // Test basic functionality
+  if (typeof Database !== 'function') {
+    throw new Error('better-sqlite3 import failed: Database is not a constructor function');
+  }
+  
+  console.log('✅ better-sqlite3 loaded successfully');
+} catch (error) {
+  nativeModuleError = error;
+  console.error('❌ Failed to load better-sqlite3:', error.message);
+  
+  // Determine the likely cause of the error
+  let errorType = 'unknown';
+  let suggestions = [];
+  
+  if (error.message.includes('MODULE_NOT_FOUND') || error.message.includes('Cannot find module')) {
+    errorType = 'missing-module';
+    suggestions.push('Run "npm install" to install missing dependencies');
+    suggestions.push('Verify better-sqlite3 is listed in package.json dependencies');
+  } else if (error.message.includes('node-gyp') || error.message.includes('binding') || error.message.includes('rebuild')) {
+    errorType = 'compilation-error';
+    suggestions.push('Run "npm run rebuild:native" to rebuild native modules');
+    suggestions.push('Ensure you have build tools installed (Visual Studio Build Tools on Windows)');
+    suggestions.push('Try running "npm rebuild better-sqlite3"');
+  } else if (error.message.includes('electron') || error.message.includes('version')) {
+    errorType = 'version-mismatch';
+    suggestions.push('Run "npm run rebuild:electron" to rebuild for Electron');
+    suggestions.push('Verify Electron and Node.js versions are compatible');
+  } else if (error.message.includes('permission') || error.message.includes('access')) {
+    errorType = 'permission-error';
+    suggestions.push('Check file permissions in node_modules directory');
+    suggestions.push('Run with elevated privileges if necessary');
+  }
+  
+  nativeModuleError.type = errorType;
+  nativeModuleError.suggestions = suggestions;
+  
+  console.error(`Error type: ${errorType}`);
+  console.error('Suggested fixes:');
+  suggestions.forEach(s => console.error(`  • ${s}`));
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -10,15 +59,56 @@ class SQLiteService {
   constructor(customDbPath = null) {
     this.db = null;
     this.customDbPath = customDbPath;
+    this.isInitialized = false;
+    this.initError = null;
     this.init();
   }
 
   init() {
     try {
+      // Check if better-sqlite3 is available
+      if (nativeModuleError) {
+        this.initError = nativeModuleError;
+        console.error('Cannot initialize database: better-sqlite3 module failed to load');
+        console.error('Error details:', nativeModuleError.message);
+        console.error('Error type:', nativeModuleError.type);
+        console.error('Suggestions:', nativeModuleError.suggestions);
+        
+        // Don't throw immediately, allow server to start and show error to user
+        return;
+      }
+      
+      if (!Database) {
+        this.initError = new Error('Database constructor not available');
+        console.error('Cannot initialize database: Database constructor is null');
+        return;
+      }
+      
       // Create database file in custom path or server directory
       const dbPath = this.customDbPath || join(__dirname, 'performance_analyzer.db');
-      this.db = new Database(dbPath);
-      console.log('Database initialized at:', dbPath);
+      
+      console.log('Attempting to create database at:', dbPath);
+      console.log('Database path exists:', existsSync(dirname(dbPath)));
+      
+      // Test database creation with error handling
+      try {
+        this.db = new Database(dbPath);
+        console.log('✅ Database connection established at:', dbPath);
+      } catch (dbError) {
+        console.error('❌ Database creation failed:', dbError.message);
+        
+        // Analyze database creation error
+        if (dbError.message.includes('SQLITE_CANTOPEN')) {
+          this.initError = new Error(`Cannot open database file. Check write permissions to: ${dirname(dbPath)}`);
+        } else if (dbError.message.includes('better-sqlite3')) {
+          this.initError = new Error(`Native module error during database creation: ${dbError.message}`);
+        } else {
+          this.initError = dbError;
+        }
+        
+        console.error('Database initialization failed with error:', this.initError.message);
+        return;
+      }
       
       // Create tables
       this.createTables();
@@ -27,35 +117,73 @@ class SQLiteService {
       const backupPath = dbPath + '.backup';
       this.migrateFromOldSchema(backupPath);
       
-      console.log('SQLite database initialized successfully');
+      this.isInitialized = true;
+      console.log('✅ SQLite database initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize database:', error);
-      throw error;
+      this.initError = error;
+      console.error('❌ Failed to initialize database:', error.message);
+      console.error('Stack trace:', error.stack);
+      
+      // Provide specific error guidance
+      if (error.message.includes('better-sqlite3')) {
+        console.error('\n🔧 This appears to be a native module compilation issue.');
+        console.error('Try running: npm run rebuild:native');
+      }
+      
+      // Don't throw error to allow server to start and show user-friendly error
     }
   }
 
-  createTables() {
-    // Create unified employee_data table with timestamps
-    const createEmployeeDataTable = `
-      CREATE TABLE IF NOT EXISTS employee_data (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        upload_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-        upload_session TEXT NOT NULL,
-        employee_name TEXT NOT NULL,
-        job_title TEXT,
-        organizational_level TEXT DEFAULT 'Staff/Other',
-        competency_name TEXT NOT NULL,
-        competency_score REAL NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `;
-    
-    // Add organizational_level column if it doesn't exist (for existing databases)
-    try {
-      this.db.exec('ALTER TABLE employee_data ADD COLUMN organizational_level TEXT DEFAULT "Staff/Other"');
-    } catch (e) {
-      // Column already exists or other error - ignore
+  // Check if database is ready for operations
+  isReady() {
+    return this.isInitialized && this.db && !this.initError;
+  }
+
+  // Get initialization error details
+  getInitError() {
+    return this.initError;
+  }
+
+  // Wrapper method to check database availability before operations
+  requireDatabase() {
+    if (!this.isReady()) {
+      const errorMsg = this.initError 
+        ? `Database not available: ${this.initError.message}`
+        : 'Database not initialized';
+      throw new Error(errorMsg);
     }
+    return this.db;
+  }
+
+  createTables() {
+    try {
+      // During initialization, use this.db directly instead of requireDatabase()
+      const db = this.db;
+      if (!db) {
+        throw new Error('Database connection not established');
+      }
+      
+      // Create unified employee_data table with timestamps
+      const createEmployeeDataTable = `
+        CREATE TABLE IF NOT EXISTS employee_data (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          upload_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+          upload_session TEXT NOT NULL,
+          employee_name TEXT NOT NULL,
+          job_title TEXT,
+          organizational_level TEXT DEFAULT 'Staff/Other',
+          competency_name TEXT NOT NULL,
+          competency_score REAL NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `;
+      
+      // Add organizational_level column if it doesn't exist (for existing databases)
+      try {
+        db.exec('ALTER TABLE employee_data ADD COLUMN organizational_level TEXT DEFAULT "Staff/Other"');
+      } catch (e) {
+        // Column already exists or other error - ignore
+      }
 
     // Create upload_sessions table for metadata
     const createUploadSessionsTable = `
@@ -119,23 +247,29 @@ class SQLiteService {
       // Tables might not exist - ignore
     }
 
-    // Execute table creation in dependency order
-    this.db.exec(createEmployeeDataTable);
-    this.db.exec(createUploadSessionsTable);
-    this.db.exec(createEmployeeDatabaseTable);
-    
-    // Tables with foreign keys must be created after their referenced tables
-    this.db.exec(createCurrentDatasetTable);
-    this.db.exec(createManualLeadershipScoresTable);
+      // Execute table creation in dependency order
+      db.exec(createEmployeeDataTable);
+      db.exec(createUploadSessionsTable);
+      db.exec(createEmployeeDatabaseTable);
+      
+      // Tables with foreign keys must be created after their referenced tables
+      db.exec(createCurrentDatasetTable);
+      db.exec(createManualLeadershipScoresTable);
 
-    // Create indexes for better performance
-    this.db.exec('CREATE INDEX IF NOT EXISTS idx_employee_data_session ON employee_data(upload_session)');
-    this.db.exec('CREATE INDEX IF NOT EXISTS idx_employee_data_timestamp ON employee_data(upload_timestamp)');
-    this.db.exec('CREATE INDEX IF NOT EXISTS idx_employee_data_name ON employee_data(employee_name)');
-    this.db.exec('CREATE INDEX IF NOT EXISTS idx_upload_sessions_timestamp ON upload_sessions(upload_timestamp)');
-    
-    this.db.exec('CREATE INDEX IF NOT EXISTS idx_employee_database_nip ON employee_database(nip)');
-    this.db.exec('CREATE INDEX IF NOT EXISTS idx_manual_leadership_scores ON manual_leadership_scores(dataset_id, employee_name)');
+      // Create indexes for better performance
+      db.exec('CREATE INDEX IF NOT EXISTS idx_employee_data_session ON employee_data(upload_session)');
+      db.exec('CREATE INDEX IF NOT EXISTS idx_employee_data_timestamp ON employee_data(upload_timestamp)');
+      db.exec('CREATE INDEX IF NOT EXISTS idx_employee_data_name ON employee_data(employee_name)');
+      db.exec('CREATE INDEX IF NOT EXISTS idx_upload_sessions_timestamp ON upload_sessions(upload_timestamp)');
+      
+      db.exec('CREATE INDEX IF NOT EXISTS idx_employee_database_nip ON employee_database(nip)');
+      db.exec('CREATE INDEX IF NOT EXISTS idx_manual_leadership_scores ON manual_leadership_scores(dataset_id, employee_name)');
+      
+      console.log('✅ Database tables created successfully');
+    } catch (error) {
+      console.error('❌ Failed to create database tables:', error.message);
+      throw error;
+    }
   }
 
 
@@ -410,65 +544,77 @@ class SQLiteService {
     }
 
     try {
-      const oldDb = new Database(backupDbPath, { readonly: true });
-      
-      console.log('Starting migration from old database schema...');
-      
-      // Migrate upload_sessions if they exist
-      try {
-        const sessions = oldDb.prepare('SELECT * FROM upload_sessions').all();
-        const insertSession = this.db.prepare(`
-          INSERT OR IGNORE INTO upload_sessions (session_id, session_name, upload_timestamp, employee_count, competency_count) 
-          VALUES (?, ?, ?, ?, ?)
-        `);
-        
-        for (const session of sessions) {
-          insertSession.run(session.session_id, session.session_name, session.upload_timestamp, session.employee_count, session.competency_count);
+          console.log('Starting migration from old database schema...');
+          // The following functions are not defined in the current file and will need to be added.
+          // migrateUploadSessions();
+          // migrateEmployeeData();
+          // migrateEmployees();
+          this.migrateUploadSessions(backupDbPath);
+          this.migrateEmployeeData(backupDbPath);
+          this.migrateEmployees(backupDbPath);
+          console.log('✅ Migration from old schema completed successfully');
+        } catch (error) {
+          console.error('Migration failed:', error);
         }
-        console.log(`Migrated ${sessions.length} upload sessions`);
-      } catch (e) {
-        console.log('No upload_sessions to migrate:', e.message);
-      }
-      
-      // Migrate employee_data if it exists
-      try {
-        const employeeData = oldDb.prepare('SELECT * FROM employee_data').all();
-        const insertData = this.db.prepare(`
-          INSERT OR IGNORE INTO employee_data (upload_session, upload_timestamp, employee_name, job_title, organizational_level, competency_name, competency_score) 
-          VALUES (?, ?, ?, ?, ?, ?, ?)
-        `);
-        
-        for (const data of employeeData) {
-          insertData.run(data.upload_session, data.upload_timestamp, data.employee_name, data.job_title, data.organizational_level || 'Staff/Other', data.competency_name, data.competency_score);
-        }
-        console.log(`Migrated ${employeeData.length} employee data records`);
-      } catch (e) {
-        console.log('No employee_data to migrate:', e.message);
-      }
-      
-      // Migrate employee_database if it exists
-      try {
-        const employees = oldDb.prepare('SELECT * FROM employee_database').all();
-        const insertEmployee = this.db.prepare(`
-          INSERT OR IGNORE INTO employee_database (name, nip, gol, pangkat, position, sub_position, organizational_level) 
-          VALUES (?, ?, ?, ?, ?, ?, ?)
-        `);
-        
-        for (const emp of employees) {
-          insertEmployee.run(emp.name, emp.nip, emp.gol, emp.pangkat, emp.position, emp.sub_position, emp.organizational_level || 'Staff/Other');
-        }
-        console.log(`Migrated ${employees.length} employee records`);
-      } catch (e) {
-        console.log('No employee_database to migrate:', e.message);
-      }
-      
-      oldDb.close();
-      console.log('Migration completed successfully');
-    } catch (error) {
-      console.error('Migration failed:', error);
-    }
   }
 
+
+  migrateUploadSessions(backupDbPath) {
+    const backupDb = new Database(backupDbPath, { readonly: true });
+    const sessions = backupDb.prepare('SELECT * FROM upload_sessions').all();
+
+    const insertSession = this.db.prepare(`
+      INSERT OR IGNORE INTO upload_sessions (session_id, session_name, upload_timestamp, employee_count, competency_count)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+
+    this.db.transaction(() => {
+      for (const session of sessions) {
+        insertSession.run(session.session_id, session.session_name, session.upload_timestamp, session.employee_count, session.competency_count);
+      }
+    })();
+
+    console.log(`Migrated ${sessions.length} upload sessions.`);
+    backupDb.close();
+  }
+
+  migrateEmployeeData(backupDbPath) {
+    const backupDb = new Database(backupDbPath, { readonly: true });
+    const data = backupDb.prepare('SELECT * FROM employee_data').all();
+
+    const insertData = this.db.prepare(`
+      INSERT OR IGNORE INTO employee_data (id, upload_timestamp, upload_session, employee_name, job_title, organizational_level, competency_name, competency_score, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    this.db.transaction(() => {
+      for (const row of data) {
+        insertData.run(row.id, row.upload_timestamp, row.upload_session, row.employee_name, row.job_title, row.organizational_level, row.competency_name, row.competency_score, row.created_at);
+      }
+    })();
+
+    console.log(`Migrated ${data.length} employee data records.`);
+    backupDb.close();
+  }
+
+  migrateEmployees(backupDbPath) {
+    const backupDb = new Database(backupDbPath, { readonly: true });
+    const employees = backupDb.prepare('SELECT * FROM employee_database').all();
+
+    const insertEmployee = this.db.prepare(`
+      INSERT OR IGNORE INTO employee_database (id, name, nip, gol, pangkat, position, sub_position, organizational_level, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    this.db.transaction(() => {
+      for (const emp of employees) {
+        insertEmployee.run(emp.id, emp.name, emp.nip, emp.gol, emp.pangkat, emp.position, emp.sub_position, emp.organizational_level, emp.created_at, emp.updated_at);
+      }
+    })();
+
+    console.log(`Migrated ${employees.length} employees from master data.`);
+    backupDb.close();
+  }
 
   // New unified data methods
   
@@ -651,10 +797,39 @@ class SQLiteService {
   
 
   close() {
-    if (this.db) {
-      this.db.close();
+    try {
+      if (this.db) {
+        this.db.close();
+        console.log('✅ Database connection closed');
+      }
+    } catch (error) {
+      console.error('❌ Error closing database:', error.message);
     }
+  }
+  
+  // Method to get detailed error information for troubleshooting
+  getDiagnosticInfo() {
+    return {
+      isReady: this.isReady(),
+      isInitialized: this.isInitialized,
+      hasDatabase: !!this.db,
+      hasError: !!this.initError,
+      errorDetails: this.initError ? {
+        message: this.initError.message,
+        type: this.initError.type || 'unknown',
+        suggestions: this.initError.suggestions || [],
+        stack: this.initError.stack
+      } : null,
+      nativeModuleAvailable: !nativeModuleError,
+      nativeModuleError: nativeModuleError ? {
+        message: nativeModuleError.message,
+        type: nativeModuleError.type,
+        suggestions: nativeModuleError.suggestions
+      } : null
+    };
   }
 }
 
+// Export both the class and error information for health checks
 export default SQLiteService;
+export { nativeModuleError };

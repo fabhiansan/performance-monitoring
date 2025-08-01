@@ -366,9 +366,10 @@ app.listen(port, () => {
   console.log(`Performance Analyzer API server running on http://localhost:${port}`);
   
   // Send ready message to parent process (for Electron)
-  if (process.send) {
-    process.send('server-ready');
-  }
+  // Commented out to prevent process exit when no parent process
+  // if (process.send) {
+  //   process.send('server-ready');
+  // }
   
   console.log('Available endpoints:');
   console.log('  GET /api/health - Health check');
