@@ -66,6 +66,7 @@ jobs:
       - name: Build application
         env:
           NODE_ENV: production
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run dist:win
 
       - name: Upload artifacts
