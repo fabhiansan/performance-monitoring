@@ -41,7 +41,10 @@ jobs:
     
     - name: Install dependencies
       run: npm install
-    
+
+    - name: Rebuild native modules for Electron
+      run: npm run rebuild:native
+
     - name: Rebuild native modules for Node.js
       run: npm run rebuild:node
     
