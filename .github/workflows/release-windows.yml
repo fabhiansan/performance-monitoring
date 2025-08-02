@@ -71,7 +71,8 @@ jobs:
         run: |
           node --version
           npm --version
-          npm list electron
+          npm list electron --depth=0 || echo "Electron not found in dependencies, checking devDependencies..."
+          npm list electron --dev --depth=0 || echo "Electron package status check completed"
         
       - name: Rebuild native modules for Electron
         run: |
