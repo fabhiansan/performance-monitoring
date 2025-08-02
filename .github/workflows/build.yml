@@ -26,10 +26,18 @@ jobs:
     - name: Clear npm cache
       run: npm cache clean --force
     
-    - name: Remove package-lock and node_modules
+    - name: Remove package-lock and node_modules (Unix)
       run: |
         rm -f package-lock.json
         rm -rf node_modules
+      if: matrix.os != 'windows-latest'
+    
+    - name: Remove package-lock and node_modules (Windows)
+      run: |
+        if (Test-Path package-lock.json) { Remove-Item package-lock.json -Force }
+        if (Test-Path node_modules) { Remove-Item node_modules -Recurse -Force }
+      shell: powershell
+      if: matrix.os == 'windows-latest'
     
     - name: Install dependencies
       run: npm install
