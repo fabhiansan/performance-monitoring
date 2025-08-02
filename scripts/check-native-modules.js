@@ -5,8 +5,8 @@ import sqlite3 from 'better-sqlite3';
 
 class NativeModuleChecker {
   constructor() {
-    this.errors = [];
-    this.warnings = [];
+    this.issues = [];
+    this.verbose = process.argv.includes('--verbose');
   }
 
   async checkBetterSqlite3() {

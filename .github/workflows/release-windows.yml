@@ -49,45 +49,19 @@ jobs:
         shell: powershell
         
       - name: Install dependencies
-        run: |
-          # Set environment for Windows x64 build
-          $env:npm_config_target_arch = "x64"
-          $env:npm_config_target_platform = "win32"
-          $env:npm_config_arch = "x64"
-          $env:NODE_ENV = "production"
-          
-          npm install
-          
-          # Verify critical dependencies
-          if (-not (Test-Path "node_modules/better-sqlite3")) {
-            Write-Host "❌ better-sqlite3 not installed, trying alternative approach"
-            npm install better-sqlite3 --build-from-source
-          }
+        run: npm install
           
       - name: Rebuild native modules for Node.js
         run: npm run rebuild:node
         
-      - name: Check installed versions
-        run: |
-          node --version
-          npm --version
-          npm list electron --depth=0 || echo "Electron not found in dependencies, checking devDependencies..."
-          npm list electron --dev --depth=0 || echo "Electron package status check completed"
+      - name: Run native module diagnostics
+        run: npm run check:native -- --verbose
+        
+      - name: Test database connection
+        run: node --input-type=module -e "import Database from 'better-sqlite3'; const db = new Database(':memory:'); db.exec('SELECT 1'); console.log('✅ Database test passed'); db.close();"
         
       - name: Rebuild native modules for Electron
-        run: |
-          Write-Host "Rebuilding native modules for Electron..."
-          npx electron-rebuild --verbose
-          
-      - name: Verify native modules
-        run: |
-          if (Test-Path node_modules/better-sqlite3/build/Release/better_sqlite3.node) {
-            Write-Host "Native module built successfully"
-            node --input-type=module -e "try { const Database = (await import('better-sqlite3')).default; const db = new Database(':memory:'); db.close(); console.log('✅ better-sqlite3 loads correctly'); } catch(e) { console.error('❌ better-sqlite3 failed to load:', e.message); process.exit(1); }"
-          } else {
-            Write-Host "Native module build failed"
-            exit 1
-          }
+        run: npm run rebuild:electron
           
       - name: Build application
         env:
