@@ -30,7 +30,6 @@ jobs:
         with:
           node-version: '20.x'
           registry-url: 'https://registry.npmjs.org'
-          cache: 'npm'
           
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -40,23 +39,24 @@ jobs:
       - name: Install Visual Studio Build Tools
         uses: microsoft/setup-msbuild@v2
         
-      - name: Clean and install dependencies
+      - name: Clear npm cache
+        run: npm cache clean --force
+        
+      - name: Remove package-lock and node_modules
         run: |
-          # Clean any existing builds
-          if (Test-Path node_modules) { Remove-Item -Recurse -Force node_modules }
-          
+          if (Test-Path package-lock.json) { Remove-Item package-lock.json -Force }
+          if (Test-Path node_modules) { Remove-Item node_modules -Recurse -Force }
+        shell: powershell
+        
+      - name: Install dependencies
+        run: |
           # Set environment for Windows x64 build
           $env:npm_config_target_arch = "x64"
           $env:npm_config_target_platform = "win32"
           $env:npm_config_arch = "x64"
           $env:NODE_ENV = "production"
           
-          # Install dependencies (use npm ci if package-lock.json exists, otherwise npm install)
-          if (Test-Path package-lock.json) {
-            npm ci --no-optional
-          } else {
-            npm install --no-optional
-          }
+          npm install
           
           # Verify critical dependencies
           if (-not (Test-Path "node_modules/better-sqlite3")) {
@@ -64,6 +64,9 @@ jobs:
             npm install better-sqlite3 --build-from-source
           }
           
+      - name: Rebuild native modules for Node.js
+        run: npm run rebuild:node
+        
       - name: Check installed versions
         run: |
           node --version

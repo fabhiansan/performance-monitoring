@@ -6,10 +6,10 @@
   "main": "main.js",
   "type": "module",
   "scripts": {
-
-    "rebuild:native": "npx @electron/rebuild --force",
+    "postinstall": "npm run rebuild:native",
+    "rebuild:native": "electron-rebuild --force",
     "rebuild:node": "npm rebuild better-sqlite3",
-    "rebuild:electron": "npx @electron/rebuild --only better-sqlite3 --force",
+    "rebuild:electron": "electron-rebuild --only better-sqlite3 --force",
     "check:native": "node scripts/check-native-modules.js",
     "dev:full": "concurrently \"npm run dev:server\" \"npm run dev:electron\"",
     "build:clean": "rimraf dist node_modules/.cache",
@@ -62,7 +62,7 @@
     "wait-on": "^7.2.0"
   },
   "engines": {
-    "node": ">=22.12.0",
+    "node": ">=20.0.0",
     "npm": ">=8.0.0"
   },
   "build": {

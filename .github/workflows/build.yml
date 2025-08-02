@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         os: [windows-latest]
-        node-version: [22.x]
+        node-version: [20.x]
     
     steps:
     - uses: actions/checkout@v4
@@ -41,10 +41,7 @@ jobs:
     
     - name: Install dependencies
       run: npm install
-
-    - name: Rebuild native modules for Electron
-      run: npm run rebuild:native
-
+    
     - name: Rebuild native modules for Node.js
       run: npm run rebuild:node
     
