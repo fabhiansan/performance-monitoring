@@ -21,12 +21,38 @@ class ApiService {
   private baseUrl: string;
 
   constructor() {
-    // Prefer environment variable if provided; fallback to localhost
-    // This ensures packaged desktop app still communicates with the bundled backend
-    this.baseUrl = (import.meta.env?.VITE_API_BASE_URL as string) || 'http://localhost:3002/api';
+    // Handle different environments: development (Vite), production (packaged), and fallback
+    let apiBaseUrl = 'http://localhost:3002/api'; // Default fallback
+    
+    try {
+      // In development with Vite, import.meta.env is available
+      if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) {
+        apiBaseUrl = import.meta.env.VITE_API_BASE_URL as string;
+      }
+      // In packaged Electron app, check for process.env
+      else if (typeof process !== 'undefined' && process.env?.VITE_API_BASE_URL) {
+        apiBaseUrl = process.env.VITE_API_BASE_URL;
+      }
+    } catch (error) {
+      // Silently fall back to default if import.meta is not available
+      console.warn('Using default API base URL due to environment detection error:', error);
+    }
+    
+    this.baseUrl = apiBaseUrl;
   }
 
   async checkHealth(): Promise<boolean> {
+    try {
+      // Try the Electron-specific health endpoint first
+      const response = await fetch('http://localhost:3002/health');
+      if (response.ok) {
+        return true;
+      }
+    } catch (error) {
+      console.warn('Electron health check failed:', error);
+    }
+    
+    // Fallback to API health endpoint
     try {
       const response = await fetch(`${this.baseUrl}/health`);
       return response.ok;

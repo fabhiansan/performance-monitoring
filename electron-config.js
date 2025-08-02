@@ -1,6 +1,6 @@
-const { app } = require('electron');
-const { join } = require('path');
-const { readFileSync, writeFileSync, existsSync } = require('fs');
+import { app } from 'electron';
+import { join } from 'path';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
 
 class ElectronConfig {
   constructor() {

@@ -1,455 +1,528 @@
-import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, dialog, shell } from 'electron';
+import { fork, spawn } from 'child_process';
+import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import { fork } from 'child_process';
-import { existsSync } from 'fs';
-// ElectronConfig will be dynamically imported in app.whenReady()
-let ElectronConfig;
+import { dirname } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-let mainWindow;
-let serverProcess;
-let config;
-// Determine if we are running in development mode
-const isDev = process.env.NODE_ENV === 'development' && !app.isPackaged;
-const port = 3002;
+class ElectronApp {
+  constructor() {
+    this.mainWindow = null;
+    this.serverProcess = null;
+    this.serverReady = false;
+    this.serverPort = 3002; // Updated to match server.js default port
+  }
 
-function createWindow() {
-  // Create the browser window
-  mainWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    minWidth: 1200,
-    minHeight: 800,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      webSecurity: true
-    },
-    icon: join(__dirname, 'assets/icon.png'), // App icon
-    title: 'Dashboard Penilaian Kinerja Pegawai Dinas Sosial',
-    show: false // Don't show until ready
-  });
+  createWindow() {
+    this.mainWindow = new BrowserWindow({
+      width: 1200,
+      height: 800,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true
+      }
+    });
 
-  // Remove menu bar
-  mainWindow.setMenuBarVisibility(false);
-
-  // Load the app
-  console.log('isDev:', isDev);
-  console.log('app.isPackaged:', app.isPackaged);
-  console.log('NODE_ENV:', process.env.NODE_ENV);
-  
-  if (isDev) {
-    // Development: load from Vite dev server
-    console.log('Loading from Vite dev server...');
-    mainWindow.loadURL('http://localhost:5173');
-    mainWindow.webContents.openDevTools();
-  } else {
-    // Production: load from built files
-    console.log('Loading from built files...');
-    const indexPath = join(__dirname, 'dist', 'index.html');
-    console.log('Loading index.html from:', indexPath);
-    console.log('Index file exists:', existsSync(indexPath));
-    
-    if (existsSync(indexPath)) {
-      mainWindow.loadFile(indexPath);
+    // Load the app
+    if (process.env.NODE_ENV === 'development') {
+      this.mainWindow.loadURL('http://localhost:5173'); // Vite dev server
+      this.mainWindow.webContents.openDevTools();
     } else {
-      console.error('Built files not found! Run "npm run build" first.');
-      app.quit();
+      this.mainWindow.loadFile('dist/index.html');
     }
   }
 
-  // Show window when ready
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
-    console.log('Window shown successfully');
-  });
-  
-  // Add debug logging for page load
-  mainWindow.webContents.on('did-finish-load', () => {
-    console.log('Page finished loading');
-  });
-  
-  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-    console.error('Page failed to load:', errorCode, errorDescription);
-  });
-
-  // Handle external links
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
-    return { action: 'deny' };
-  });
-
-  // Handle window closed
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
-}
-
-app.whenReady().then(async () => {
-  try {
-    // Import the ElectronConfig class
-    const Config = require('./electron-config.js');
-    config = new Config();
-    console.log('ElectronConfig loaded successfully');
-
-    // Start the server and create the window
-    await startServer();
-    createWindow();
-  } catch (error) {
-    console.error('Failed to start application:', error);
-    dialog.showErrorBox(
-      'Startup Failed',
-      `Failed to start Dashboard Penilaian Kinerja Pegawai Dinas Sosial: ${error.message}`
-    );
-    app.quit();
-  }
-});
-
-async function runServerHealthCheck() {
-  try {
-    // Dynamic import of health check module
-    const { checkServerHealth } = await import('./server/server-health-check.js');
-    const healthResult = await checkServerHealth();
-    console.log('Server health check result:', healthResult);
-    return healthResult;
-  } catch (error) {
-    console.warn('Health check module not available, proceeding with startup:', error.message);
-    return { healthy: false, reason: 'health-check-unavailable', details: error.message };
-  }
-}
-
-function startServer() {
-  return new Promise(async (resolve, reject) => {
-    try {
-      // Run server health check first
-      console.log('Running server health check...');
-      const healthCheck = await runServerHealthCheck();
-      
-      if (!healthCheck.healthy && healthCheck.reason === 'native-module-error') {
-        console.error('Native module error detected:', healthCheck.details);
-        const errorMsg = `Native module compilation issue detected:\n${healthCheck.details}\n\nPlease run: npm run rebuild:native`;
-        
-        dialog.showErrorBox('Native Module Error', errorMsg);
-        reject(new Error(`Native module error: ${healthCheck.details}`));
-        return;
+  /**
+   * Generate potential server paths based on app configuration
+   * @returns {Array} Array of path configuration objects
+   */
+  generateServerPaths() {
+    const isPackaged = app.isPackaged;
+    const appPath = app.getAppPath();
+    
+    return [
+      // Primary: app.getAppPath() for asar packed
+      {
+        serverPath: path.join(appPath, 'server', 'server.js'),
+        cwd: path.join(appPath, 'server'),
+        description: 'App path (asar packed)'
+      },
+      // Secondary: app.getAppPath() with .unpacked for asar unpacked
+      {
+        serverPath: path.join(appPath + '.unpacked', 'server', 'server.js'),
+        cwd: path.join(appPath + '.unpacked', 'server'),
+        description: 'App path with .unpacked (asar unpacked)'
+      },
+      // Tertiary: Legacy resourcesPath fallback
+      {
+        serverPath: path.join(process.resourcesPath, 'app.asar.unpacked', 'server', 'server.js'),
+        cwd: path.join(process.resourcesPath, 'app.asar.unpacked', 'server'),
+        description: 'Resources path legacy fallback'
+      },
+      // Development fallback
+      {
+        serverPath: path.join(__dirname, 'server', 'server.js'),
+        cwd: path.join(__dirname, 'server'),
+        description: 'Development fallback'
       }
-      
-      // Set database path to userData directory
+    ];
+  }
+
+  /**
+   * Resolve database path based on app packaging status
+   * @returns {string} Resolved database path
+   */
+  resolveDatabasePath() {
+    const isPackaged = app.isPackaged;
+    
+    console.log('🔍 Resolving database path...');
+    console.log(`App packaged: ${isPackaged}`);
+    
+    let databasePath;
+    
+    if (isPackaged) {
+      // For packaged apps, use userData directory for writable location
       const userDataPath = app.getPath('userData');
-      const dbPath = join(userDataPath, 'performance_analyzer.db');
+      const databaseDir = path.join(userDataPath, 'database');
+      databasePath = path.join(databaseDir, 'performance_analyzer.db');
       
-      console.log('Starting server with database at:', dbPath);
-      console.log('User data path:', userDataPath);
-      console.log('Platform:', process.platform);
-      console.log('Architecture:', process.arch);
+      console.log(`📂 Using userData directory: ${userDataPath}`);
+      console.log(`📁 Database directory: ${databaseDir}`);
       
-      // Set environment variables for the server
-      const apiKey = config.getGeminiApiKey();
-      const env = {
-        ...process.env,
-        DB_PATH: dbPath,
-        PORT: port.toString(),
-        NODE_ENV: isDev ? 'development' : 'production',
-        API_KEY: apiKey,
-        GEMINI_API_KEY: apiKey
-      };
-
-      // In packaged apps, ensure NODE_PATH includes the unpacked modules
-      if (app.isPackaged) {
-        const unpackedNodeModules = join(process.resourcesPath, 'app.asar.unpacked', 'node_modules');
-        env.NODE_PATH = env.NODE_PATH ? `${env.NODE_PATH}:${unpackedNodeModules}` : unpackedNodeModules;
-        console.log('Set NODE_PATH for packaged app:', env.NODE_PATH);
-      }
-
-      // Determine server path depending on environment with better cross-platform support
-      let serverPath;
-      if (isDev) {
-        // In development, prefer .mjs for explicit ES module support, then wrapper, then fallback to .js
-        const mjsPath = join(__dirname, 'server', 'server.mjs');
-        const wrapperPath = join(__dirname, 'server', 'server-wrapper.cjs');
-        const jsPath = join(__dirname, 'server', 'server.js');
+      // Ensure database directory exists
+      try {
+        if (!fs.existsSync(databaseDir)) {
+          fs.mkdirSync(databaseDir, { recursive: true });
+          console.log(`✅ Created database directory: ${databaseDir}`);
+        }
         
-        if (existsSync(mjsPath)) {
-          serverPath = mjsPath;
-        } else if (existsSync(wrapperPath)) {
-          serverPath = wrapperPath;
+        // Validate directory is writable
+        fs.accessSync(databaseDir, fs.constants.W_OK);
+        console.log(`✅ Database directory is writable: ${databaseDir}`);
+        
+      } catch (error) {
+        const pathError = new Error(`Failed to create or access database directory: ${databaseDir}. ${error.message}`);
+        console.error('❌ Database path error:', pathError.message);
+        throw pathError;
+      }
+    } else {
+      // For development, use the current working directory
+      databasePath = path.join(process.cwd(), 'server', 'performance_analyzer.db');
+      console.log(`🛠️ Development mode - using current directory: ${databasePath}`);
+    }
+    
+    console.log(`📊 Final database path: ${databasePath}`);
+    return databasePath;
+  }
+
+  /**
+   * Validate a server path configuration
+   * @param {Object} pathConfig - Path configuration object
+   * @returns {boolean} True if path is valid, false otherwise
+   */
+  validateServerPath(pathConfig) {
+    console.log(`🔍 Checking ${pathConfig.description}: ${pathConfig.serverPath}`);
+    
+    try {
+      if (fs.existsSync(pathConfig.serverPath)) {
+        const stats = fs.statSync(pathConfig.serverPath);
+        if (stats.isFile()) {
+          console.log(`✅ Found valid server file: ${pathConfig.serverPath}`);
+          console.log(`📁 Working directory: ${pathConfig.cwd}`);
+          return true;
         } else {
-          serverPath = jsPath;
+          console.log(`❌ Path exists but is not a file: ${pathConfig.serverPath}`);
         }
       } else {
-        // Try multiple possible paths for cross-platform compatibility
-        const possiblePaths = [
-          // First try .mjs files for explicit ES module support
-          join(process.resourcesPath, 'app.asar.unpacked', 'server', 'server.mjs'),
-          join(process.resourcesPath, 'app', 'server', 'server.mjs'),
-          join(process.resourcesPath, 'server', 'server.mjs'),
-          join(__dirname, 'server', 'server.mjs'),
-          // Then try CommonJS wrapper for ES modules
-          join(process.resourcesPath, 'app.asar.unpacked', 'server', 'server-wrapper.cjs'),
-          join(process.resourcesPath, 'app', 'server', 'server-wrapper.cjs'),
-          join(process.resourcesPath, 'server', 'server-wrapper.cjs'),
-          join(__dirname, 'server', 'server-wrapper.cjs'),
-          // Then fallback to .js files
-          join(process.resourcesPath, 'app.asar.unpacked', 'server', 'server.js'), // Primary asar unpacked path
-          join(process.resourcesPath, 'app', 'server', 'server.js'),
-          join(process.resourcesPath, 'server', 'server.js'),
-          join(__dirname, 'server', 'server.js'),
-          join(__dirname, 'resources', 'server', 'server.js'),
-          join(__dirname, '..', 'server', 'server.js'), // Go up one level
-          join(process.cwd(), 'server', 'server.js'), // Current working directory
-          join(app.getAppPath(), 'server', 'server.js') // App path fallback
-        ];
-        
-        console.log('Searching for server in the following paths:');
-        possiblePaths.forEach((path, index) => {
-          const exists = existsSync(path);
-          console.log(`${index + 1}. ${path} - ${exists ? '✅ EXISTS' : '❌ NOT FOUND'}`);
-        });
-        
-        serverPath = possiblePaths.find(path => existsSync(path));
-        
-        if (!serverPath) {
-          console.error('Server file not found in any of these locations:', possiblePaths);
-          console.error('Debug info:');
-          console.error('  __dirname:', __dirname);
-          console.error('  process.cwd():', process.cwd());
-          console.error('  process.resourcesPath:', process.resourcesPath);
-          console.error('  app.getAppPath():', app.getAppPath());
-          console.error('  app.isPackaged:', app.isPackaged);
-          throw new Error(`Server file not found. Searched ${possiblePaths.length} paths.`);
-        }
+        console.log(`❌ Path does not exist: ${pathConfig.serverPath}`);
       }
+    } catch (error) {
+      console.log(`❌ Error accessing path ${pathConfig.serverPath}:`, error.message);
+    }
+    
+    return false;
+  }
 
-      console.log('Server path:', serverPath);
-      console.log('Server file exists:', existsSync(serverPath));
+  resolveServerPath() {
+    const isPackaged = app.isPackaged;
+    const appPath = app.getAppPath();
+    
+    console.log('🔍 Resolving server path...');
+    console.log(`App packaged: ${isPackaged}`);
+    console.log(`App path: ${appPath}`);
+    console.log(`Resources path: ${process.resourcesPath}`);
+    console.log(`__dirname: ${__dirname}`);
+    
+    // Generate potential server paths
+    const serverPaths = this.generateServerPaths();
+    
+    // Try each path in order
+    for (const pathConfig of serverPaths) {
+      if (this.validateServerPath(pathConfig)) {
+        return pathConfig;
+      }
+    }
+    
+    // If we get here, no valid path was found
+    const errorDetails = {
+      appPath,
+      resourcesPath: process.resourcesPath,
+      dirname: __dirname,
+      isPackaged,
+      attemptedPaths: serverPaths.map(p => p.serverPath)
+    };
+    
+    throw new Error(`No valid server path found. Attempted paths: ${JSON.stringify(errorDetails, null, 2)}`);
+  }
+
+  async startServer() {
+    return new Promise((resolve, reject) => {
+      console.log('Starting backend server...');
       
-      if (!existsSync(serverPath)) {
-        throw new Error(`Server file not found at: ${serverPath}`);
-      }
-
-      // Fork options for ES modules and cross-platform compatibility
-      const forkOptions = {
-        env,
-        silent: false,
-        execArgv: [], // Clear execArgv to use default Node.js module resolution
-        stdio: ['pipe', 'pipe', 'pipe', 'ipc'] // Ensure proper stdio for Windows
-      };
-
-      // In packaged apps, set the working directory to the unpacked location
-      if (app.isPackaged) {
-        const unpackedDir = join(process.resourcesPath, 'app.asar.unpacked');
-        forkOptions.cwd = unpackedDir;
-        console.log('Set working directory for packaged app:', forkOptions.cwd);
+      try {
+        const pathConfig = this.resolveServerPath();
+        const { serverPath, cwd } = pathConfig;
+        const isPackaged = app.isPackaged;
         
-        // For ES modules in packaged apps, we need to ensure package.json is accessible
-        // and the module type is properly recognized
-        const packageJsonPath = join(unpackedDir, 'package.json');
-        console.log('Package.json path in packaged app:', packageJsonPath);
-        console.log('Package.json exists in unpacked dir:', existsSync(packageJsonPath));
-      }
+        console.log(`🚀 Starting server with resolved configuration:`);
+        console.log(`   Server path: ${serverPath}`);
+        console.log(`   Working directory: ${cwd}`);
+        
+        // Resolve database path and add to environment
+        const databasePath = this.resolveDatabasePath();
+        
+        const env = { 
+          ...process.env, 
+          PORT: this.serverPort,
+          DATABASE_PATH: databasePath
+        };
+        const forkOptions = {
+          cwd: cwd,
+          env: env,
+          silent: true
+        };
 
-      console.log('Forking server with options:', {
-        serverPath,
-        args: [],
-        options: { ...forkOptions, env: '...' } // Don't log full env for security
-      });
-
-      serverProcess = fork(serverPath, [], forkOptions);
-
-      // Capture stdout/stderr for better error diagnosis
-      if (serverProcess.stdout) {
-        serverProcess.stdout.on('data', (data) => {
-          console.log(`Server stdout: ${data}`);
-        });
-      }
-
-      if (serverProcess.stderr) {
-        serverProcess.stderr.on('data', (data) => {
-          console.error(`Server stderr: ${data}`);
-        });
-      }
-
-      serverProcess.on('message', (message) => {
-        console.log('Server message received:', message);
-        if (message === 'server-ready') {
-          console.log('Express server is ready');
-          resolve();
+        if (isPackaged) {
+          forkOptions.execPath = process.execPath;
+          forkOptions.env.ELECTRON_RUN_AS_NODE = '1';
         }
-      });
 
-      serverProcess.on('error', (error) => {
-        console.error('Server process error:', error);
-        
-        // Provide detailed error analysis
-        let errorDetails = `Server process failed to start: ${error.message}`;
-        let suggestions = [];
-        
-        if (error.code === 'ENOENT') {
-          errorDetails += '\n\nServer file not found or not executable.';
-          suggestions.push('Verify the server files are properly built');
-          suggestions.push('Run "npm run build" to rebuild the application');
-        } else if (error.message.includes('better-sqlite3') || error.message.includes('native')) {
-          errorDetails += '\n\nNative module loading error detected.';
-          suggestions.push('Run "npm run rebuild:native" to rebuild native modules');
-          suggestions.push('Ensure native modules are compiled for Electron');
+        // Final validation before fork
+        if (!fs.existsSync(serverPath)) {
+          const error = new Error(`Server file not found at resolved path: ${serverPath}`);
+          console.error('❌ Final validation failed:', error.message);
+          reject(error);
+          return;
         }
+
+        // Start the server.js file using fork for better integration with Node.js scripts
+        this.serverProcess = fork(serverPath, [], forkOptions);
+      } catch (error) {
+        console.error('❌ Failed to initialize server:', error.message);
         
-        if (suggestions.length > 0) {
-          errorDetails += '\n\nSuggested fixes:\n' + suggestions.map(s => `• ${s}`).join('\n');
+        // Check if this is a database path error
+        if (error.message.includes('database directory')) {
+          this.showDatabasePathError(error);
+        } else {
+          this.showServerPathError(error);
         }
-        
-        dialog.showErrorBox('Server Error', errorDetails);
         reject(error);
-      });
+        return;
+      }
 
-      serverProcess.on('exit', (code, signal) => {
-        console.log(`Server process exited with code ${code}, signal ${signal}`);
-        if (code !== 0) {
-          let errorMsg = `Server exited with code ${code}${signal ? ` (signal: ${signal})` : ''}`;
-          let suggestions = [];
-          
-          // Analyze exit codes for better error reporting
-          if (code === 1) {
-            errorMsg += '\n\nThis is typically caused by:';
-            suggestions.push('Native module compilation issues (better-sqlite3)');
-            suggestions.push('Missing dependencies or incorrect module paths');
-            suggestions.push('Database permission issues');
-            
-            errorMsg += '\n\nSuggested fixes:';
-            suggestions.push('Run "npm run rebuild:native" to rebuild native modules');
-            suggestions.push('Check write permissions to user data directory');
-            suggestions.push('Verify all dependencies are properly installed');
-          } else if (code === 3221225477 || code === -1073741819) { // Windows access violation
-            errorMsg += '\n\nWindows access violation detected.';
-            suggestions.push('Run "npm run rebuild:electron" to rebuild for Electron');
-            suggestions.push('Close any other instances of the application');
+      let errorBuffer = '';
+      let outputBuffer = '';
+
+      this.serverProcess.stdout.on('data', (data) => {
+        const output = data.toString();
+        outputBuffer += output;
+        
+        try {
+          const lines = output.split('\n').filter(line => line.trim());
+          for (const line of lines) {
+            if (line.startsWith('{')) {
+              const message = JSON.parse(line);
+              if (message.type === 'server-ready') {
+                this.serverReady = true;
+                this.serverPort = message.port || this.serverPort;
+                console.log(`✅ Backend server is ready on port ${this.serverPort}`);
+                resolve();
+              }
+            }
           }
+        } catch (e) {
+          // Not JSON, regular log output
+          console.log('Server:', output);
           
-          if (suggestions.length > 0) {
-            errorMsg += '\n' + suggestions.map(s => `• ${s}`).join('\n');
+          // Also check for the regular server startup message
+          if (output.includes('Performance Analyzer API server running')) {
+            this.serverReady = true;
+            console.log('✅ Backend server is ready (detected from log)');
+            resolve();
           }
-          
-          console.error(errorMsg);
-          dialog.showErrorBox('Server Exit Error', errorMsg);
-          reject(new Error(errorMsg));
         }
       });
 
-      // Fallback timeout in case server doesn't send ready message
-      setTimeout(() => {
-        console.log('Server started (timeout fallback)');
-        resolve();
-      }, 3000);
-
-    } catch (error) {
-      reject(error);
-    }
-  });
-}
-
-function stopServer() {
-  if (serverProcess) {
-    console.log('Stopping server...');
-    serverProcess.kill();
-    serverProcess = null;
-  }
-}
-
-// App event handlers
-app.whenReady().then(async () => {
-  try {
-    console.log('Starting Dashboard Penilaian Kinerja Pegawai Dinas Sosial...');
-    
-    // Dynamically import ElectronConfig with proper path handling
-    let ElectronConfig;
-    if (app.isPackaged) {
-      // In packaged app, files are unpacked to app.asar.unpacked
-      const { pathToFileURL } = await import('url');
-      const unpackedPath = join(process.resourcesPath, 'app.asar.unpacked', 'electron-config.js');
-      console.log('Loading ElectronConfig from unpacked path:', unpackedPath);
-      ElectronConfig = (await import(pathToFileURL(unpackedPath).href)).default;
-    } else {
-      // In development, use relative import
-      console.log('Loading ElectronConfig from relative path in development');
-      ElectronConfig = (await import('./electron-config.js')).default;
-    }
-    
-    // Initialize config
-    config = new ElectronConfig();
-    console.log('Config loaded from:', config.getConfigPath());
-    
-    // Start the Express server (always start in both development and production)
-    let serverStarted = false;
-    console.log(`${isDev ? 'Development' : 'Production'} mode: Starting embedded server...`);
-    try {
-      await startServer();
-      serverStarted = true;
-      console.log('✅ Embedded server started successfully');
-    } catch (error) {
-      console.error('❌ Failed to start embedded server:', error.message);
-      console.error('Will show error information in the application window');
-      serverStarted = false;
-    }
-    
-    // Always create the window, even if server failed
-    createWindow();
-    
-    // If server failed to start, show error info to user after window is ready
-    if (!serverStarted) {
-      mainWindow.once('ready-to-show', () => {
-        setTimeout(() => {
-          mainWindow.webContents.executeJavaScript(`
-            console.error('Server failed to start. Please restart the application.');
-            if (window.location.pathname !== '/error') {
-              document.body.innerHTML = '<div style="padding: 40px; font-family: Arial, sans-serif; text-align: center;">' +
-                '<h2 style="color: #e74c3c;">🔧 Server Error</h2>' +
-                '<p>The backend server failed to start.</p>' +
-                '<p>Please:</p>' +
-                '<ul style="text-align: left; display: inline-block;">' +
-                '<li>Restart the application</li>' +
-                '<li>Check if another instance is running</li>' +
-                '<li>Verify you have write permissions to the user data directory</li>' +
-                '</ul>' +
-                '<button onclick="require(\\'electron\\').remote.app.relaunch(); require(\\'electron\\').remote.app.exit()" ' +
-                'style="margin-top: 20px; padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;">' +
-                'Restart Application</button>' +
-                '</div>';
+      this.serverProcess.stderr.on('data', (data) => {
+        const error = data.toString();
+        errorBuffer += error;
+        
+        try {
+          const lines = error.split('\n').filter(line => line.trim());
+          for (const line of lines) {
+            if (line.startsWith('{')) {
+              const errorMessage = JSON.parse(line);
+              this.handleServerError(errorMessage);
             }
-          `);
-        }, 2000);
+          }
+        } catch (e) {
+          console.error('Server Error:', error);
+        }
       });
-    }
 
-    console.log('Application ready!');
-  } catch (error) {
-    console.error('Failed to start application:', error);
+      this.serverProcess.on('exit', (code) => {
+        console.log(`Server process exited with code ${code}`);
+        
+        if (code === 1 && !this.serverReady) {
+          this.showServerExitError(code, errorBuffer);
+          reject(new Error(`Server exited with code ${code}`));
+        }
+      });
+
+      // Timeout after 30 seconds
+      setTimeout(() => {
+        if (!this.serverReady) {
+          reject(new Error('Server startup timeout'));
+        }
+      }, 30000);
+    });
+  }
+
+  handleServerError(errorMessage) {
+    console.error('Structured server error:', errorMessage);
     
-    // Show error dialog on startup failure
-    dialog.showErrorBox('Startup Failed', 
-      `Failed to start Dashboard Penilaian Kinerja Pegawai Dinas Sosial:\n\n${error.message}\n\nPlease check if:\n- The application files are not corrupted\n- You have write permissions to the user data directory\n- No other instance is running`
-    );
+    if (errorMessage.type === 'database-error') {
+      this.showDatabaseError(errorMessage.details);
+    } else if (errorMessage.type === 'server-startup-error') {
+      this.showServerStartupError(errorMessage);
+    } else {
+      this.showGenericServerError(errorMessage);
+    }
+  }
+
+  showDatabaseError(errorDetails) {
+    const { type, description, solution } = errorDetails;
     
-    // Show error page in window if it exists
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      const errorPath = join(__dirname, 'assets/error.html');
-      if (existsSync(errorPath)) {
-        mainWindow.loadFile(errorPath);
-        mainWindow.show();
+    const message = `Database Error: ${description}\n\nSuggested Solution: ${solution}\n\nThis is typically caused by native module compilation issues.`;
+    
+    const response = dialog.showMessageBoxSync(this.mainWindow, {
+      type: 'error',
+      title: 'Database Initialization Failed',
+      message: 'Server Exit Error',
+      detail: message,
+      buttons: ['Open Troubleshooting Guide', 'Retry', 'Exit'],
+      defaultId: 1,
+      cancelId: 2
+    });
+
+    switch (response) {
+      case 0: // Open troubleshooting guide
+        shell.openExternal('https://github.com/WiseLibs/better-sqlite3/blob/HEAD/docs/troubleshooting.md');
+        break;
+      case 1: // Retry
+        this.restartServer();
+        break;
+      case 2: // Exit
+        app.quit();
+        break;
+    }
+  }
+
+  showServerStartupError(errorMessage) {
+    const message = `Server startup failed: ${errorMessage.message}\n\nThis could be due to:\n- Native module compilation issues\n- Port conflicts\n- Missing dependencies`;
+    
+    const response = dialog.showMessageBoxSync(this.mainWindow, {
+      type: 'error',
+      title: 'Server Startup Error',
+      message: 'Failed to Start Backend Server',
+      detail: message,
+      buttons: ['Run Diagnostics', 'Open Documentation', 'Exit'],
+      defaultId: 0,
+      cancelId: 2
+    });
+
+    switch (response) {
+      case 0: // Run diagnostics
+        this.runDiagnostics();
+        break;
+      case 1: // Open documentation
+        shell.openExternal('https://github.com/WiseLibs/better-sqlite3/blob/HEAD/docs/troubleshooting.md');
+        break;
+      case 2: // Exit
+        app.quit();
+        break;
+    }
+  }
+
+  showServerExitError(exitCode, errorOutput) {
+    const message = `The backend server exited unexpectedly with code ${exitCode}.\n\nThis is often caused by native module compilation issues with better-sqlite3.\n\nError output:\n${errorOutput.slice(-500)}`;
+    
+    const response = dialog.showMessageBoxSync(this.mainWindow, {
+      type: 'error',
+      title: 'Server Exit Error',
+      message: `Server Exit Error (Code ${exitCode})`,
+      detail: message,
+      buttons: ['Run Diagnostics', 'Open Documentation', 'Exit'],
+      defaultId: 0,
+      cancelId: 2
+    });
+
+    switch (response) {
+      case 0: // Run diagnostics
+        this.runDiagnostics();
+        break;
+      case 1: // Open documentation
+        shell.openExternal('https://github.com/WiseLibs/better-sqlite3/blob/HEAD/docs/troubleshooting.md');
+        break;
+      case 2: // Exit
+        app.quit();
+        break;
+    }
+  }
+
+  showGenericServerError(errorMessage) {
+    dialog.showErrorBox('Server Error', `Server error: ${errorMessage.message || 'Unknown error'}`);
+  }
+
+  showDatabasePathError(error) {
+    const message = `Cannot create or access the database directory.\n\nThis is typically caused by:\n• Insufficient file system permissions\n• Read-only file system\n• Corrupted user data directory\n\nTechnical details:\n${error.message}\n\nTry running the application with administrator privileges or check the user data directory permissions.`;
+    
+    const response = dialog.showMessageBoxSync(this.mainWindow, {
+      type: 'error',
+      title: 'Database Path Error',
+      message: 'Cannot Initialize Database',
+      detail: message,
+      buttons: ['Open User Data Folder', 'Retry with Different Location', 'Exit'],
+      defaultId: 0,
+      cancelId: 2
+    });
+
+    switch (response) {
+      case 0: // Open user data folder
+        const userDataPath = app.getPath('userData');
+        shell.openPath(userDataPath);
+        break;
+      case 1: // Retry (this could be enhanced to allow manual path selection)
+        this.restartServer();
+        break;
+      case 2: // Exit
+        app.quit();
+        break;
+    }
+  }
+
+  showServerPathError(error) {
+    const message = `Cannot locate server files required to start the application.\n\nThis is typically caused by:\n• Incorrect packaging configuration\n• Missing asar.unpacked settings\n• Corrupted installation\n\nTechnical details:\n${error.message}\n\nTry reinstalling the application or check the packaging configuration.`;
+    
+    const response = dialog.showMessageBoxSync(this.mainWindow, {
+      type: 'error',
+      title: 'Server Files Not Found',
+      message: 'Cannot Start Application',
+      detail: message,
+      buttons: ['Open Documentation', 'Show Technical Details', 'Exit'],
+      defaultId: 0,
+      cancelId: 2
+    });
+
+    switch (response) {
+      case 0: // Open documentation
+        shell.openExternal('https://github.com/electron/electron/blob/main/docs/tutorial/application-packaging.md');
+        break;
+      case 1: // Show technical details
+        let technicalDetails;
+        try {
+          // Attempt to parse JSON from error message
+          const jsonPart = error.message.split(': ')[1];
+          const parsedError = JSON.parse(jsonPart);
+          technicalDetails = JSON.stringify(parsedError, null, 2);
+        } catch (parseError) {
+          // Fallback to raw error message if JSON parsing fails
+          console.warn('Failed to parse error message as JSON:', parseError.message);
+          technicalDetails = error.message;
+        }
+        
+        dialog.showMessageBox(this.mainWindow, {
+          type: 'info',
+          title: 'Technical Details',
+          message: 'Path Resolution Error',
+          detail: technicalDetails
+        });
+        break;
+      case 2: // Exit
+        app.quit();
+        break;
+    }
+  }
+
+  runDiagnostics() {
+    const diagnostics = spawn('node', ['scripts/check-native-modules.js', '--verbose'], {
+      stdio: 'inherit',
+      cwd: __dirname
+    });
+    
+    diagnostics.on('exit', (code) => {
+      if (code === 0) {
+        dialog.showMessageBox(this.mainWindow, {
+          type: 'info',
+          title: 'Diagnostics Complete',
+          message: 'Diagnostics completed successfully. Try restarting the application.'
+        });
       }
+    });
+  }
+
+  async restartServer() {
+    if (this.serverProcess) {
+      this.serverProcess.kill();
     }
     
-    // Don't quit immediately, let user see the error
-    setTimeout(() => {
-      app.quit();
-    }, 10000); // Quit after 10 seconds
+    this.serverReady = false;
+    
+    try {
+      await this.startServer();
+    } catch (error) {
+      console.error('Failed to restart server:', error);
+    }
   }
+
+  async initialize() {
+    try {
+      await this.startServer();
+      this.createWindow();
+    } catch (error) {
+      console.error('Failed to initialize application:', error);
+      // Error dialogs are handled in startServer
+    }
+  }
+
+  cleanup() {
+    if (this.serverProcess) {
+      this.serverProcess.kill();
+    }
+  }
+}
+
+const electronApp = new ElectronApp();
+
+app.whenReady().then(() => {
+  electronApp.initialize();
 });
 
 app.on('window-all-closed', () => {
-  stopServer();
+  electronApp.cleanup();
   if (process.platform !== 'darwin') {
     app.quit();
   }
@@ -457,31 +530,10 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
+    electronApp.createWindow();
   }
 });
 
 app.on('before-quit', () => {
-  stopServer();
-});
-
-// Handle app termination
-process.on('SIGTERM', () => {
-  console.log('Received SIGTERM, shutting down gracefully...');
-  stopServer();
-  app.quit();
-});
-
-process.on('SIGINT', () => {
-  console.log('Received SIGINT, shutting down gracefully...');
-  stopServer();
-  app.quit();
-});
-
-// Handle restart request from renderer
-ipcMain.on('restart-app', () => {
-  console.log('Restart requested by user');
-  stopServer();
-  app.relaunch();
-  app.exit(0);
+  electronApp.cleanup();
 });

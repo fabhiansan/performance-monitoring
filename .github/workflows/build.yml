@@ -1,0 +1,90 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: [18.x, 20.x]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Rebuild native modules
+      run: npm run rebuild:native
+    
+    - name: Run native module diagnostics
+      run: npm run check:native -- --verbose
+    
+    - name: Test database connection
+      run: node -e "const db = require('better-sqlite3')(':memory:'); db.exec('SELECT 1'); console.log('✅ Database test passed');"
+    
+    - name: Build application
+      run: npm run build
+    
+    - name: Test server startup
+      run: |
+        timeout 30s npm run dev:server &
+        sleep 10
+        curl -f http://localhost:3000/health || exit 1
+      shell: bash
+      if: matrix.os != 'windows-latest'
+    
+    - name: Test server startup (Windows)
+      run: |
+        Start-Process -NoNewWindow npm -ArgumentList "run", "dev:server"
+        Start-Sleep 10
+        Invoke-WebRequest -Uri "http://localhost:3000/health" -UseBasicParsing
+      shell: powershell
+      if: matrix.os == 'windows-latest'
+
+  build-electron:
+    needs: test
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Rebuild native modules for Electron
+      run: npm run rebuild:electron
+    
+    - name: Build Electron app
+      run: npm run electron:build
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: electron-app-${{ matrix.os }}
+        path: release/
