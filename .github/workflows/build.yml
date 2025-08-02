@@ -25,7 +25,15 @@ jobs:
         cache: 'npm'
     
     - name: Install dependencies
-      run: npm ci
+      run: |
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          # Windows-specific installation with better error handling
+          npm install --no-optional
+        else
+          # Use npm ci for other platforms
+          npm ci
+        fi
+      shell: bash
     
     - name: Rebuild native modules
       run: npm run rebuild:native
@@ -34,7 +42,7 @@ jobs:
       run: npm run check:native -- --verbose
     
     - name: Test database connection
-      run: node -e "const db = require('better-sqlite3')(':memory:'); db.exec('SELECT 1'); console.log('✅ Database test passed');"
+      run: node --input-type=module -e "import Database from 'better-sqlite3'; const db = new Database(':memory:'); db.exec('SELECT 1'); console.log('✅ Database test passed'); db.close();"
     
     - name: Build application
       run: npm run build
@@ -43,7 +51,7 @@ jobs:
       run: |
         timeout 30s npm run dev:server &
         sleep 10
-        curl -f http://localhost:3000/health || exit 1
+        curl -f http://localhost:3002/health || exit 1
       shell: bash
       if: matrix.os != 'windows-latest'
     
@@ -51,7 +59,7 @@ jobs:
       run: |
         Start-Process -NoNewWindow npm -ArgumentList "run", "dev:server"
         Start-Sleep 10
-        Invoke-WebRequest -Uri "http://localhost:3000/health" -UseBasicParsing
+        Invoke-WebRequest -Uri "http://localhost:3002/health" -UseBasicParsing
       shell: powershell
       if: matrix.os == 'windows-latest'
 

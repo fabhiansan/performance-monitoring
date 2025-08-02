@@ -28,8 +28,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20.x'
           registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
           
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -41,12 +42,27 @@ jobs:
         
       - name: Clean and install dependencies
         run: |
-          if (Test-Path package-lock.json) { Remove-Item package-lock.json }
+          # Clean any existing builds
+          if (Test-Path node_modules) { Remove-Item -Recurse -Force node_modules }
+          
+          # Set environment for Windows x64 build
           $env:npm_config_target_arch = "x64"
           $env:npm_config_target_platform = "win32"
           $env:npm_config_arch = "x64"
           $env:NODE_ENV = "production"
-          npm install
+          
+          # Install dependencies (use npm ci if package-lock.json exists, otherwise npm install)
+          if (Test-Path package-lock.json) {
+            npm ci --no-optional
+          } else {
+            npm install --no-optional
+          }
+          
+          # Verify critical dependencies
+          if (-not (Test-Path "node_modules/better-sqlite3")) {
+            Write-Host "❌ better-sqlite3 not installed, trying alternative approach"
+            npm install better-sqlite3 --build-from-source
+          }
           
       - name: Check installed versions
         run: |
@@ -63,7 +79,7 @@ jobs:
         run: |
           if (Test-Path node_modules/better-sqlite3/build/Release/better_sqlite3.node) {
             Write-Host "Native module built successfully"
-            node -e "try { require('better-sqlite3'); console.log('✅ better-sqlite3 loads correctly'); } catch(e) { console.error('❌ better-sqlite3 failed to load:', e.message); process.exit(1); }"
+            node --input-type=module -e "try { const Database = (await import('better-sqlite3')).default; const db = new Database(':memory:'); db.close(); console.log('✅ better-sqlite3 loads correctly'); } catch(e) { console.error('❌ better-sqlite3 failed to load:', e.message); process.exit(1); }"
           } else {
             Write-Host "Native module build failed"
             exit 1
@@ -75,7 +91,7 @@ jobs:
         run: npm run dist:win
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: windows-build
           path: release/*.exe
