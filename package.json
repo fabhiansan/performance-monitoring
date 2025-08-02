@@ -21,7 +21,6 @@
     "build": "vite build",
     "preview": "vite preview",
     "server:node": "npm run rebuild:node && node server/server.js",
-    "rebuild:node": "npm rebuild better-sqlite3",
     "dev:server": "node server/server.js",
     "server:start": "node server/server.js",
     "preelectron": "npm run rebuild:electron",

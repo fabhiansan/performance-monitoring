@@ -79,6 +79,7 @@ const getPositionType = (employee: Employee): 'eselon' | 'staff' => {
  * Finds competency score by partial name matching
  */
 const findCompetencyScore = (performance: CompetencyScore[], searchTerms: string[]): number => {
+  if (!performance || performance.length === 0) return 0;
   for (const term of searchTerms) {
     const found = performance.find(p => 
       p.name.toLowerCase().includes(term.toLowerCase()) ||
@@ -94,6 +95,7 @@ const findCompetencyScore = (performance: CompetencyScore[], searchTerms: string
  * Sum of parameters 1, 2, 3, 4, 6 with weights 5%, 5%, 5%, 5%, 10% (Max: 25.5)
  */
 export const calculatePerilakuKinerja = (performance: CompetencyScore[]): number => {
+  if (!performance || performance.length === 0) return 0;
   const { parameters, weights } = PARAMETER_WEIGHTS.perilakuKinerja;
   let totalScore = 0;
 
@@ -123,6 +125,7 @@ export const calculatePerilakuKinerja = (performance: CompetencyScore[]): number
  * Staff: weights 50, 10, 10 (Max: 70)
  */
 export const calculateKualitasKerja = (performance: CompetencyScore[], positionType: 'eselon' | 'staff'): number => {
+  if (!performance || performance.length === 0) return 0;
   const configKey = positionType === 'eselon' ? 'kualitasKerjaEselon' : 'kualitasKerjaStaff';
   const { parameters, weights } = PARAMETER_WEIGHTS[configKey];
   let totalScore = 0;

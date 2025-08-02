@@ -56,13 +56,13 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
   };
 
   const calculatePerilakuKerjaScore = () => {
-    if (!selectedEmployee) return 0;
+    if (!selectedEmployee || !selectedEmployee.performance || selectedEmployee.performance.length === 0) return 0;
     const perilakuKerja = selectedEmployee.performance.slice(0, 5).reduce((sum, perf) => sum + perf.score, 0);
     return (perilakuKerja / 5) * 0.3;
   };
 
   const calculateKualitasKinerjaScore = () => {
-    if (!selectedEmployee) return 0;
+    if (!selectedEmployee || !selectedEmployee.performance || selectedEmployee.performance.length === 0) return 0;
     const kualitasKinerja = selectedEmployee.performance.slice(5, 8).reduce((sum, perf) => sum + perf.score, 0);
     return (kualitasKinerja / 3) * 0.5;
   };
@@ -196,7 +196,7 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
                       {calculatePerilakuKerjaScore().toFixed(2)}
                     </td>
                   </tr>
-                  {selectedEmployee.performance.slice(0, 5).map((perf, index) => (
+                  {selectedEmployee.performance && selectedEmployee.performance.length > 0 && selectedEmployee.performance.slice(0, 5).map((perf, index) => (
                     <tr key={index}>
                       <td className="border border-gray-300 dark:border-gray-500 p-2 text-gray-700 dark:text-gray-300">{index + 1}</td>
                       <td className="border border-gray-300 dark:border-gray-500 p-2 text-gray-700 dark:text-gray-300">{perf.name}</td>
@@ -212,7 +212,7 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
                       {calculateKualitasKinerjaScore().toFixed(2)}
                     </td>
                   </tr>
-                  {selectedEmployee.performance.slice(5, 8).map((perf, index) => (
+                  {selectedEmployee.performance && selectedEmployee.performance.length > 0 && selectedEmployee.performance.slice(5, 8).map((perf, index) => (
                     <tr key={index + 5}>
                       <td className="border border-gray-300 dark:border-gray-500 p-2 text-gray-700 dark:text-gray-300">{index + 1}</td>
                       <td className="border border-gray-300 dark:border-gray-500 p-2 text-gray-700 dark:text-gray-300">{perf.name}</td>
@@ -304,7 +304,7 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
                     <td className="border border-black p-2 font-bold">PERILAKU KERJA</td>
                     <td className="border border-black p-2 text-center font-bold">30%</td>
                   </tr>
-                  {selectedEmployee.performance.slice(0, 5).map((perf, index) => (
+                  {selectedEmployee.performance && selectedEmployee.performance.length > 0 && selectedEmployee.performance.slice(0, 5).map((perf, index) => (
                     <tr key={index}>
                       <td className="border border-black p-1 text-center">{index + 1}.</td>
                       <td className="border border-black p-1">{perf.name}</td>
@@ -317,7 +317,7 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
                     <td className="border border-black p-2 font-bold">KUALITAS KINERJA</td>
                     <td className="border border-black p-2 text-center font-bold">50%</td>
                   </tr>
-                  {selectedEmployee.performance.slice(5, 8).map((perf, index) => (
+                  {selectedEmployee.performance && selectedEmployee.performance.length > 0 && selectedEmployee.performance.slice(5, 8).map((perf, index) => (
                     <tr key={index + 5}>
                       <td className="border border-black p-1 text-center">{index + 1}.</td>
                       <td className="border border-black p-1">{perf.name}</td>
@@ -365,7 +365,7 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
                     <td className="border border-black p-2 text-center font-bold">25.50</td>
                     <td className="border border-black p-2 text-center font-bold">{calculatePerilakuKerjaScore().toFixed(2)}</td>
                   </tr>
-                  {selectedEmployee.performance.slice(0, 5).map((perf, index) => (
+                  {selectedEmployee.performance && selectedEmployee.performance.length > 0 && selectedEmployee.performance.slice(0, 5).map((perf, index) => (
                     <tr key={index}>
                       <td className="border border-black p-1 text-center">{index + 1}</td>
                       <td className="border border-black p-1">{perf.name}</td>
@@ -380,7 +380,7 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
                     <td className="border border-black p-2 text-center font-bold">42.50</td>
                     <td className="border border-black p-2 text-center font-bold">{calculateKualitasKinerjaScore().toFixed(2)}</td>
                   </tr>
-                  {selectedEmployee.performance.slice(5, 8).map((perf, index) => (
+                  {selectedEmployee.performance && selectedEmployee.performance.length > 0 && selectedEmployee.performance.slice(5, 8).map((perf, index) => (
                     <tr key={index + 5}>
                       <td className="border border-black p-1 text-center">{index + 1}</td>
                       <td className="border border-black p-1">{perf.name}</td>

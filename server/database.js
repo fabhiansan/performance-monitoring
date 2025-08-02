@@ -15,7 +15,7 @@ class SQLiteService {
     
     console.log(`📊 Database path resolved to: ${this.dbPath}`);
     
-    this.initialize();
+    // Note: initialize() will be called explicitly by the server
   }
 
   async validateAndPrepareDirectory(dbDir) {
@@ -266,9 +266,9 @@ class SQLiteService {
     // Create tables if they don't exist
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS upload_sessions (
-        id TEXT PRIMARY KEY,
+        session_id TEXT PRIMARY KEY,
         session_name TEXT,
-        upload_time TEXT,
+        upload_timestamp TEXT,
         employee_count INTEGER
       );
       
@@ -282,8 +282,8 @@ class SQLiteService {
         position TEXT,
         sub_position TEXT,
         organizational_level TEXT,
-        upload_time TEXT,
-        FOREIGN KEY (session_id) REFERENCES upload_sessions(id)
+        upload_timestamp TEXT,
+        FOREIGN KEY (session_id) REFERENCES upload_sessions(session_id)
       );
       
       CREATE TABLE IF NOT EXISTS employees (
@@ -315,12 +315,12 @@ class SQLiteService {
     const finalSessionName = sessionName || `Upload ${new Date().toLocaleString()}`;
     
     const insertSession = this.db.prepare(`
-      INSERT INTO upload_sessions (id, session_name, upload_time, employee_count)
+      INSERT INTO upload_sessions (session_id, session_name, upload_timestamp, employee_count)
       VALUES (?, ?, ?, ?)
     `);
     
     const insertEmployee = this.db.prepare(`
-      INSERT INTO employee_data (session_id, name, nip, gol, pangkat, position, sub_position, organizational_level, upload_time)
+      INSERT INTO employee_data (session_id, name, nip, gol, pangkat, position, sub_position, organizational_level, upload_timestamp)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     
@@ -347,12 +347,23 @@ class SQLiteService {
   }
 
   getAllUploadSessions() {
-    const stmt = this.db.prepare(`
-      SELECT id, session_name, upload_time, employee_count
-      FROM upload_sessions
-      ORDER BY upload_time DESC
-    `);
-    return stmt.all();
+    console.log('getAllUploadSessions called');
+    console.log('Database ready:', this.isReady());
+    console.log('Database object:', !!this.db);
+    
+    try {
+      const stmt = this.db.prepare(`
+        SELECT session_id, session_name, upload_timestamp, employee_count
+        FROM upload_sessions
+        ORDER BY upload_timestamp DESC
+      `);
+      const result = stmt.all();
+      console.log('Query result:', result);
+      return result;
+    } catch (error) {
+      console.error('Error in getAllUploadSessions:', error);
+      throw error;
+    }
   }
 
   getEmployeeDataBySession(sessionId) {
@@ -367,16 +378,16 @@ class SQLiteService {
   getEmployeeDataByTimeRange(startTime, endTime) {
     const stmt = this.db.prepare(`
       SELECT * FROM employee_data
-      WHERE upload_time BETWEEN ? AND ?
-      ORDER BY upload_time DESC, name
+      WHERE upload_timestamp BETWEEN ? AND ?
+      ORDER BY upload_timestamp DESC, name
     `);
     return stmt.all(startTime, endTime);
   }
 
   getLatestEmployeeData() {
     const latestSession = this.db.prepare(`
-      SELECT id FROM upload_sessions
-      ORDER BY upload_time DESC
+      SELECT session_id as id FROM upload_sessions
+      ORDER BY upload_timestamp DESC
       LIMIT 1
     `).get();
     
@@ -387,7 +398,7 @@ class SQLiteService {
 
   deleteUploadSession(sessionId) {
     const deleteEmployees = this.db.prepare('DELETE FROM employee_data WHERE session_id = ?');
-    const deleteSession = this.db.prepare('DELETE FROM upload_sessions WHERE id = ?');
+    const deleteSession = this.db.prepare('DELETE FROM upload_sessions WHERE session_id = ?');
     
     const transaction = this.db.transaction(() => {
       deleteEmployees.run(sessionId);
@@ -483,8 +494,8 @@ class SQLiteService {
   // Leadership scores methods
   getCurrentDatasetId() {
     const stmt = this.db.prepare(`
-      SELECT id FROM upload_sessions
-      ORDER BY upload_time DESC
+      SELECT session_id as id FROM upload_sessions
+      ORDER BY upload_timestamp DESC
       LIMIT 1
     `);
     const result = stmt.get();

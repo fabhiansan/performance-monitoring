@@ -488,15 +488,19 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
     if (employees.length === 0) return;
     
     const csvData = employees.map(emp => {
-      const avgScore = emp.performance.reduce((s, p) => s + p.score, 0) / emp.performance.length;
+      const avgScore = emp.performance && emp.performance.length > 0 
+        ? emp.performance.reduce((s, p) => s + p.score, 0) / emp.performance.length 
+        : 0;
       return {
         Name: emp.name,
         Job: emp.organizational_level,
         'Average Score': avgScore.toFixed(2),
-        ...emp.performance.reduce((acc, perf) => ({
-          ...acc,
-          [perf.name]: perf.score
-        }), {})
+        ...(emp.performance && emp.performance.length > 0 
+          ? emp.performance.reduce((acc, perf) => ({
+              ...acc,
+              [perf.name]: perf.score
+            }), {}) 
+          : {})
       };
     });
 
@@ -749,7 +753,7 @@ The system will auto-detect the data type and process accordingly."
               <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                 <p className="text-sm text-gray-600 dark:text-gray-400">Competencies</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {employees.length > 0 ? employees[0].performance.length : 0}
+                  {employees.length > 0 && employees[0].performance ? employees[0].performance.length : 0}
                 </p>
               </div>
             </div>

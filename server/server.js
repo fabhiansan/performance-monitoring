@@ -5,10 +5,14 @@ import SQLiteService from './database.js';
 const app = express();
 const port = process.env.PORT || 3002;
 
+(async () => {
 try {
   // Initialize database with optional custom path
   const dbPath = process.env.DB_PATH || null;
   const db = new SQLiteService(dbPath);
+  
+  // Initialize the database (this is crucial!)
+  await db.initialize();
 
   // Middleware
   app.use(cors());
@@ -49,11 +53,31 @@ try {
   // Get all upload sessions (replaces datasets list)
   app.get('/api/upload-sessions', (req, res) => {
     try {
+      if (!db.isReady()) {
+        console.error('Database not ready when trying to get upload sessions');
+        console.error('Database initialization status:', {
+          isInitialized: db.isInitialized,
+          hasDbConnection: !!db.db,
+          errorDetails: db.getErrorDetails()
+        });
+        return res.status(500).json({ 
+          error: 'Database not ready',
+          details: 'The database is still initializing. Please try again in a moment.'
+        });
+      }
       const sessions = db.getAllUploadSessions();
       res.json(sessions);
     } catch (error) {
       console.error('Error getting upload sessions:', error);
-      res.status(500).json({ error: 'Failed to get upload sessions' });
+      console.error('Database status:', {
+        isReady: db.isReady(),
+        isInitialized: db.isInitialized,
+        hasDbConnection: !!db.db
+      });
+      res.status(500).json({ 
+        error: 'Failed to get upload sessions',
+        details: error.message
+      });
     }
   });
 
@@ -412,3 +436,4 @@ try {
   
   process.exit(1);
 }
+})();

@@ -33,8 +33,12 @@ const EmployeeAnalytics: React.FC<EmployeeAnalyticsProps> = ({ employees }) => {
         case 'organizational_level':
           return a.organizational_level.localeCompare(b.organizational_level);
         case 'performance':
-          const aAvg = a.performance.reduce((s, p) => s + p.score, 0) / a.performance.length;
-          const bAvg = b.performance.reduce((s, p) => s + p.score, 0) / b.performance.length;
+          const aAvg = a.performance && a.performance.length > 0 
+            ? a.performance.reduce((s, p) => s + p.score, 0) / a.performance.length 
+            : 0;
+          const bAvg = b.performance && b.performance.length > 0 
+            ? b.performance.reduce((s, p) => s + p.score, 0) / b.performance.length 
+            : 0;
           return bAvg - aAvg;
         default:
           return 0;
@@ -144,6 +148,7 @@ const EmployeeAnalytics: React.FC<EmployeeAnalyticsProps> = ({ employees }) => {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {['Excellent', 'Good', 'Average', 'Below Average'].map((level, index) => {
                   const count = filteredAndSortedEmployees.filter(emp => {
+                    if (!emp.performance || emp.performance.length === 0) return false;
                     const avg = emp.performance.reduce((s, p) => s + p.score, 0) / emp.performance.length;
                     const perfLevel = getPerformanceLevel(avg);
                     return perfLevel.label === level;

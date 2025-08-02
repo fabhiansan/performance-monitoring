@@ -31,14 +31,18 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee }) => {
   };
 
   // Calculate average score for overall color
-  const averageScore = employee.performance.reduce((sum, p) => sum + p.score, 0) / employee.performance.length;
+  const averageScore = employee.performance && employee.performance.length > 0 
+    ? employee.performance.reduce((sum, p) => sum + p.score, 0) / employee.performance.length 
+    : 0;
   const primaryColor = getScoreColor(averageScore);
 
-  const chartData = employee.performance.map(p => ({
+  const chartData = employee.performance && employee.performance.length > 0 
+    ? employee.performance.map(p => ({
     subject: p.name.split(' ').slice(0, 2).join(' '), // Shorten long names
     A: p.score,
     fullMark: 100
-  }));
+  }))
+    : [];
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg hover:shadow-2xl transition-shadow duration-300 overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col">

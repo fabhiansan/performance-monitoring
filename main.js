@@ -218,8 +218,21 @@ class ElectronApp {
           return;
         }
 
-        // Start the server.js file using fork for better integration with Node.js scripts
-        this.serverProcess = fork(serverPath, [], forkOptions);
+        // Start the server.js file
+        if (isPackaged && process.platform === 'win32') {
+          // For Windows packaged apps, use spawn with ELECTRON_RUN_AS_NODE to avoid spawn ENOENT errors
+          this.serverProcess = spawn(process.execPath, [serverPath], {
+            ...forkOptions,
+            stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+            env: {
+              ...forkOptions.env,
+              ELECTRON_RUN_AS_NODE: '1'
+            }
+          });
+        } else {
+          // For development and other platforms, use fork for better integration
+          this.serverProcess = fork(serverPath, [], forkOptions);
+        }
       } catch (error) {
         console.error('❌ Failed to initialize server:', error.message);
         

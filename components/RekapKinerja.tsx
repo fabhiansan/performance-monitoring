@@ -534,7 +534,7 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
                   Perilaku Kinerja (25.5 pts)
                 </h4>
                 <div className="space-y-2 text-sm">
-                  {selectedEmployee.performance.filter((p: CompetencyScore) => {
+                  {selectedEmployee.performance && selectedEmployee.performance.length > 0 && selectedEmployee.performance.filter((p: CompetencyScore) => {
                     const name = p.name.toLowerCase();
                     return name.includes('inisiatif') || name.includes('kehadiran') || 
                            name.includes('kerjasama') || name.includes('manajemen') || 
@@ -566,7 +566,7 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
                   Kualitas Kerja ({selectedEmployee.performanceRecap.positionType === 'eselon' ? '50%' : '70%'} Weight)
                 </h4>
                 <div className="space-y-2 text-sm">
-                  {selectedEmployee.performance.filter((p: CompetencyScore) => {
+                  {selectedEmployee.performance && selectedEmployee.performance.length > 0 && selectedEmployee.performance.filter((p: CompetencyScore) => {
                     const name = p.name.toLowerCase();
                     return name.includes('kualitas') || name.includes('komunikasi') || 
                            name.includes('permasalahan') || name.includes('sosial');

@@ -122,6 +122,7 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees }) => {
   
   const averageScore = filteredEmployees.length > 0 
     ? filteredEmployees.reduce((sum, emp) => {
+        if (!emp.performance || emp.performance.length === 0) return sum;
         const empAvg = emp.performance.reduce((s, p) => s + p.score, 0) / emp.performance.length;
         return sum + empAvg;
       }, 0) / filteredEmployees.length
@@ -129,6 +130,8 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees }) => {
 
   const topPerformer = filteredEmployees.length > 0 
     ? filteredEmployees.reduce((top, emp) => {
+        if (!emp.performance || emp.performance.length === 0) return top;
+        if (!top.performance || top.performance.length === 0) return emp;
         const empAvg = emp.performance.reduce((s, p) => s + p.score, 0) / emp.performance.length;
         const topAvg = top.performance.reduce((s, p) => s + p.score, 0) / top.performance.length;
         return empAvg > topAvg ? emp : top;
@@ -137,6 +140,7 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees }) => {
 
   const competencyAverages = filteredEmployees.length > 0 
     ? filteredEmployees.reduce((acc, emp) => {
+        if (!emp.performance || emp.performance.length === 0) return acc;
         emp.performance.forEach(perf => {
           // Only include competencies with actual scores > 0
           if (perf.score > 0) {
@@ -165,6 +169,7 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees }) => {
   ];
 
   filteredEmployees.forEach(emp => {
+    if (!emp.performance || emp.performance.length === 0) return;
     const avgScore = emp.performance.reduce((s, p) => s + p.score, 0) / emp.performance.length;
     if (avgScore >= 90) scoreRanges[0].value++;
     else if (avgScore >= 80) scoreRanges[1].value++;
@@ -234,7 +239,7 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees }) => {
     {
       title: 'Top Performer',
       value: topPerformer ? topPerformer.name : 'N/A',
-      score: topPerformer ? (topPerformer.performance.reduce((s, p) => s + p.score, 0) / topPerformer.performance.length).toFixed(1) : null,
+      score: topPerformer && topPerformer.performance && topPerformer.performance.length > 0 ? (topPerformer.performance.reduce((s, p) => s + p.score, 0) / topPerformer.performance.length).toFixed(1) : null,
       icon: IconSparkles,
       color: 'text-yellow-800 dark:text-yellow-200',
       bgColor: 'bg-yellow-50 dark:bg-yellow-900/30'
@@ -363,7 +368,10 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees }) => {
                     {employees.length > 0 && (
                       <div className="mt-2">
                         <div className="text-xs text-gray-500 dark:text-gray-400">
-                          Avg Score: {(employees.reduce((sum, emp) => sum + (emp.performance.reduce((s, p) => s + p.score, 0) / emp.performance.length), 0) / employees.length).toFixed(1)}
+                          Avg Score: {(employees.reduce((sum, emp) => {
+                            if (!emp.performance || emp.performance.length === 0) return sum;
+                            return sum + (emp.performance.reduce((s, p) => s + p.score, 0) / emp.performance.length);
+                          }, 0) / employees.length).toFixed(1)}
                         </div>
                       </div>
                     )}
@@ -387,6 +395,12 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees }) => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-[400px]">
                   {topLevels.map(([level, levelEmployees], levelIndex) => {
                     const employeeScores = levelEmployees.map(emp => {
+                      if (!emp.performance || emp.performance.length === 0) {
+                        return {
+                          name: emp.name.length > 15 ? emp.name.substring(0, 15) + '...' : emp.name,
+                          score: 0
+                        };
+                      }
                       const score = emp.performance.find(p => p.name === competency.competency)?.score || 0;
                       return {
                         name: emp.name.length > 15 ? emp.name.substring(0, 15) + '...' : emp.name,

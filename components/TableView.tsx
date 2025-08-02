@@ -44,6 +44,7 @@ const TableView: React.FC<TableViewProps> = ({ employees }) => {
     
     // Collect competency names that have actual data
     relevantEmployees.forEach(emp => {
+      if (!emp.performance || emp.performance.length === 0) return;
       emp.performance.forEach(comp => {
         // Only include competencies with actual scores > 0
         if (comp.score > 0) {
@@ -85,12 +86,20 @@ const TableView: React.FC<TableViewProps> = ({ employees }) => {
         aValue = a.organizational_level;
         bValue = b.organizational_level;
       } else if (sortColumn === 'average') {
-        aValue = a.performance.reduce((sum, comp) => sum + comp.score, 0) / a.performance.length;
-        bValue = b.performance.reduce((sum, comp) => sum + comp.score, 0) / b.performance.length;
+        aValue = a.performance && a.performance.length > 0 
+          ? a.performance.reduce((sum, comp) => sum + comp.score, 0) / a.performance.length 
+          : 0;
+        bValue = b.performance && b.performance.length > 0 
+          ? b.performance.reduce((sum, comp) => sum + comp.score, 0) / b.performance.length 
+          : 0;
       } else {
         // Competency score
-        const aComp = a.performance.find(comp => comp.name === sortColumn);
-        const bComp = b.performance.find(comp => comp.name === sortColumn);
+        const aComp = a.performance && a.performance.length > 0 
+          ? a.performance.find(comp => comp.name === sortColumn) 
+          : null;
+        const bComp = b.performance && b.performance.length > 0 
+          ? b.performance.find(comp => comp.name === sortColumn) 
+          : null;
         aValue = aComp ? aComp.score : 0;
         bValue = bComp ? bComp.score : 0;
       }
@@ -113,6 +122,7 @@ const TableView: React.FC<TableViewProps> = ({ employees }) => {
   };
 
   const getCompetencyScore = (employee: Employee, competencyName: string): number => {
+    if (!employee.performance || employee.performance.length === 0) return 0;
     const comp = employee.performance.find(c => c.name === competencyName);
     return comp ? comp.score : 0;
   };
@@ -243,7 +253,9 @@ const TableView: React.FC<TableViewProps> = ({ employees }) => {
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {filteredAndSortedEmployees.map((employee, index) => {
-                const averageScore = employee.performance.reduce((sum, comp) => sum + comp.score, 0) / employee.performance.length;
+                const averageScore = employee.performance && employee.performance.length > 0 
+                  ? employee.performance.reduce((sum, comp) => sum + comp.score, 0) / employee.performance.length 
+                  : 0;
                 
                 return (
                   <tr key={employee.name} className={index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-750'}>
