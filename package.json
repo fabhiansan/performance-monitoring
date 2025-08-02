@@ -8,6 +8,7 @@
   "scripts": {
     "postinstall": "npm run rebuild:native",
     "rebuild:native": "electron-rebuild --force",
+    "rebuild:node": "npm rebuild better-sqlite3",
     "rebuild:electron": "electron-rebuild --only better-sqlite3 --force",
     "check:native": "node scripts/check-native-modules.js",
     "dev:full": "concurrently \"npm run dev:server\" \"npm run dev:electron\"",

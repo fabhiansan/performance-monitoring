@@ -24,11 +24,14 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
     
-    - name: Install dependencies
-      run: npm install --no-optional
+    - name: Clear npm cache
+      run: npm cache clean --force
     
-    - name: Rebuild native modules
-      run: npm run rebuild:native
+    - name: Install dependencies
+      run: npm ci --no-optional
+    
+    - name: Rebuild native modules for Node.js
+      run: npm run rebuild:node
     
     - name: Run native module diagnostics
       run: npm run check:native -- --verbose
