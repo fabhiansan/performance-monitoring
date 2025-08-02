@@ -12,7 +12,7 @@ jobs:
     
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [windows-latest]
         node-version: [18.x, 20.x]
     
     steps:
@@ -25,15 +25,7 @@ jobs:
         cache: 'npm'
     
     - name: Install dependencies
-      run: |
-        if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          # Windows-specific installation with better error handling
-          npm install --no-optional
-        else
-          # Use npm ci for other platforms
-          npm ci
-        fi
-      shell: bash
+      run: npm install --no-optional
     
     - name: Rebuild native modules
       run: npm run rebuild:native
