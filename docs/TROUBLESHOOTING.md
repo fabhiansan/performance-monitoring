@@ -86,7 +86,7 @@ If automatic rebuilding fails:
 ### Environment Setup
 
 #### Required Versions
-- Node.js: >= 18.0.0
+- Node.js: >= 20.0.0
 - npm: >= 8.0.0
 - Python: 3.x (for node-gyp)
 

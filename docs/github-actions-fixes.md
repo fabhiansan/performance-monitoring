@@ -98,7 +98,7 @@ const Database = (await import('better-sqlite3')).default; const db = new Databa
 
 ### To test the general build:
 1. Push to main or develop branch to trigger the "Build and Test" workflow
-2. Check that all matrix combinations (Ubuntu, Windows, macOS with Node 18.x and 20.x) pass
+2. Check that all matrix combinations (Ubuntu, Windows, macOS with Node 20.x) pass
 
 ## Expected Improvements
 
