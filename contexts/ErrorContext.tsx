@@ -142,7 +142,7 @@ export const useError = (): ErrorContextValue => {
 export const useAsyncError = () => {
   const { showError, setRetryAction } = useError();
 
-  const executeAsync = useCallback(async <T>(
+  const executeAsync = useCallback(async <T,>(
     operation: () => Promise<T>,
     context?: Record<string, any>,
     retryable: boolean = true
