@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { categorizeOrganizationalLevel, determineOrganizationalLevelFromPosition, inferEselonFromGolongan } from '../utils/organizationalLevels';
 
 interface Employee {
   id: number;
@@ -43,6 +44,19 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeAdded, onCa
       setErrors({});
     }
   }, [employee]);
+
+  // Auto-infer organizational level based on golongan and position
+  useEffect(() => {
+    if (gol.trim() || position.trim() || subPosition.trim()) {
+      const positionBasedLevel = determineOrganizationalLevelFromPosition(position, subPosition);
+      const inferredLevel = categorizeOrganizationalLevel(positionBasedLevel, gol.trim());
+      
+      // Only auto-update if current value is default or if we have a better inference
+      if (organizationalLevel === 'Staff/Other' || (gol.trim() && inferEselonFromGolongan(gol.trim()) !== 'Staff')) {
+        setOrganizationalLevel(inferredLevel);
+      }
+    }
+  }, [gol, position, subPosition]);
 
   const validateForm = () => {
     const newErrors: { name?: string; nip?: string; gol?: string; pangkat?: string; position?: string; subPosition?: string } = {};

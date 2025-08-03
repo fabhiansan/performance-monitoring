@@ -2,20 +2,28 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Employee } from '../types';
 import { parsePerformanceData } from '../services/parser';
 import { parseEmployeeCSV, validateEmployeeData } from '../services/csvParser';
+import { ValidationResult, getValidationSeverity } from '../services/validationService';
+import { useError } from '../contexts/ErrorContext';
 import ResolveEmployeesDialog from './ResolveEmployeesDialog';
 import AddEmployeeForm from './AddEmployeeForm';
+import ValidationFeedback from './ValidationFeedback';
+import RefreshStatus from './RefreshStatus';
 import { api, UploadSession } from '../services/api';
 import { IconClipboardData, IconAnalyze, IconSparkles, IconUsers } from './Icons';
 
 interface DataManagementProps {
   employees: Employee[];
   onDataUpdate: (employees: Employee[], sessionName?: string) => void;
+  pendingSaves?: Set<string>;
+  savingStatus?: 'idle' | 'saving' | 'saved' | 'error';
+  selectedSessionId?: string;
 }
 
-const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate }) => {
+const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate, pendingSaves = new Set(), savingStatus = 'idle', selectedSessionId }) => {
   const [rawText, setRawText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { showError } = useError();
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadSessions, setUploadSessions] = useState<UploadSession[]>([]);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
@@ -28,6 +36,7 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
   const [showAddEmployeeForm, setShowAddEmployeeForm] = useState(false);
   const [currentNewEmployeeName, setCurrentNewEmployeeName] = useState<string>('');
   const [resolveMapping, setResolveMapping] = useState<Record<string, { chosenName: string; orgLevel: string; isNew: boolean }> | null>(null);
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
 
   const detectDataType = (data: string): 'employee_roster' | 'performance_data' => {
     const lines = data.trim().split('\n').filter(line => line.trim().length > 1);
@@ -167,9 +176,11 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
             
             return;
           } catch (err) {
-            console.error('Employee roster import error:', err);
-            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-            setError(`Gagal mengimpor data pegawai: ${errorMessage}`);
+            showError(err, {
+              component: 'DataManagement',
+              operation: 'importEmployeeRoster',
+              dataType: 'employee_roster'
+            });
             return;
           } finally {
             setIsLoading(false);
@@ -191,7 +202,10 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
           
           
         } catch (mappingError) {
-          console.error('Error fetching organizational level mapping:', mappingError);
+          showError(mappingError, {
+            component: 'DataManagement',
+            operation: 'fetchOrgLevelMapping'
+          });
         }
         
         // Helper function to normalize names for comparison
@@ -316,8 +330,19 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
           orgLevelMapping[name] = 'Staff/Other';
         });
         
-        const parsedData = parsePerformanceData(rawText, undefined, orgLevelMapping);
-        const sortedData = parsedData.sort((a, b) => a.name.localeCompare(b.name));
+        const parseResult = parsePerformanceData(rawText, undefined, orgLevelMapping);
+        const sortedData = parseResult.employees.sort((a, b) => a.name.localeCompare(b.name));
+        
+        // Store validation result for display
+        setValidationResult(parseResult.validation);
+        
+        // Check if validation passed with acceptable quality
+        const severity = getValidationSeverity(parseResult.validation);
+        if (severity === 'critical') {
+          setError('Critical data validation errors found. Please fix the issues before proceeding.');
+          return;
+        }
+        
         onDataUpdate(sortedData);
         // Automatically open save dialog and ask for month/year identifier
         const now = new Date();
@@ -376,8 +401,16 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
       setIsLoading(true);
       setTimeout(() => {
         try {
-          const parsed = parsePerformanceData(rawText, undefined, resolveModal.orgMap);
-          const sorted = parsed.sort((a, b) => a.name.localeCompare(b.name));
+          const parseResult = parsePerformanceData(rawText, undefined, resolveModal.orgMap);
+          const sorted = parseResult.employees.sort((a, b) => a.name.localeCompare(b.name));
+          setValidationResult(parseResult.validation);
+          
+          const severity = getValidationSeverity(parseResult.validation);
+          if (severity === 'critical') {
+            setError('Critical data validation errors found. Please fix the issues before proceeding.');
+            return;
+          }
+          
           onDataUpdate(sorted);
           setShowSaveDialog(true);
           setSessionName(`${new Date().getMonth() + 1}/${new Date().getFullYear()}`);
@@ -436,8 +469,16 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
       // Re-run parsing with updated mapping
       setTimeout(() => {
         try {
-          const parsed = parsePerformanceData(rawText, undefined, orgLevelMapping);
-          const sorted = parsed.sort((a, b) => a.name.localeCompare(b.name));
+          const parseResult = parsePerformanceData(rawText, undefined, orgLevelMapping);
+          const sorted = parseResult.employees.sort((a, b) => a.name.localeCompare(b.name));
+          setValidationResult(parseResult.validation);
+          
+          const severity = getValidationSeverity(parseResult.validation);
+          if (severity === 'critical') {
+            setError('Critical data validation errors found. Please fix the issues before proceeding.');
+            return;
+          }
+          
           onDataUpdate(sorted);
           setShowSaveDialog(true);
           setSessionName(`${new Date().getMonth() + 1}/${new Date().getFullYear()}`);
@@ -487,6 +528,12 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
   const exportData = () => {
     if (employees.length === 0) return;
     
+    // Check if there are pending saves and prevent export
+    if (pendingSaves.size > 0 || savingStatus === 'saving') {
+      setError('Please wait for pending saves to complete before exporting.');
+      return;
+    }
+    
     const csvData = employees.map(emp => {
       const avgScore = emp.performance && emp.performance.length > 0 
         ? emp.performance.reduce((s, p) => s + p.score, 0) / emp.performance.length 
@@ -523,6 +570,7 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
     setRawText('');
     onDataUpdate([]);
     setError(null);
+    setValidationResult(null);
   };
 
   const loadUploadSessions = async () => {
@@ -530,7 +578,10 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
       const sessions = await api.getAllUploadSessions();
       setUploadSessions(sessions);
     } catch (error) {
-      console.error('Failed to load upload sessions:', error);
+      showError(error, {
+        component: 'DataManagement',
+        operation: 'loadUploadSessions'
+      });
     }
   };
 
@@ -543,8 +594,32 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
       setSessionName('');
       await loadUploadSessions();
     } catch (error) {
-      setError('Failed to save session');
+      showError(error, {
+        component: 'DataManagement',
+        operation: 'saveCurrentSession',
+        sessionName,
+        employeeCount: employees.length
+      });
     }
+  };
+  
+  // Helper to check if we can perform export operations
+  const canExport = () => {
+    return employees.length > 0 && pendingSaves.size === 0 && savingStatus !== 'saving';
+  };
+  
+  // Helper to get save status message
+  const getSaveStatusMessage = () => {
+    if (pendingSaves.size > 0 || savingStatus === 'saving') {
+      return 'Saving data...';
+    }
+    if (savingStatus === 'saved') {
+      return 'Data saved successfully!';
+    }
+    if (savingStatus === 'error') {
+      return 'Save failed. Please try again.';
+    }
+    return null;
   };
 
   const loadSession = async (session: UploadSession) => {
@@ -736,6 +811,10 @@ The system will auto-detect the data type and process accordingly."
               <p>{error}</p>
             </div>
           )}
+
+          {validationResult && (
+            <ValidationFeedback validation={validationResult} className="mt-4" />
+          )}
         </div>
 
         <div className="bg-white dark:bg-gray-900 shadow-xl rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
@@ -778,14 +857,25 @@ The system will auto-detect the data type and process accordingly."
               
               <button
                 onClick={exportData}
-                disabled={employees.length === 0}
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                disabled={!canExport()}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors relative"
+                title={!canExport() && pendingSaves.size > 0 ? 'Waiting for saves to complete...' : 'Export data as CSV'}
               >
+                {(pendingSaves.size > 0 || savingStatus === 'saving') && (
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                )}
                 Export CSV
               </button>
               
               <button
                 onClick={() => {
+                  if (!canExport()) {
+                    setError('Please wait for pending saves to complete before exporting.');
+                    return;
+                  }
                   const jsonData = JSON.stringify(employees, null, 2);
                   const blob = new Blob([jsonData], { type: 'application/json' });
                   const url = window.URL.createObjectURL(blob);
@@ -795,15 +885,62 @@ The system will auto-detect the data type and process accordingly."
                   a.click();
                   window.URL.revokeObjectURL(url);
                 }}
-                disabled={employees.length === 0}
+                disabled={!canExport()}
                 className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title={!canExport() && pendingSaves.size > 0 ? 'Waiting for saves to complete...' : 'Export data as JSON'}
               >
+                {(pendingSaves.size > 0 || savingStatus === 'saving') && (
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                )}
                 Export JSON
               </button>
             </div>
           </div>
+          
+          {/* Save Status Indicator */}
+          {getSaveStatusMessage() && (
+            <div className={`mt-4 p-3 rounded-lg text-sm font-medium ${
+              savingStatus === 'saving' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200' :
+              savingStatus === 'saved' ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200' :
+              savingStatus === 'error' ? 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200' :
+              'bg-gray-100 dark:bg-gray-900/50 text-gray-800 dark:text-gray-200'
+            }`}>
+              <div className="flex items-center">
+                {(pendingSaves.size > 0 || savingStatus === 'saving') && (
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                )}
+                {savingStatus === 'saved' && (
+                  <svg className="-ml-1 mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+                {savingStatus === 'error' && (
+                  <svg className="-ml-1 mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                )}
+                {getSaveStatusMessage()}
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Granular Refresh Status */}
+      <RefreshStatus 
+        selectedSessionId={selectedSessionId}
+        onDataUpdate={(type, data) => {
+          // Handle data updates from refresh operations
+          console.log(`Refresh completed for ${type}:`, data);
+        }}
+        className="mt-6"
+      />
 
       {uploadSessions.length > 0 && (
         <div className="bg-white dark:bg-gray-900 shadow-xl rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
@@ -842,8 +979,9 @@ The system will auto-detect the data type and process accordingly."
                 </button>
                 <button
                   onClick={mergeSelectedSessions}
-                  disabled={selectedSessions.size < 2 || isLoading}
+                  disabled={selectedSessions.size < 2 || isLoading || pendingSaves.size > 0 || savingStatus === 'saving'}
                   className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={pendingSaves.size > 0 || savingStatus === 'saving' ? 'Wait for saves to complete before merging' : ''}
                 >
                   {isLoading ? 'Merging...' : `Merge ${selectedSessions.size} Sessions`}
                 </button>

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Employee } from '../types';
+import { categorizeOrganizationalLevel, isAnyEselonLevel } from '../utils/organizationalLevels';
 
 interface TableViewProps {
   employees: Employee[];
@@ -11,13 +12,8 @@ const TableView: React.FC<TableViewProps> = ({ employees }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'eselon' | 'staff'>('all');
 
-  // Helper to categorize employees by organizational level
-  const categorizeEmployee = (level: string): 'Eselon III' | 'Eselon IV' | 'Staff' => {
-    const jobTrimmed = level.trim();
-    if (jobTrimmed === 'Eselon III') return 'Eselon III';
-    if (jobTrimmed === 'Eselon IV') return 'Eselon IV';
-    return 'Staff';
-  };
+  // Use standardized categorization function
+  const categorizeEmployee = categorizeOrganizationalLevel;
 
   // Get competency names that have actual data for the current filter
   const competencyNames = useMemo(() => {
@@ -27,8 +23,8 @@ const TableView: React.FC<TableViewProps> = ({ employees }) => {
     let relevantEmployees = employees;
     if (activeTab === 'eselon') {
       relevantEmployees = employees.filter(emp => {
-        const level = categorizeEmployee(emp.organizational_level);
-        return level === 'Eselon III' || level === 'Eselon IV';
+        const category = categorizeEmployee(emp.organizational_level);
+        return isAnyEselonLevel(category);
       });
     } else if (activeTab === 'staff') {
       relevantEmployees = employees.filter(emp => categorizeEmployee(emp.organizational_level) === 'Staff');
@@ -63,8 +59,8 @@ const TableView: React.FC<TableViewProps> = ({ employees }) => {
     // Filter by tab
     if (activeTab === 'eselon') {
       filtered = filtered.filter(emp => {
-        const level = categorizeEmployee(emp.organizational_level);
-        return level === 'Eselon III' || level === 'Eselon IV';
+        const category = categorizeEmployee(emp.organizational_level);
+        return isAnyEselonLevel(category);
       });
     } else if (activeTab === 'staff') {
       filtered = filtered.filter(emp => categorizeEmployee(emp.organizational_level) === 'Staff');

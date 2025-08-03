@@ -1,4 +1,5 @@
 import { Employee, CompetencyScore } from '../types';
+import { getPositionType } from '../utils/organizationalLevels';
 
 export interface PerformanceRecap {
   perilakuKinerja: number; // Max 25.5% (30% allocated but capped)
@@ -47,33 +48,7 @@ const PARAMETER_WEIGHTS = {
   }
 };
 
-/**
- * Determines if employee is Eselon (II/III/IV) or Staff based on position
- */
-const getPositionType = (employee: Employee): 'eselon' | 'staff' => {
-  const position = employee.organizational_level?.toLowerCase() || '';
-  
-  // Check for Eselon II, III, and IV indicators
-  if (position.includes('eselon ii') || 
-      position.includes('eselon iii') || 
-      position.includes('eselon iv') ||
-      position.includes('kepala') || 
-      position.includes('manager') ||
-      position.includes('direktur') ||
-      position.includes('kabag') ||
-      position.includes('kasubag') ||
-      position.includes('pimpinan')) {
-    return 'eselon';
-  }
-  
-  // Staff positions (including detailed staff roles)
-  if (position.includes('staff')) {
-    return 'staff';
-  }
-  
-  // Default to staff for all other positions
-  return 'staff';
-};
+// Position type determination is now handled by the centralized utility function
 
 /**
  * Finds competency score by partial name matching

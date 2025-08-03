@@ -84,11 +84,41 @@ try {
   // Get employee data by session ID
   app.get('/api/employee-data/session/:sessionId', (req, res) => {
     try {
-      const employees = db.getEmployeeDataBySession(req.params.sessionId);
-      res.json({ employees, sessionId: req.params.sessionId });
+      const { sessionId } = req.params;
+      
+      if (!sessionId) {
+        return res.status(400).json({ 
+          error: 'Session ID is required',
+          details: 'Please provide a valid session ID'
+        });
+      }
+      
+      const employees = db.getEmployeeDataBySession(sessionId);
+      
+      // Validate that performance data was properly loaded
+      const employeesWithoutPerformance = employees.filter(emp => !emp.performance || emp.performance.length === 0);
+      if (employeesWithoutPerformance.length > 0) {
+        console.warn(`⚠️ ${employeesWithoutPerformance.length} employees loaded without performance data from session ${sessionId}`);
+      }
+      
+      console.log(`✅ Loaded ${employees.length} employees from session ${sessionId}, ${employees.length - employeesWithoutPerformance.length} with performance data`);
+      
+      res.json({ 
+        employees, 
+        sessionId: sessionId,
+        metadata: {
+          totalEmployees: employees.length,
+          employeesWithPerformanceData: employees.length - employeesWithoutPerformance.length,
+          employeesWithoutPerformanceData: employeesWithoutPerformance.length
+        }
+      });
     } catch (error) {
       console.error('Error getting employee data by session:', error);
-      res.status(500).json({ error: 'Failed to get employee data' });
+      res.status(500).json({ 
+        error: 'Failed to get employee data',
+        details: error.message,
+        sessionId: req.params.sessionId
+      });
     }
   });
 
@@ -97,10 +127,19 @@ try {
     try {
       const { startTime, endTime } = req.query;
       const employees = db.getEmployeeDataByTimeRange(startTime, endTime);
-      res.json(employees);
+      res.json({ 
+        employees, 
+        metadata: {
+          totalEmployees: employees.length,
+          timeRange: { startTime, endTime }
+        }
+      });
     } catch (error) {
       console.error('Error getting employee data by time range:', error);
-      res.status(500).json({ error: 'Failed to get employee data' });
+      res.status(500).json({ 
+        error: 'Failed to get employee data',
+        details: error.message
+      });
     }
   });
 
@@ -108,10 +147,19 @@ try {
   app.get('/api/employee-data/latest', (req, res) => {
     try {
       const employees = db.getLatestEmployeeData();
-      res.json(employees);
+      res.json({ 
+        employees, 
+        metadata: {
+          totalEmployees: employees.length,
+          isLatest: true
+        }
+      });
     } catch (error) {
       console.error('Error getting latest employee data:', error);
-      res.status(500).json({ error: 'Failed to get latest employee data' });
+      res.status(500).json({ 
+        error: 'Failed to get latest employee data',
+        details: error.message
+      });
     }
   });
 

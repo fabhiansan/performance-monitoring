@@ -49,3 +49,119 @@ html, body {
 .dark ::-webkit-scrollbar-thumb:hover {
   background: #777;
 }
+
+/* Container queries for responsive chart behavior */
+@container (max-width: 320px) {
+  .chart-container {
+    min-height: 200px;
+    padding: 0.5rem;
+  }
+  
+  .chart-title {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+}
+
+@container (min-width: 321px) and (max-width: 640px) {
+  .chart-container {
+    min-height: 250px;
+    padding: 0.75rem;
+  }
+  
+  .chart-title {
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+}
+
+@container (min-width: 641px) and (max-width: 1024px) {
+  .chart-container {
+    min-height: 320px;
+    padding: 1rem;
+  }
+  
+  .chart-title {
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+  }
+}
+
+@container (min-width: 1025px) {
+  .chart-container {
+    min-height: 400px;
+    padding: 1.5rem;
+  }
+  
+  .chart-title {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+  }
+}
+
+/* Dynamic height utilities */
+.chart-dynamic-height {
+  container-type: inline-size;
+  height: auto;
+  min-height: var(--chart-min-height, 250px);
+  max-height: var(--chart-max-height, 600px);
+}
+
+/* Responsive grid for charts */
+.chart-grid {
+  container-type: inline-size;
+  display: grid;
+  gap: 1.5rem;
+}
+
+@container (max-width: 640px) {
+  .chart-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+@container (min-width: 641px) and (max-width: 1024px) {
+  .chart-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+  }
+}
+
+@container (min-width: 1025px) {
+  .chart-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+/* Adaptive text sizing */
+.adaptive-text {
+  font-size: clamp(0.75rem, 2vw, 1rem);
+}
+
+.adaptive-title {
+  font-size: clamp(1rem, 3vw, 1.5rem);
+}
+
+/* Responsive chart wrapper */
+.responsive-chart-wrapper {
+  container-type: inline-size;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* Performance optimizations */
+.chart-container {
+  contain: layout style;
+  will-change: transform;
+}
+
+/* Smooth transitions for responsive changes */
+.chart-container,
+.chart-title,
+.adaptive-text,
+.adaptive-title {
+  transition: all 0.2s ease-in-out;
+}

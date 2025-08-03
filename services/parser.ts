@@ -1,5 +1,7 @@
 
 import { Employee } from '../types';
+import { validatePerformanceData, getValidationMessage, ValidationResult } from './validationService';
+import { determineOrganizationalLevelFromPosition, categorizeOrganizationalLevel } from '../utils/organizationalLevels';
 
 interface ScoreMap {
   [employeeName: string]: {
@@ -135,21 +137,24 @@ export const parseEmployeeData = (csvText: string): { [employeeName: string]: st
     const position = values[5]?.trim() || '';
     const subPosition = values[6]?.trim() || '';
     
-    if (name && golongan) {
-      // Extract roman numeral from golongan (e.g., "IV/c" -> "IV", "III/d" -> "III")
-      const romanNumeral = golongan.split('/')[0];
+    if (name) {
+      // Use enhanced organizational level determination with golongan-based inference
+      const positionBasedLevel = determineOrganizationalLevelFromPosition(position, subPosition);
+      const organizationalLevel = categorizeOrganizationalLevel(
+        positionBasedLevel === 'Other' ? undefined : positionBasedLevel,
+        golongan
+      );
       
       let detailedPosition = '';
       
-      // Determine position based on roman numeral and position fields
-      if (romanNumeral === 'II') {
-        detailedPosition = 'Eselon II';
-      } else if (romanNumeral === 'III') {
-        detailedPosition = 'Eselon III';
-      } else if (romanNumeral === 'IV') {
-        detailedPosition = 'Eselon IV';
-      } else {
+      // For Eselon levels, use the organizational level directly
+      if (organizationalLevel === 'Eselon II' || organizationalLevel === 'Eselon III' || organizationalLevel === 'Eselon IV') {
+        detailedPosition = organizationalLevel;
+      } else if (organizationalLevel === 'Staff') {
         // For staff positions, determine detailed role based on position and subPosition
+        detailedPosition = determineStaffPosition(position, subPosition, golongan);
+      } else {
+        // Fallback to staff position for unrecognized positions
         detailedPosition = determineStaffPosition(position, subPosition, golongan);
       }
       
@@ -199,7 +204,7 @@ const determineStaffPosition = (position: string, subPosition: string, golongan:
 };
 
 
-export const parsePerformanceData = (text: string, employeeDataCsv?: string, orgLevelMapping?: { [employeeName: string]: string }): Employee[] => {
+export const parsePerformanceData = (text: string, employeeDataCsv?: string, orgLevelMapping?: { [employeeName: string]: string }): { employees: Employee[], validation: ValidationResult } => {
   
   // Parse employee data if provided, otherwise use empty mapping
   const dynamicEmployeeMapping = employeeDataCsv ? parseEmployeeData(employeeDataCsv) : {};
@@ -357,5 +362,8 @@ export const parsePerformanceData = (text: string, employeeDataCsv?: string, org
     throw new Error("No valid employee performance data could be parsed. Check that headers are in 'Competency [Employee Name]' format and data rows contain numeric scores.");
   }
 
-  return validEmployees;
+  // Validate the parsed data
+  const validation = validatePerformanceData(validEmployees);
+
+  return { employees: validEmployees, validation };
 };

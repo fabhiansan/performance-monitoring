@@ -282,6 +282,7 @@ class SQLiteService {
         position TEXT,
         sub_position TEXT,
         organizational_level TEXT,
+        performance_data TEXT,
         upload_timestamp TEXT,
         FOREIGN KEY (session_id) REFERENCES upload_sessions(session_id)
       );
@@ -306,6 +307,19 @@ class SQLiteService {
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    
+    // Add performance_data column to existing employee_data table if it doesn't exist
+    try {
+      this.db.exec(`
+        ALTER TABLE employee_data ADD COLUMN performance_data TEXT;
+      `);
+      console.log('✅ Added performance_data column to existing employee_data table');
+    } catch (error) {
+      // Column already exists, which is fine
+      if (!error.message.includes('duplicate column name')) {
+        console.warn('⚠️ Unexpected error adding performance_data column:', error.message);
+      }
+    }
   }
 
   // Upload session methods
@@ -320,14 +334,17 @@ class SQLiteService {
     `);
     
     const insertEmployee = this.db.prepare(`
-      INSERT INTO employee_data (session_id, name, nip, gol, pangkat, position, sub_position, organizational_level, upload_timestamp)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO employee_data (session_id, name, nip, gol, pangkat, position, sub_position, organizational_level, performance_data, upload_timestamp)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     
     const transaction = this.db.transaction(() => {
       insertSession.run(sessionId, finalSessionName, uploadTime, employees.length);
       
       for (const employee of employees) {
+        // Serialize performance data as JSON
+        const performanceData = employee.performance ? JSON.stringify(employee.performance) : JSON.stringify([]);
+        
         insertEmployee.run(
           sessionId,
           employee.name || '',
@@ -336,7 +353,8 @@ class SQLiteService {
           employee.pangkat || '',
           employee.position || '',
           employee.subPosition || '',
-          employee.organizationalLevel || '',
+          employee.organizational_level || employee.organizationalLevel || '',
+          performanceData,
           uploadTime
         );
       }
@@ -372,7 +390,150 @@ class SQLiteService {
       WHERE session_id = ?
       ORDER BY name
     `);
-    return stmt.all(sessionId);
+    const rawData = stmt.all(sessionId);
+    
+    // Deserialize performance data and reconstruct Employee objects
+    return rawData.map(row => {
+      let performance = [];
+      try {
+        if (row.performance_data) {
+          const parsedData = JSON.parse(row.performance_data);
+          performance = this.validateAndSanitizePerformanceData(parsedData, row.name);
+        }
+      } catch (error) {
+        console.warn(`Failed to parse performance data for employee ${row.name}:`, error);
+        performance = [];
+      }
+      
+      return {
+        id: row.id,
+        name: row.name || '',
+        nip: row.nip || '',
+        gol: row.gol || '',
+        pangkat: row.pangkat || '',
+        position: row.position || '',
+        subPosition: row.sub_position || '',
+        organizationalLevel: row.organizational_level || '',
+        performance: performance,
+        created_at: row.upload_timestamp
+      };
+    });
+  }
+
+  /**
+   * Validates and sanitizes performance data to ensure it conforms to CompetencyScore interface
+   * @param {any} data - Raw performance data to validate
+   * @param {string} employeeName - Employee name for logging purposes
+   * @returns {Array} - Validated array of CompetencyScore objects
+   */
+  validateAndSanitizePerformanceData(data, employeeName) {
+    if (!Array.isArray(data)) {
+      console.warn(`Performance data for employee ${employeeName} is not an array, converting to empty array`);
+      return [];
+    }
+
+    const validatedPerformance = [];
+    const validationErrors = [];
+
+    data.forEach((item, index) => {
+      const validationResult = this.validateCompetencyScore(item, index, employeeName);
+      
+      if (validationResult.isValid) {
+        validatedPerformance.push(validationResult.competencyScore);
+      } else {
+        validationErrors.push(validationResult.error);
+      }
+    });
+
+    // Log validation summary
+    if (validationErrors.length > 0) {
+      console.warn(`Performance data validation for employee ${employeeName}:`);
+      console.warn(`  - Valid competencies: ${validatedPerformance.length}`);
+      console.warn(`  - Invalid competencies: ${validationErrors.length}`);
+      validationErrors.forEach(error => console.warn(`    ${error}`));
+    }
+
+    return validatedPerformance;
+  }
+
+  /**
+   * Validates a single competency score object against CompetencyScore interface
+   * @param {any} item - Item to validate
+   * @param {number} index - Index in the array for error reporting
+   * @param {string} employeeName - Employee name for error reporting
+   * @returns {Object} - Validation result with isValid flag and either competencyScore or error
+   */
+  validateCompetencyScore(item, index, employeeName) {
+    // Check if item is an object
+    if (!item || typeof item !== 'object') {
+      return {
+        isValid: false,
+        error: `Item at index ${index} is not an object (type: ${typeof item})`
+      };
+    }
+
+    // Validate name property
+    if (!item.hasOwnProperty('name')) {
+      return {
+        isValid: false,
+        error: `Item at index ${index} missing required 'name' property`
+      };
+    }
+
+    if (typeof item.name !== 'string') {
+      return {
+        isValid: false,
+        error: `Item at index ${index} has invalid 'name' property (expected string, got ${typeof item.name})`
+      };
+    }
+
+    if (item.name.trim().length === 0) {
+      return {
+        isValid: false,
+        error: `Item at index ${index} has empty 'name' property`
+      };
+    }
+
+    // Validate score property
+    if (!item.hasOwnProperty('score')) {
+      return {
+        isValid: false,
+        error: `Item at index ${index} missing required 'score' property`
+      };
+    }
+
+    if (typeof item.score !== 'number') {
+      // Try to convert to number if it's a string
+      if (typeof item.score === 'string' && !isNaN(parseFloat(item.score))) {
+        item.score = parseFloat(item.score);
+      } else {
+        return {
+          isValid: false,
+          error: `Item at index ${index} has invalid 'score' property (expected number, got ${typeof item.score})`
+        };
+      }
+    }
+
+    if (!isFinite(item.score)) {
+      return {
+        isValid: false,
+        error: `Item at index ${index} has non-finite 'score' value: ${item.score}`
+      };
+    }
+
+    // Validate score range (typical performance scores are 0-100)
+    if (item.score < 0 || item.score > 100) {
+      console.warn(`Employee ${employeeName}: Competency '${item.name}' has score ${item.score} outside typical range (0-100)`);
+    }
+
+    // Return validated CompetencyScore object with only required properties
+    return {
+      isValid: true,
+      competencyScore: {
+        name: item.name.trim(),
+        score: item.score
+      }
+    };
   }
 
   getEmployeeDataByTimeRange(startTime, endTime) {
@@ -472,7 +633,7 @@ class SQLiteService {
           employee.pangkat || '',
           employee.position || '',
           employee.subPosition || '',
-          employee.organizationalLevel || ''
+          employee.organizational_level || employee.organizationalLevel || ''
         );
       }
     });

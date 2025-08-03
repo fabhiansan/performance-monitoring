@@ -3,6 +3,7 @@ import { api } from '../services/api';
 import { IconUsers, IconUpload, IconPlus, IconClipboardData, IconEdit, IconTrash } from './Icons';
 import EmployeeImport from './EmployeeImport';
 import AddEmployeeForm from './AddEmployeeForm';
+import { ORGANIZATIONAL_LEVELS, isValidOrganizationalLevel } from '../utils/organizationalLevels';
 
 interface Employee {
   id: number;
@@ -66,15 +67,13 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onEmployeeUpdat
     try {
       await api.deleteEmployee(id);
       await loadEmployees();
+      
+      // Trigger broader application refresh to update all dependent components
       if (onEmployeeUpdate) {
         onEmployeeUpdate();
       }
       
-      // Show success message briefly
-      const successMessage = `Pegawai "${name}" berhasil dihapus.`;
       setError(null);
-      
-      // Success - employee deleted
     } catch (err) {
       setError(`Gagal menghapus pegawai "${name}". Silakan coba lagi.`);
     }
@@ -124,9 +123,12 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onEmployeeUpdat
       }
       setSelectedEmployees(new Set());
       await loadEmployees();
+      
+      // Trigger broader application refresh to update all dependent components
       if (onEmployeeUpdate) {
         onEmployeeUpdate();
       }
+      
       setError(null);
     } catch (err) {
       setError('Gagal menghapus pegawai. Silakan coba lagi.');
@@ -137,6 +139,12 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onEmployeeUpdat
 
   const handleBulkEdit = async () => {
     if (selectedEmployees.size === 0 || !bulkEditField || !bulkEditValue) return;
+    
+    // Validate organizational level values against predefined levels
+    if (bulkEditField === 'organizational_level' && !isValidOrganizationalLevel(bulkEditValue)) {
+      setError(`Tingkat organisasi "${bulkEditValue}" tidak valid. Silakan pilih dari daftar yang tersedia.`);
+      return;
+    }
     
     const isConfirmed = window.confirm(
       `Apakah Anda yakin ingin mengubah ${bulkEditField} untuk ${selectedEmployees.size} pegawai terpilih menjadi "${bulkEditValue}"?`
@@ -195,9 +203,13 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onEmployeeUpdat
       setBulkEditField('');
       setBulkEditValue('');
       await loadEmployees();
+      
+      // Trigger broader application refresh, especially important for organizational level changes
+      // This ensures dashboard components refresh their categorization and role-based functionality
       if (onEmployeeUpdate) {
         onEmployeeUpdate();
       }
+      
       setError(null);
     } catch (err) {
       setError('Gagal mengubah data pegawai. Silakan coba lagi.');
@@ -356,20 +368,9 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onEmployeeUpdat
                     className="w-full px-3 py-2 border border-purple-300 dark:border-purple-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   >
                     <option value="">Pilih tingkat organisasi...</option>
-                    <option value="Eselon II">Eselon II</option>
-                    <option value="Eselon III">Eselon III</option>
-                    <option value="Eselon IV">Eselon IV</option>
-                    <option value="Staff ASN Sekretariat">Staff ASN Sekretariat</option>
-                    <option value="Staff Non ASN Sekretariat">Staff Non ASN Sekretariat</option>
-                    <option value="Staff ASN Bidang Hukum">Staff ASN Bidang Hukum</option>
-                    <option value="Staff ASN Bidang Pemberdayaan Sosial">Staff ASN Bidang Pemberdayaan Sosial</option>
-                    <option value="Staff Non ASN Bidang Pemberdayaan Sosial">Staff Non ASN Bidang Pemberdayaan Sosial</option>
-                    <option value="Staff ASN Bidang Rehabilitasi Sosial">Staff ASN Bidang Rehabilitasi Sosial</option>
-                    <option value="Staff Non ASN Bidang Rehabilitasi Sosial">Staff Non ASN Bidang Rehabilitasi Sosial</option>
-                    <option value="Staff ASN Bidang Perlindungan dan Jaminan Sosial">Staff ASN Bidang Perlindungan dan Jaminan Sosial</option>
-                    <option value="Staff Non ASN Bidang Perlindungan dan Jaminan Sosial">Staff Non ASN Bidang Perlindungan dan Jaminan Sosial</option>
-                    <option value="Staff ASN Bidang Penanganan Bencana">Staff ASN Bidang Penanganan Bencana</option>
-                    <option value="Staff Non ASN Bidang Penanganan Bencana">Staff Non ASN Bidang Penanganan Bencana</option>
+                    {ORGANIZATIONAL_LEVELS.map(level => (
+                      <option key={level} value={level}>{level}</option>
+                    ))}
                   </select>
                 ) : (
                   <input
@@ -520,8 +521,10 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onEmployeeUpdat
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        emp.organizational_level === 'Eselon II' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-300' :
                         emp.organizational_level === 'Eselon III' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300' :
                         emp.organizational_level === 'Eselon IV' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300' :
+                        emp.organizational_level?.toLowerCase().includes('eselon') ? 'bg-violet-100 text-violet-800 dark:bg-violet-900/20 dark:text-violet-300' :
                         'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'
                       }`}>
                         {emp.organizational_level}
@@ -563,6 +566,9 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onEmployeeUpdat
             setShowAddForm(false);
             setEditingEmployee(null);
             loadEmployees();
+            
+            // Trigger broader application refresh for new/edited employees
+            // This ensures dashboard components update their data and categorization
             if (onEmployeeUpdate) {
               onEmployeeUpdate();
             }

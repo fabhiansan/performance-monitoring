@@ -2,12 +2,162 @@ import React, { useState, useMemo } from 'react';
 import { Employee } from '../types';
 import { IconUsers, IconChartBar, IconSparkles } from './Icons';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
+import { 
+  ORGANIZATIONAL_LEVELS, 
+  categorizeOrganizationalLevel,
+  getUniqueOrganizationalLevels,
+  groupEmployeesByOrganizationalLevel,
+  getOrganizationalSummary
+} from '../utils/organizationalLevels';
+import { 
+  useResizeObserver, 
+  useViewportObserver,
+  calculateYAxisWidth, 
+  calculateChartMargins, 
+  calculateDynamicHeight,
+  getResponsiveChartConfig,
+  calculateOptimalItemCount
+} from '../utils/useResizeObserver';
 
 interface DashboardOverviewProps {
   employees: Employee[];
+  organizationalMappings?: Record<string, string>;
 }
 
-const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees }) => {
+interface ChartContainerProps {
+  employeeScores: Array<{ name: string; score: number }>;
+  competency: { competency: string };
+  getScoreColor: (score: number) => string;
+  getScoreLabel: (score: number) => string;
+}
+
+const ChartContainer: React.FC<ChartContainerProps> = ({ employeeScores, competency, getScoreColor, getScoreLabel }) => {
+  const { width, height, ref, isSmallScreen, isMediumScreen, isLargeScreen } = useResizeObserver();
+  const viewport = useViewportObserver();
+  
+  // Memoize chart configuration for performance
+  const chartConfig = useMemo(() => getResponsiveChartConfig(width, height), [width, height]);
+  
+  // Calculate dynamic height based on content, screen size, and viewport
+  const dynamicHeight = useMemo(() => {
+    const availableViewportHeight = viewport.height * 0.8; // Use 80% of viewport height
+    return calculateDynamicHeight(
+      {
+        baseHeight: 250,
+        minHeight: isSmallScreen ? 200 : isMediumScreen ? 250 : 300,
+        maxHeight: Math.min(
+          isSmallScreen ? 400 : isMediumScreen ? 500 : 600,
+          availableViewportHeight
+        ),
+        contentCount: employeeScores.length,
+        itemHeight: isSmallScreen ? 35 : isMediumScreen ? 40 : 45
+      },
+      width,
+      Math.max(height, availableViewportHeight)
+    );
+  }, [width, height, viewport.height, employeeScores.length, isSmallScreen, isMediumScreen]);
+  
+  // Memoize layout calculations
+  const layoutConfig = useMemo(() => {
+    const yAxisWidth = calculateYAxisWidth(width);
+    const margins = calculateChartMargins(width, height);
+    const optimalItemCount = calculateOptimalItemCount(width, dynamicHeight, chartConfig.spacing.categoryGap + 20);
+    
+    return {
+      yAxisWidth,
+      margins,
+      optimalItemCount,
+      displayedScores: employeeScores.slice(0, optimalItemCount)
+    };
+  }, [width, height, dynamicHeight, chartConfig.spacing.categoryGap, employeeScores]);
+  
+  // Dynamic CSS custom properties for container queries
+  const containerStyle = useMemo(() => ({
+    '--chart-min-height': `${dynamicHeight}px`,
+    '--chart-max-height': `${Math.min(dynamicHeight * 1.5, viewport.height * 0.9)}px`
+  } as React.CSSProperties), [dynamicHeight, viewport.height]);
+
+  return (
+    <div 
+      ref={ref} 
+      className="chart-container chart-dynamic-height responsive-chart-wrapper"
+      style={{
+        ...containerStyle,
+        height: `${dynamicHeight}px`,
+        minHeight: `${dynamicHeight}px`
+      }}
+    >
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart 
+          data={layoutConfig.displayedScores} 
+          layout="vertical" 
+          margin={layoutConfig.margins}
+          barGap={chartConfig.spacing.barGap}
+          barCategoryGap={chartConfig.spacing.categoryGap}
+        >
+          <CartesianGrid 
+            strokeDasharray="3 3" 
+            stroke="#374151" 
+            strokeWidth={chartConfig.strokeWidth}
+          />
+          <XAxis 
+            type="number" 
+            stroke="#6b7280" 
+            domain={[0, 100]}
+            tick={{ fontSize: chartConfig.fontSize.tick }}
+          />
+          <YAxis 
+            dataKey="name" 
+            type="category" 
+            width={layoutConfig.yAxisWidth} 
+            axisLine={false} 
+            tickLine={false}
+            tick={{ fontSize: chartConfig.fontSize.tick }}
+            stroke="#6b7280" 
+          />
+          <Tooltip
+            contentStyle={{
+              backgroundColor: '#ffffff',
+              border: '2px solid #374151',
+              borderRadius: `${chartConfig.radius.tooltip}px`,
+              color: '#111827',
+              fontSize: `${chartConfig.fontSize.tooltip}px`,
+              fontWeight: 500,
+              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            }}
+            formatter={(value: number) => [`${value} (${getScoreLabel(value)})`, 'Score']}
+          />
+          <Bar 
+            dataKey="score" 
+            radius={[0, chartConfig.radius.bar, chartConfig.radius.bar, 0]}
+          >
+            <LabelList 
+              dataKey="name" 
+              position="insideLeft" 
+              style={{ 
+                fill: '#111827', 
+                fontSize: chartConfig.fontSize.label,
+                fontWeight: isSmallScreen ? 'normal' : 'medium'
+              }} 
+            />
+            {layoutConfig.displayedScores.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={getScoreColor(entry.score)} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+      
+      {/* Show indicator if items were truncated */}
+      {employeeScores.length > layoutConfig.optimalItemCount && (
+        <div className="absolute bottom-2 right-2 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow">
+          +{employeeScores.length - layoutConfig.optimalItemCount} more
+        </div>
+      )}
+    </div>
+  );
+};
+
+const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees, organizationalMappings }) => {
   // Function to get color based on score range
   const getScoreColor = (score: number): string => {
     if (score >= 85) return '#059669'; // Darker green for Sangat Baik (85+) - better contrast
@@ -30,61 +180,18 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees }) => {
     return 'bg-purple-50 dark:bg-purple-900/30'; // Perlu Perbaikan - lighter background for better text contrast
   };
 
-  // Helper to categorize employees by organizational level
-  // Supports all 13 organizational positions
-  const categorizeEmployee = (level: string | undefined | null): string => {
-    if (!level) return 'Other';
-    const normalized = level.trim();
-    
-    // Return exact match for all 13 predefined positions
-    if (predefinedLevels.includes(normalized)) {
-      return normalized;
-    }
-    
-    // Fallback categorization for legacy data
-    const normalizedLower = normalized.toLowerCase();
-    if (normalizedLower.includes('eselon ii')) return 'Eselon II';
-    if (normalizedLower.includes('eselon iii')) return 'Eselon III';
-    if (normalizedLower.includes('eselon iv')) return 'Eselon IV';
-    
-    return 'Other';
-  };
+  // Use centralized categorization function
+  const categorizeEmployee = categorizeOrganizationalLevel;
 
   const [searchTerm, setSearchTerm] = useState('');
   const [levelFilter, setLevelFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
-  // Predefined organizational levels
-  const predefinedLevels = [
-    'Eselon II',
-    'Eselon III', 
-    'Eselon IV',
-    'Staff ASN Sekretariat',
-    'Staff Non ASN Sekretariat',
-    'Staff ASN Bidang Pemberdayaan Sosial',
-    'Staff Non ASN Bidang Pemberdayaan Sosial',
-    'Staff ASN Bidang Rehabilitasi Sosial',
-    'Staff Non ASN Bidang Rehabilitasi Sosial',
-    'Staff ASN Bidang Perlindungan dan Jaminan Sosial',
-    'Staff Non ASN Bidang Perlindungan dan Jaminan Sosial',
-    'Staff ASN Bidang Penanganan Bencana',
-    'Staff Non ASN Bidang Penanganan Bencana'
-  ];
+  // Use predefined organizational levels from constants
+  const predefinedLevels = ORGANIZATIONAL_LEVELS;
 
   const uniqueLevels = useMemo(() => {
-    // Get actual levels from employee data
-    const actualLevels = [...new Set(employees.map(emp => emp.organizational_level))];
-    const filteredActualLevels = actualLevels.filter(l => l && l !== 'N/A');
-    
-    // Combine predefined levels with any additional levels from data
-    const allLevels = [...predefinedLevels];
-    filteredActualLevels.forEach(level => {
-      if (!allLevels.includes(level)) {
-        allLevels.push(level);
-      }
-    });
-    
-    return allLevels.sort();
+    return getUniqueOrganizationalLevels(employees);
   }, [employees]);
 
   const filteredEmployees = useMemo(() => {
@@ -98,24 +205,7 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees }) => {
 
   // Group employees by their exact organizational level
   const employeesByLevel = useMemo(() => {
-    const grouped: Record<string, Employee[]> = {};
-    
-    // Initialize all predefined levels
-    predefinedLevels.forEach(level => {
-      grouped[level] = [];
-    });
-    grouped['Other'] = [];
-    
-    // Group employees
-    filteredEmployees.forEach(emp => {
-      const category = categorizeEmployee(emp.organizational_level);
-      if (!grouped[category]) {
-        grouped[category] = [];
-      }
-      grouped[category].push(emp);
-    });
-    
-    return grouped;
+    return groupEmployeesByOrganizationalLevel(filteredEmployees);
   }, [filteredEmployees]);
 
   const totalEmployees = filteredEmployees.length;
@@ -179,25 +269,14 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees }) => {
 
   // Group organizational levels by major categories for display
   const organizationalSummary = useMemo(() => {
-    const eselonCount = (employeesByLevel['Eselon II']?.length || 0) + 
-                       (employeesByLevel['Eselon III']?.length || 0) + 
-                       (employeesByLevel['Eselon IV']?.length || 0);
-    
-    const asnStaffCount = Object.keys(employeesByLevel)
-      .filter(key => key.includes('Staff ASN'))
-      .reduce((sum, key) => sum + (employeesByLevel[key]?.length || 0), 0);
-    
-    const nonAsnStaffCount = Object.keys(employeesByLevel)
-      .filter(key => key.includes('Staff Non ASN'))
-      .reduce((sum, key) => sum + (employeesByLevel[key]?.length || 0), 0);
-    
+    const summary = getOrganizationalSummary(filteredEmployees);
     return {
-      eselon: eselonCount,
-      asnStaff: asnStaffCount,
-      nonAsnStaff: nonAsnStaffCount,
-      other: employeesByLevel['Other']?.length || 0
+      eselon: summary.eselonCount,
+      asnStaff: summary.asnStaffCount,
+      nonAsnStaff: summary.nonAsnStaffCount,
+      other: (employeesByLevel['Other']?.length || 0)
     };
-  }, [employeesByLevel]);
+  }, [filteredEmployees, employeesByLevel]);
 
   const kpiCards = [
     {
@@ -249,10 +328,10 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees }) => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+        <h1 className="adaptive-title font-bold text-gray-900 dark:text-white mb-2" style={{ fontSize: 'clamp(1.5rem, 4vw, 2.25rem)' }}>
           Dashboard Overview
         </h1>
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="adaptive-text text-gray-600 dark:text-gray-400">
           Comprehensive view of team performance metrics
         </p>
         {/* Search + filter controls */}
@@ -338,7 +417,7 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees }) => {
         <div className="space-y-6">
           {/* Organizational Level Overview */}
           <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
+            <h3 className="adaptive-title font-bold text-gray-900 dark:text-white mb-6">
               Employee Distribution by Organizational Level
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -389,10 +468,10 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees }) => {
 
             return (
               <div key={competencyIndex} className="space-y-4">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                <h3 className="adaptive-title font-bold text-gray-900 dark:text-white mb-4">
                   {competency.competency} - Top 3 Organizational Levels
                 </h3>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-[400px]">
+                <div className="chart-grid">
                   {topLevels.map(([level, levelEmployees], levelIndex) => {
                     const employeeScores = levelEmployees.map(emp => {
                       if (!emp.performance || emp.performance.length === 0) {
@@ -418,37 +497,14 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees }) => {
                     );
 
                     return (
-                      <div key={levelIndex} className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 flex flex-col min-h-[400px]">
-                        <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                          {level.length > 25 ? level.substring(0, 25) + '...' : level} ({employeeScores.length})
+                      <div key={levelIndex} className="bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col chart-container">
+                        <h4 className="chart-title font-semibold text-gray-900 dark:text-white mb-4">
+                          <span className="adaptive-title">
+                            {level.length > 25 ? level.substring(0, 25) + '...' : level}
+                          </span>
+                          <span className="adaptive-text text-gray-500 ml-2">({employeeScores.length})</span>
                         </h4>
-                        <div className="flex-1 min-h-[320px]">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={employeeScores.slice(0, 10)} layout="vertical" margin={{ top: 10, right: 30, left: 20, bottom: 5 }}>
-                              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                              <XAxis type="number" stroke="#6b7280" domain={[0, 100]} />
-                              <YAxis dataKey="name" type="category" width={120} stroke="#6b7280" />
-                              <Tooltip
-                                contentStyle={{
-                                  backgroundColor: '#ffffff',
-                                  border: '2px solid #374151',
-                                  borderRadius: '8px',
-                                  color: '#111827',
-                                  fontSize: '14px',
-                                  fontWeight: 500,
-                                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
-                                }}
-                                formatter={(value: number) => [`${value} (${getScoreLabel(value)})`, 'Score']}
-                              />
-                              <Bar dataKey="score" radius={[0, 4, 4, 0]}>
-                                <LabelList dataKey="name" position="insideLeft" style={{ fill: '#111827', fontSize: 9 }} />
-                                {employeeScores.slice(0, 10).map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={getScoreColor(entry.score)} />
-                                ))}
-                              </Bar>
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </div>
+                        <ChartContainer employeeScores={employeeScores.slice(0, 10)} competency={competency} getScoreColor={getScoreColor} getScoreLabel={getScoreLabel} />
                       </div>
                     );
                   })}

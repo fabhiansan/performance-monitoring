@@ -115,6 +115,7 @@ H. ACHMADI, S.Sos	19680714 199202 1 002	III/d	Penata Tk.I	Kepala Bidang	Penangan
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pangkat</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Jabatan</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sub-Jabatan</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Level Organisasi</th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
@@ -126,6 +127,15 @@ H. ACHMADI, S.Sos	19680714 199202 1 002	III/d	Penata Tk.I	Kepala Bidang	Penangan
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{emp.pangkat}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{emp.position}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{emp.subPosition}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        emp.organizational_level.startsWith('Eselon') 
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                      }`}>
+                        {emp.organizational_level}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>

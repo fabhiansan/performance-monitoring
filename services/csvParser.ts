@@ -1,3 +1,5 @@
+import { determineOrganizationalLevelFromPosition, categorizeOrganizationalLevel } from '../utils/organizationalLevels';
+
 export interface EmployeeData {
   name: string;
   nip: string;
@@ -5,6 +7,7 @@ export interface EmployeeData {
   pangkat: string;
   position: string;
   subPosition: string;
+  organizational_level: string;
 }
 
 /**
@@ -89,13 +92,19 @@ export function parseEmployeeCSV(csvText: string): EmployeeData[] {
       
       // Expect at least 7 columns: No, Nama, NIP, Gol, Pangkat, Jabatan, Sub-Jabatan
       if (columns.length >= 7 && columns[1].trim()) { // Check that name is not empty
+        const position = columns[5]?.trim() || '-';      // Jabatan (index 5) - default to "-"
+        const subPosition = columns[6]?.trim() || '-';    // Sub-Jabatan (index 6) - default to "-"
+        const positionBasedLevel = determineOrganizationalLevelFromPosition(position, subPosition);
+        const organizationalLevel = categorizeOrganizationalLevel(positionBasedLevel, columns[3]?.trim());
+        
         const employee = {
           name: columns[1]?.trim() || '',           // Nama (index 1)
           nip: columns[2]?.trim() || '-',           // NIP (index 2) - default to "-"
           gol: columns[3]?.trim() || '',            // Gol (index 3)
           pangkat: columns[4]?.trim() || '-',       // Pangkat (index 4) - default to "-"
-          position: columns[5]?.trim() || '-',      // Jabatan (index 5) - default to "-"
-          subPosition: columns[6]?.trim() || '-'    // Sub-Jabatan (index 6) - default to "-"
+          position: position,
+          subPosition: subPosition,
+          organizational_level: String(organizationalLevel)
         };
         
         // Only add if name and gol are not empty (minimum required fields)
@@ -104,13 +113,19 @@ export function parseEmployeeCSV(csvText: string): EmployeeData[] {
         }
       } else if (columns.length >= 6 && !columns[0].match(/^\d+$/) && columns[0].trim()) {
         // Fallback: if no number column, assume format: Nama, NIP, Gol, Pangkat, Jabatan, Sub-Jabatan
+        const position = columns[4]?.trim() || '-';
+        const subPosition = columns[5]?.trim() || '-';
+        const positionBasedLevel = determineOrganizationalLevelFromPosition(position, subPosition);
+        const organizationalLevel = categorizeOrganizationalLevel(positionBasedLevel, columns[2]?.trim());
+        
         const employee = {
           name: columns[0]?.trim() || '',
           nip: columns[1]?.trim() || '-',
           gol: columns[2]?.trim() || '',
           pangkat: columns[3]?.trim() || '-',
-          position: columns[4]?.trim() || '-',
-          subPosition: columns[5]?.trim() || '-'
+          position: position,
+          subPosition: subPosition,
+          organizational_level: String(organizationalLevel)
         };
         
         // Only add if name and gol are not empty (minimum required fields)
