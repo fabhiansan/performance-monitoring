@@ -415,20 +415,14 @@ const AppContent: React.FC = () => {
                   Dashboard Penilaian Kinerja Pegawai Dinas Sosial
                 </h1>
                 <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-8">
-                  Start by importing employee data, then add performance data for comprehensive analytics
+                  No employee data available. Please go to Manage Employees to import employee data first.
                 </p>
                 <div className="flex gap-4 justify-center">
                   <button
                     onClick={() => setActiveView('employee-management')}
                     className="inline-flex items-center px-8 py-3 bg-gradient-to-r from-green-600 to-blue-500 text-white font-bold rounded-lg shadow-lg hover:shadow-xl hover:from-green-700 hover:to-blue-600 transform hover:scale-105 transition-all duration-300"
                   >
-                    Import Employee Data
-                  </button>
-                  <button
-                    onClick={() => setActiveView('data')}
-                    className="inline-flex items-center px-8 py-3 bg-gradient-to-r from-blue-600 to-teal-500 text-white font-bold rounded-lg shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-teal-600 transform hover:scale-105 transition-all duration-300"
-                  >
-                    Import Performance Data
+                    Go to Manage Employees
                   </button>
                 </div>
               </div>

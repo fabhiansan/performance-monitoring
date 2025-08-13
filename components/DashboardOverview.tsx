@@ -203,9 +203,19 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees, organi
     });
   }, [employees, searchTerm, levelFilter]);
 
-  // Group employees by their exact organizational level
+  // Group employees by their exact organizational level (use actual values, not categorized)
   const employeesByLevel = useMemo(() => {
-    return groupEmployeesByOrganizationalLevel(filteredEmployees);
+    const grouped: Record<string, typeof filteredEmployees> = {};
+    
+    filteredEmployees.forEach(emp => {
+      const level = emp.organizational_level || 'Other';
+      if (!grouped[level]) {
+        grouped[level] = [];
+      }
+      grouped[level].push(emp);
+    });
+    
+    return grouped;
   }, [filteredEmployees]);
 
   const totalEmployees = filteredEmployees.length;
@@ -269,14 +279,34 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees, organi
 
   // Group organizational levels by major categories for display
   const organizationalSummary = useMemo(() => {
-    const summary = getOrganizationalSummary(filteredEmployees);
+    let eselonCount = 0;
+    let asnStaffCount = 0;
+    let nonAsnStaffCount = 0;
+    let otherCount = 0;
+    
+    Object.entries(employeesByLevel).forEach(([level, employees]) => {
+      const levelLower = level.toLowerCase();
+      if (levelLower.includes('eselon') || levelLower.includes('eselon ii') || levelLower.includes('eselon iii') || levelLower.includes('eselon iv')) {
+        eselonCount += employees.length;
+      } else if (levelLower.includes('staff asn')) {
+        asnStaffCount += employees.length;
+      } else if (levelLower.includes('staff non asn')) {
+        nonAsnStaffCount += employees.length;
+      } else if (levelLower === 'staff') {
+        // Handle generic "Staff" level - categorize as other for now
+        otherCount += employees.length;
+      } else {
+        otherCount += employees.length;
+      }
+    });
+    
     return {
-      eselon: summary.eselonCount,
-      asnStaff: summary.asnStaffCount,
-      nonAsnStaff: summary.nonAsnStaffCount,
-      other: (employeesByLevel['Other']?.length || 0)
+      eselon: eselonCount,
+      asnStaff: asnStaffCount,
+      nonAsnStaff: nonAsnStaffCount,
+      other: otherCount
     };
-  }, [filteredEmployees, employeesByLevel]);
+  }, [employeesByLevel]);
 
   const kpiCards = [
     {
@@ -289,7 +319,7 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ employees, organi
     {
       title: 'Eselon (II-IV)',
       value: organizationalSummary.eselon.toString(),
-      detail: `II: ${employeesByLevel['Eselon II']?.length || 0}, III: ${employeesByLevel['Eselon III']?.length || 0}, IV: ${employeesByLevel['Eselon IV']?.length || 0}`,
+      detail: `II: ${(employeesByLevel['Eselon II'] || []).length}, III: ${(employeesByLevel['Eselon III'] || []).length}, IV: ${(employeesByLevel['Eselon IV'] || []).length}`,
       icon: IconUsers,
       color: 'text-purple-800 dark:text-purple-200',
       bgColor: 'bg-purple-50 dark:bg-purple-900/30'

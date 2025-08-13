@@ -90,18 +90,18 @@ export function parseEmployeeCSV(csvText: string): EmployeeData[] {
       // Use the robust CSV parser to handle comma-separated values with quotes
       const columns = parseCsvLine(line).map(col => col.trim());
       
-      // Expect at least 7 columns: No, Nama, NIP, Gol, Pangkat, Jabatan, Sub-Jabatan
-      if (columns.length >= 7 && columns[1].trim()) { // Check that name is not empty
-        const position = columns[5]?.trim() || '-';      // Jabatan (index 5) - default to "-"
-        const subPosition = columns[6]?.trim() || '-';    // Sub-Jabatan (index 6) - default to "-"
+      // Handle format: No, Nama, NIP, Pangkat, Jabatan, Sub-Jabatan (6 columns)
+      if (columns.length >= 6 && columns[1].trim()) { // Check that name is not empty
+        const position = columns[4]?.trim() || '-';      // Jabatan (index 4) - default to "-"
+        const subPosition = columns[5]?.trim() || '-';    // Sub-Jabatan (index 5) - default to "-"
         const positionBasedLevel = determineOrganizationalLevelFromPosition(position, subPosition);
         const organizationalLevel = categorizeOrganizationalLevel(positionBasedLevel, columns[3]?.trim());
         
         const employee = {
           name: columns[1]?.trim() || '',           // Nama (index 1)
           nip: columns[2]?.trim() || '-',           // NIP (index 2) - default to "-"
-          gol: columns[3]?.trim() || '',            // Gol (index 3)
-          pangkat: columns[4]?.trim() || '-',       // Pangkat (index 4) - default to "-"
+          gol: columns[3]?.trim() || '',            // Pangkat as Gol (index 3)
+          pangkat: columns[3]?.trim() || '-',       // Pangkat (index 3) - same as gol
           position: position,
           subPosition: subPosition,
           organizational_level: String(organizationalLevel)
@@ -111,18 +111,18 @@ export function parseEmployeeCSV(csvText: string): EmployeeData[] {
         if (employee.name && employee.gol) {
           employees.push(employee);
         }
-      } else if (columns.length >= 6 && !columns[0].match(/^\d+$/) && columns[0].trim()) {
-        // Fallback: if no number column, assume format: Nama, NIP, Gol, Pangkat, Jabatan, Sub-Jabatan
-        const position = columns[4]?.trim() || '-';
-        const subPosition = columns[5]?.trim() || '-';
+      } else if (columns.length >= 5 && !columns[0].match(/^\d+$/) && columns[0].trim()) {
+        // Fallback: if no number column, assume format: Nama, NIP, Pangkat, Jabatan, Sub-Jabatan
+        const position = columns[3]?.trim() || '-';
+        const subPosition = columns[4]?.trim() || '-';
         const positionBasedLevel = determineOrganizationalLevelFromPosition(position, subPosition);
         const organizationalLevel = categorizeOrganizationalLevel(positionBasedLevel, columns[2]?.trim());
         
         const employee = {
           name: columns[0]?.trim() || '',
           nip: columns[1]?.trim() || '-',
-          gol: columns[2]?.trim() || '',
-          pangkat: columns[3]?.trim() || '-',
+          gol: columns[2]?.trim() || '',            // Pangkat as Gol
+          pangkat: columns[2]?.trim() || '-',       // Pangkat (same as gol)
           position: position,
           subPosition: subPosition,
           organizational_level: String(organizationalLevel)

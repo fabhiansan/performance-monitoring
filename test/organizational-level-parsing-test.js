@@ -36,6 +36,22 @@ const testPositions = [
   { position: 'Analis', subPosition: 'Sekretariat', expected: 'Staff' },
   { position: 'Operator', subPosition: 'Bidang Penanganan Bencana', expected: 'Staff' },
 
+  // NEW: Sub-Jabatan priority tests - positions that would be Eselon but have "STAFF" in Sub-Jabatan
+  { position: 'Kepala Sub Bagian', subPosition: 'STAFF Perencanaan', expected: 'Staff' },
+  { position: 'Kepala Seksi', subPosition: 'Staff Jaminan Sosial', expected: 'Staff' },
+  { position: 'Kepala Bidang', subPosition: 'STAF Rehabilitasi Sosial', expected: 'Staff' },
+  { position: 'Sekretaris Dinas', subPosition: 'staff administrasi', expected: 'Staff' },
+  
+  // NEW: Edge cases for different capitalizations and spellings
+  { position: 'Kepala Sub Bagian', subPosition: 'Staff', expected: 'Staff' },
+  { position: 'Kepala Seksi', subPosition: 'STAFF', expected: 'Staff' },
+  { position: 'Kepala Bidang', subPosition: 'Staf', expected: 'Staff' },
+  { position: 'Kepala Sub Bagian', subPosition: 'STAF', expected: 'Staff' },
+  
+  // NEW: Verify existing logic still works when Sub-Jabatan doesn't contain STAFF
+  { position: 'Kepala Sub Bagian', subPosition: 'Perencanaan Regular', expected: 'Eselon IV' },
+  { position: 'Kepala Bidang', subPosition: 'Rehabilitasi Regular', expected: 'Eselon III' },
+
   // Edge cases
   { position: '', subPosition: '', expected: 'Other' },
   { position: 'Unknown Position', subPosition: 'Some Department', expected: 'Other' }
@@ -46,6 +62,10 @@ console.log('🧪 Testing determineOrganizationalLevelFromPosition function...\n
 
 let passedTests = 0;
 let totalTests = 0;
+let csvPassedTests = 0;
+let csvTotalTests = 0;
+let csvParserPassedTests = 0;
+let csvParserTotalTests = 0;
 
 testPositions.forEach((test, index) => {
   totalTests++;
@@ -93,8 +113,8 @@ if (fs.existsSync(csvPath)) {
       'AKHMAD YULIADIE, ST': 'Eselon IV'              // Kepala Seksi
     };
     
-    let csvPassedTests = 0;
-    let csvTotalTests = 0;
+    csvPassedTests = 0;
+    csvTotalTests = 0;
     
     Object.entries(expectedCategorizations).forEach(([name, expected]) => {
       csvTotalTests++;
@@ -114,8 +134,8 @@ if (fs.existsSync(csvPath)) {
     console.log('Testing parseEmployeeCSV function:');
     const employees = parseEmployeeCSV(csvContent);
     
-    let csvParserPassedTests = 0;
-    let csvParserTotalTests = 0;
+    csvParserPassedTests = 0;
+    csvParserTotalTests = 0;
     
     employees.forEach(emp => {
       if (expectedCategorizations[emp.name]) {

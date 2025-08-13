@@ -473,15 +473,21 @@ export const categorizeOrganizationalLevel = (
     }
   }
   
-  // Priority 1: Use golongan-based inference if golongan data is available
+  // Priority 1: If position-based inference is 'Staff', it takes precedence
+  // This ensures Sub-Jabatan staff detection overrides golongan-based inference
+  if (positionInference === 'Staff') {
+    return 'Staff';
+  }
+
+  // Priority 2: Use golongan-based inference if golongan data is available
   if (golonganInference) {
     // Only use golongan inference if it provides a definitive result
     if (golonganInference !== 'Staff' || !level) {
       return golonganInference;
     }
   }
-  
-  // Priority 2: Use position-based inference
+
+  // Priority 3: Use position-based inference
   return positionInference || 'Other';
 };
 
@@ -547,6 +553,14 @@ export const determineOrganizationalLevelFromPosition = (
   subPosition?: string
 ): OrganizationalCategory => {
   if (!position || typeof position !== 'string') return 'Other';
+  
+  // Early return for Sub-Jabatan containing "STAFF" - new priority logic
+  if (subPosition && typeof subPosition === 'string') {
+    const normalizedSubPosition = subPosition.toLowerCase();
+    if (normalizedSubPosition.includes('staff') || normalizedSubPosition.includes('staf')) {
+      return 'Staff';
+    }
+  }
   
   const normalizedPosition = normalizePosition(position);
   const normalizedSubPosition = subPosition ? normalizePosition(subPosition) : '';

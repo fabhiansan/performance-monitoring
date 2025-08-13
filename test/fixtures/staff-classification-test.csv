@@ -1,0 +1,11 @@
+No.,Nama,NIP,Gol,Pangkat,Jabatan,Sub-Jabatan
+1,"TEST STAFF OVERRIDE 1, S.Sos",19800101 200001 1 001,III/c,Penata,Kepala Sub Bagian,STAFF Perencanaan
+2,"TEST STAFF OVERRIDE 2, SE",19750505 199505 2 002,III/d,Penata Tk.I,Kepala Seksi,Staff Jaminan Sosial
+3,"TEST STAF OVERRIDE 3, S.ST",19820303 200303 1 003,III/b,Penata Muda Tk.I,Kepala Bidang,STAF Rehabilitasi
+4,"TEST STAFF MIXED CASE, S.Pd",19770707 199707 1 004,III/c,Penata,Sekretaris Dinas,staff administrasi
+5,"TEST STAFF SIMPLE, S.Sos",19850808 200808 2 005,III/a,Penata Muda,Kepala Sub Bagian,Staff
+6,"TEST STAF SIMPLE, SE",19900909 201009 1 006,III/b,Penata Muda Tk.I,Kepala Seksi,STAF
+7,"TEST REGULAR ESELON IV, S.ST",19780202 199802 1 007,III/d,Penata Tk.I,Kepala Sub Bagian,Perencanaan Regular
+8,"TEST REGULAR ESELON III, S.Pd",19720404 199204 2 008,IV/a,Pembina,Kepala Bidang,Rehabilitasi Regular
+9,"TEST REGULAR STAFF, S.Sos",19860606 200606 1 009,III/a,Penata Muda,Analis,Sekretariat
+10,"TEST EDGE CASE EMPTY, SE",19790101 199901 2 010,III/c,Penata,Unknown Position,Some Department

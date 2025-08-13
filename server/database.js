@@ -385,10 +385,15 @@ class SQLiteService {
   }
 
   getEmployeeDataBySession(sessionId) {
+    // Join with employees table to get current organizational_level values
     const stmt = this.db.prepare(`
-      SELECT * FROM employee_data
-      WHERE session_id = ?
-      ORDER BY name
+      SELECT 
+        ed.*,
+        COALESCE(e.organizational_level, ed.organizational_level) as current_organizational_level
+      FROM employee_data ed
+      LEFT JOIN employees e ON ed.name = e.name
+      WHERE ed.session_id = ?
+      ORDER BY ed.name
     `);
     const rawData = stmt.all(sessionId);
     
@@ -413,7 +418,7 @@ class SQLiteService {
         pangkat: row.pangkat || '',
         position: row.position || '',
         subPosition: row.sub_position || '',
-        organizationalLevel: row.organizational_level || '',
+        organizationalLevel: row.current_organizational_level || '',
         performance: performance,
         created_at: row.upload_timestamp
       };
