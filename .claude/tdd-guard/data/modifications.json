@@ -1,0 +1,11 @@
+{
+  "session_id": "6751b7d4-bb60-4e05-85bd-4353838c75fa",
+  "transcript_path": "/Users/fabhiantomaoludyo/.claude/projects/-Volumes-San-employee-performance-analyzer/6751b7d4-bb60-4e05-85bd-4353838c75fa.jsonl",
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Edit",
+  "tool_input": {
+    "file_path": "/Volumes/San/employee-performance-analyzer/main.js",
+    "old_string": "      this.serverProcess.on('exit', (code) => {\n        console.log(`Server process exited with code ${code}`);\n        \n        if (code === 1 && !this.serverReady) {\n          this.showServerExitError(code, errorBuffer);\n          reject(new Error(`Server exited with code ${code}`));\n        }\n      });",
+    "new_string": "      this.serverProcess.on('exit', (code, signal) => {\n        console.log(`Server process exited with code ${code}, signal: ${signal}`);\n        \n        if (code !== 0 && !this.serverReady) {\n          this.showServerExitError(code, errorBuffer);\n          reject(new Error(`Server exited with code ${code}, signal: ${signal}`));\n        }\n      });\n      \n      this.serverProcess.on('error', (error) => {\n        console.error(`Server process error: ${error.message}`);\n        if (!this.serverReady) {\n          reject(error);\n        }\n      });"
+  }
+}

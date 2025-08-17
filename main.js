@@ -197,7 +197,7 @@ class ElectronApp {
         const env = { 
           ...process.env, 
           PORT: this.serverPort,
-          DATABASE_PATH: databasePath
+          DB_PATH: databasePath
         };
         const forkOptions = {
           cwd: cwd,
@@ -220,14 +220,18 @@ class ElectronApp {
 
         // Start the server.js file
         if (isPackaged && process.platform === 'win32') {
-          // For Windows packaged apps, use spawn with ELECTRON_RUN_AS_NODE to avoid spawn ENOENT errors
-          this.serverProcess = spawn(process.execPath, [serverPath], {
-            ...forkOptions,
-            stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+          // For Windows packaged apps, use spawn with Node.js to run ES modules
+          const nodeExePath = process.execPath;
+          console.log(`🪟 Windows spawn: ${nodeExePath} with server: ${serverPath}`);
+          
+          this.serverProcess = spawn(nodeExePath, [serverPath], {
+            cwd: forkOptions.cwd,
             env: {
               ...forkOptions.env,
               ELECTRON_RUN_AS_NODE: '1'
-            }
+            },
+            stdio: ['pipe', 'pipe', 'pipe'],
+            shell: false
           });
         } else {
           // For development and other platforms, use fork for better integration

@@ -1,0 +1,35 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "tdd-guard",
+            "env": {
+              "CLAUDE_CLI_PATH": "/Users/fabhiantomaoludyo/.nvm/versions/node/v20.19.4/bin/claude",
+              "MODEL_TYPE": "claude_cli",
+              "USE_SYSTEM_CLAUDE": "true"
+            }
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "tdd-guard",
+            "env": {
+              "CLAUDE_CLI_PATH": "/Users/fabhiantomaoludyo/.nvm/versions/node/v20.19.4/bin/claude",
+              "MODEL_TYPE": "claude_cli",
+              "USE_SYSTEM_CLAUDE": "true"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
