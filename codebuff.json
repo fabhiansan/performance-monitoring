@@ -1,0 +1,18 @@
+{
+  "description": "Template configuration for this project. See https://www.codebuff.com/config for all options.",
+  "startupProcesses": [
+    {
+      "name": "vite",
+      "command": "npm run dev:vite",
+      "enabled": true,
+      "stdoutFile": "logs/vite.log"
+    },
+    {
+      "name": "server",
+      "command": "npm run server:node",
+      "enabled": true,
+      "stdoutFile": "logs/server.log"
+    }
+  ],
+  "fileChangeHooks": []
+}

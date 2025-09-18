@@ -7,9 +7,10 @@
   "type": "module",
   "scripts": {
     "postinstall": "npm run rebuild:native",
-    "rebuild:native": "electron-rebuild --force",
+    "rebuild:native": "electron-rebuild --force --only better-sqlite3",
     "rebuild:node": "npm rebuild better-sqlite3",
     "rebuild:electron": "electron-rebuild --only better-sqlite3 --force",
+    "rebuild:clean": "rimraf node_modules/better-sqlite3/build && npm run rebuild:electron",
     "check:native": "node scripts/check-native-modules.js",
     "dev:full": "concurrently \"npm run dev:server\" \"npm run dev:electron\"",
     "build:clean": "rimraf dist node_modules/.cache",
@@ -90,7 +91,8 @@
       "electron-config.js",
       "server/**/*",
       "scripts/**/*",
-      "node_modules/better-sqlite3/**/*"
+      "node_modules/better-sqlite3/**/*",
+      "node_modules/@electron/rebuild/**/*"
     ],
     "nativeRebuilder": "sequential",
     "win": {

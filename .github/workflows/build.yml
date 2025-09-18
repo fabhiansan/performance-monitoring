@@ -42,14 +42,22 @@ jobs:
     - name: Install dependencies
       run: npm install --force
     
-    - name: Rebuild native modules for Node.js
-      run: npm run rebuild:node
+    - name: Clean rebuild native modules for Node.js
+      run: |
+        npm run rebuild:clean
+        npm run rebuild:node
     
     - name: Run native module diagnostics
       run: npm run check:native -- --verbose
     
     - name: Test database connection
       run: node --input-type=module -e "import Database from 'better-sqlite3'; const db = new Database(':memory:'); db.exec('SELECT 1'); console.log('✅ Database test passed'); db.close();"
+    
+    - name: Verify better-sqlite3 build artifacts
+      run: |
+        echo "Checking better-sqlite3 build artifacts:"
+        ls -la node_modules/better-sqlite3/build/ || echo "No build directory found"
+        ls -la node_modules/better-sqlite3/prebuilds/ || echo "No prebuilds directory found"
     
     - name: Build application
       run: npm run build
@@ -77,8 +85,17 @@ jobs:
     - name: Install dependencies
       run: npm install
     
-    - name: Rebuild native modules for Electron
-      run: npm run rebuild:electron
+    - name: Clean and rebuild native modules for Electron
+      run: |
+        npm run rebuild:clean
+        npm run rebuild:electron
+    
+    - name: Verify Electron native modules
+      run: |
+        echo "Checking better-sqlite3 Electron build:"
+        ls -la node_modules/better-sqlite3/build/Release/ || echo "No Release build found"
+        node --version
+        npx electron --version
     
     - name: Build Electron app
       run: npm run electron:build

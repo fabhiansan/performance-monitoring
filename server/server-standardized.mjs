@@ -632,10 +632,28 @@ app.listen(port, () => {
   console.log('- Legacy clients: Use existing response format');
   console.log('- New clients: Add header "Accept-API-Version: 2.0" or query param "?apiVersion=2.0"');
   
-  // Send ready message to parent process (for Electron)
+  // Send ready message to parent process (for Electron) with enhanced data
   if (process.send) {
-    process.send('server-ready');
+    try {
+      process.send({
+        type: 'server-ready',
+        port: port,
+        timestamp: new Date().toISOString(),
+        pid: process.pid
+      });
+    } catch (error) {
+      console.error('Failed to send IPC message:', error.message);
+    }
   }
+  
+  // Also send to stdout as JSON for spawn processes without IPC
+  const readyMessage = {
+    type: 'server-ready',
+    port: port,
+    timestamp: new Date().toISOString(),
+    pid: process.pid
+  };
+  console.log(JSON.stringify(readyMessage));
   
   console.log('\nAvailable endpoints:');
   console.log('  GET /api/health - Health check');

@@ -51,8 +51,10 @@ jobs:
       - name: Install dependencies
         run: npm install --force
           
-      - name: Rebuild native modules for Node.js
-        run: npm run rebuild:node
+      - name: Clean and rebuild native modules for Node.js
+        run: |
+          npm run rebuild:clean
+          npm run rebuild:node
         
       - name: Run native module diagnostics
         run: npm run check:native -- --verbose
@@ -60,8 +62,17 @@ jobs:
       - name: Test database connection
         run: node --input-type=module -e "import Database from 'better-sqlite3'; const db = new Database(':memory:'); db.exec('SELECT 1'); console.log('✅ Database test passed'); db.close();"
         
-      - name: Rebuild native modules for Electron
-        run: npm run rebuild:electron
+      - name: Clean and rebuild native modules for Electron
+        run: |
+          npm run rebuild:clean
+          npm run rebuild:electron
+          
+      - name: Verify Windows Electron build
+        run: |
+          echo "Checking better-sqlite3 Windows Electron build:"
+          dir node_modules\better-sqlite3\build\Release
+          node --version
+          npx electron --version
           
       - name: Build application
         env:

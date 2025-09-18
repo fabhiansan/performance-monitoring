@@ -44,29 +44,41 @@ class ElectronApp {
     const appPath = app.getAppPath();
     
     return [
-      // Primary: app.getAppPath() for asar packed
+      // Primary: PREFER unpacked location with wrapper for better reliability
       {
-        serverPath: path.join(appPath, 'server', 'server.js'),
-        cwd: path.join(appPath, 'server'),
-        description: 'App path (asar packed)'
-      },
-      // Secondary: app.getAppPath() with .unpacked for asar unpacked
-      {
-        serverPath: path.join(appPath + '.unpacked', 'server', 'server.js'),
+        serverPath: path.join(appPath + '.unpacked', 'server', 'server-wrapper.mjs'),
         cwd: path.join(appPath + '.unpacked', 'server'),
-        description: 'App path with .unpacked (asar unpacked)'
+        description: 'App path with .unpacked + wrapper (most reliable)'
       },
-      // Tertiary: Legacy resourcesPath fallback
+      // Secondary: Unpacked location with direct server
       {
-        serverPath: path.join(process.resourcesPath, 'app.asar.unpacked', 'server', 'server.js'),
+        serverPath: path.join(appPath + '.unpacked', 'server', 'server-standardized.mjs'),
+        cwd: path.join(appPath + '.unpacked', 'server'),
+        description: 'App path with .unpacked (direct server)'
+      },
+      // Tertiary: Legacy resourcesPath with wrapper
+      {
+        serverPath: path.join(process.resourcesPath, 'app.asar.unpacked', 'server', 'server-wrapper.mjs'),
         cwd: path.join(process.resourcesPath, 'app.asar.unpacked', 'server'),
-        description: 'Resources path legacy fallback'
+        description: 'Resources path with wrapper fallback'
       },
-      // Development fallback
+      // Quaternary: Legacy resourcesPath direct
       {
-        serverPath: path.join(__dirname, 'server', 'server.js'),
+        serverPath: path.join(process.resourcesPath, 'app.asar.unpacked', 'server', 'server-standardized.mjs'),
+        cwd: path.join(process.resourcesPath, 'app.asar.unpacked', 'server'),
+        description: 'Resources path direct fallback'
+      },
+      // Development fallback with wrapper
+      {
+        serverPath: path.join(__dirname, 'server', 'server-wrapper.mjs'),
         cwd: path.join(__dirname, 'server'),
-        description: 'Development fallback'
+        description: 'Development with wrapper'
+      },
+      // Development fallback direct
+      {
+        serverPath: path.join(__dirname, 'server', 'server-standardized.mjs'),
+        cwd: path.join(__dirname, 'server'),
+        description: 'Development direct fallback'
       }
     ];
   }
@@ -230,12 +242,34 @@ class ElectronApp {
               ...forkOptions.env,
               ELECTRON_RUN_AS_NODE: '1'
             },
-            stdio: ['pipe', 'pipe', 'pipe'],
+            stdio: ['pipe', 'pipe', 'pipe', 'ipc'], // Add IPC for better communication
             shell: false
+          });
+          
+          // Listen for IPC messages on Windows spawn
+          this.serverProcess.on('message', (message) => {
+            console.log('Received IPC message:', message);
+            if (message && message.type === 'server-ready') {
+              this.serverReady = true;
+              this.serverPort = message.port || this.serverPort;
+              console.log(`✅ Backend server is ready on port ${this.serverPort} (via IPC)`);
+              resolve();
+            }
           });
         } else {
           // For development and other platforms, use fork for better integration
           this.serverProcess = fork(serverPath, [], forkOptions);
+          
+          // Listen for IPC messages from fork
+          this.serverProcess.on('message', (message) => {
+            console.log('Received fork message:', message);
+            if (message && message.type === 'server-ready') {
+              this.serverReady = true;
+              this.serverPort = message.port || this.serverPort;
+              console.log(`✅ Backend server is ready on port ${this.serverPort} (via fork IPC)`);
+              resolve();
+            }
+          });
         }
       } catch (error) {
         console.error('❌ Failed to initialize server:', error.message);
@@ -309,12 +343,13 @@ class ElectronApp {
         }
       });
 
-      // Timeout after 30 seconds
+      // Increased timeout for slow systems and first-time DB creation
       setTimeout(() => {
         if (!this.serverReady) {
-          reject(new Error('Server startup timeout'));
+          console.error('❌ Server startup timeout after 60 seconds');
+          reject(new Error('Server startup timeout - this may be due to slow disk I/O, antivirus scanning, or native module issues'));
         }
-      }, 30000);
+      }, 60000);
     });
   }
 
@@ -484,21 +519,60 @@ class ElectronApp {
     }
   }
 
-  runDiagnostics() {
-    const diagnostics = spawn('node', ['scripts/check-native-modules.js', '--verbose'], {
-      stdio: 'inherit',
-      cwd: __dirname
-    });
-    
-    diagnostics.on('exit', (code) => {
-      if (code === 0) {
+  async runDiagnostics() {
+    try {
+      // Run comprehensive startup diagnostics
+      const { default: StartupDiagnostics } = await import('./scripts/startup-diagnostics.js');
+      const diagnostics = new StartupDiagnostics();
+      const result = await diagnostics.run();
+      
+      // Show results to user
+      const hasErrors = result.errors.length > 0 || 
+        Object.values(result.modules).some(m => m.error);
+      
+      const message = hasErrors 
+        ? `Diagnostics found issues. Check the log file for details.\n\nLog location: ${diagnostics.logPath}`
+        : 'Diagnostics completed successfully. No issues found.';
+      
+      dialog.showMessageBox(this.mainWindow, {
+        type: hasErrors ? 'warning' : 'info',
+        title: 'Diagnostics Complete',
+        message,
+        detail: hasErrors 
+          ? 'Common fixes:\n• Run: npm run rebuild:electron\n• Reinstall the application\n• Check antivirus software'
+          : 'You can try restarting the application.'
+      });
+      
+    } catch (error) {
+      console.error('Failed to run diagnostics:', error);
+      
+      // Fallback to simple native module check
+      const nodeExePath = process.execPath;
+      const scriptPath = path.join(__dirname, 'scripts', 'check-native-modules.js');
+      
+      console.log(`Running fallback diagnostics: ${nodeExePath} ${scriptPath}`);
+      
+      const diagnostics = spawn(nodeExePath, [scriptPath, '--verbose'], {
+        stdio: 'inherit',
+        cwd: __dirname,
+        env: {
+          ...process.env,
+          ELECTRON_RUN_AS_NODE: '1'
+        }
+      });
+      
+      diagnostics.on('exit', (code) => {
+        const message = code === 0 
+          ? 'Basic diagnostics completed successfully. Try restarting the application.'
+          : `Diagnostics failed with exit code ${code}. Check the console for details.`;
+          
         dialog.showMessageBox(this.mainWindow, {
-          type: 'info',
+          type: code === 0 ? 'info' : 'error',
           title: 'Diagnostics Complete',
-          message: 'Diagnostics completed successfully. Try restarting the application.'
+          message
         });
-      }
-    });
+      });
+    }
   }
 
   async restartServer() {
