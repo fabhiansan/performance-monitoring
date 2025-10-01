@@ -15,6 +15,9 @@
     "noEmit": true,
     "allowJs": true,
     "jsx": "react-jsx",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
 
     /* Linting */
     "strict": true,
@@ -22,9 +25,36 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "alwaysStrict": true,
 
     "paths": {
-      "@/*" :  ["./*"]
+      "@/*": ["./*"],
+      "@/components/*": ["./components/*"],
+      "@/services/*": ["./services/*"],
+      "@/utils/*": ["./utils/*"],
+      "@/types": ["./types"],
+      "@/constants/*": ["./constants/*"]
     }
-  }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.js",
+    "**/*.jsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "release",
+    "docs",
+    "test"
+  ]
 }

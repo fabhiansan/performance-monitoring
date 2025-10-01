@@ -1,0 +1,86 @@
+---
+globs: *.tsx,*.jsx
+---
+
+# React Component Patterns
+
+## Component Structure
+- Use functional components with React 19 hooks
+- Define components in [components/](mdc:components/) directory
+- Use PascalCase for component file names (e.g., `EmployeeCard.tsx`)
+- Export components as default exports
+- Use TypeScript with proper prop interfaces
+
+## State Management
+- Use `useState` for local component state
+- Use `useCallback` for event handlers to prevent unnecessary re-renders
+- Use `useMemo` for expensive calculations
+- Use `useEffect` for side effects with proper dependency arrays
+- Use Zustand for global state management
+- Use React Query for server state management
+
+## Custom Hooks
+- Define custom hooks in [hooks/](mdc:hooks/) directory
+- Use camelCase naming for hook files
+- Return objects for multiple values, arrays for pairs
+- Use proper TypeScript typing for hook parameters and return values
+- Examples: `useDashboardData`, `useEmployeeApi`, `useSessionManagement`
+
+## Context Usage
+- Use [ErrorContext](mdc:contexts/ErrorContext.tsx) for global error handling
+- Wrap components with context providers at the appropriate level
+- Use custom hooks to consume contexts (e.g., `useError`)
+- Minimize context usage - prefer props for local data
+
+## Props and Data Flow
+- Define explicit prop interfaces for all components
+- Use the `Employee` interface from [types.ts](mdc:types.ts) for employee data
+- Pass data down through props, not through context unless necessary
+- Use callback props for parent-child communication
+- Use generic props for reusable components
+
+## Performance Optimization
+- Use `React.memo` for components that receive stable props
+- Use `useCallback` for functions passed as props
+- Use `useMemo` for expensive computations
+- Implement proper key props for list items
+- Use React Query for efficient data fetching and caching
+- Implement proper cleanup in useEffect
+
+## Error Boundaries
+- Use the global error handling system via [ErrorContext](mdc:contexts/ErrorContext.tsx)
+- Display errors using [ErrorDisplay](mdc:components/ErrorDisplay.tsx) component
+- Provide meaningful error context and recovery options
+- Handle loading and error states gracefully
+
+## Form Handling
+- Use React Hook Form for form management
+- Use Zod for form validation
+- Implement proper form state management
+- Handle form submission and validation errors
+
+## Data Fetching
+- Use React Query for server state management
+- Implement proper loading and error states
+- Use query invalidation for data refresh
+- Handle optimistic updates where appropriate
+
+## Styling
+- Use Tailwind CSS classes for styling
+- Follow the design system defined in [constants/designTokens.ts](mdc:constants/designTokens.ts)
+- Use dark mode classes with `dark:` prefix
+- Maintain consistent spacing and color schemes
+- Use the design system components from [design-system/](mdc:design-system/)
+
+## Component Composition
+- Use compound components for complex UI patterns
+- Implement proper component composition
+- Use render props or children functions when appropriate
+- Create reusable component variants
+
+## Accessibility
+- Use semantic HTML elements
+- Implement proper ARIA attributes
+- Ensure keyboard navigation support
+- Use proper focus management
+- Test with screen readers

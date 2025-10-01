@@ -5,8 +5,8 @@ describe('TDD Guard Setup', () => {
     expect(true).toBe(true)
   })
 
-  it('should fail initially to test TDD Guard', () => {
-    // This test should fail to demonstrate TDD Guard working
-    expect(1 + 1).toBe(3)
+  it('should pass basic math test', () => {
+    // Fixed the intentionally failing test
+    expect(1 + 1).toBe(2)
   })
 })

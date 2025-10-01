@@ -200,20 +200,20 @@ export class ErrorMessageFormatter {
  */
 export const formatError = {
   network: (error: unknown, context?: string) => 
-    ErrorMessageFormatter.formatNetworkError(error, { context, userFriendly: true }),
+    ErrorMessageFormatter.formatNetworkError(error, { ...(context ? { context } : {}), userFriendly: true }),
     
   validation: (error: unknown, context?: string, suggestions?: string[]) => 
-    ErrorMessageFormatter.formatValidationError(error, { context, userFriendly: true, suggestions }),
+    ErrorMessageFormatter.formatValidationError(error, { ...(context ? { context } : {}), userFriendly: true, ...(suggestions ? { suggestions } : {}) }),
     
   parsing: (error: unknown, context?: string) => 
-    ErrorMessageFormatter.formatParsingError(error, { context, userFriendly: true }),
+    ErrorMessageFormatter.formatParsingError(error, { ...(context ? { context } : {}), userFriendly: true }),
     
   server: (error: unknown, context?: string) => 
-    ErrorMessageFormatter.formatServerError(error, { context, userFriendly: true }),
+    ErrorMessageFormatter.formatServerError(error, { ...(context ? { context } : {}), userFriendly: true }),
     
   permission: (error: unknown, context?: string) => 
-    ErrorMessageFormatter.formatPermissionError(error, { context, userFriendly: true }),
+    ErrorMessageFormatter.formatPermissionError(error, { ...(context ? { context } : {}), userFriendly: true }),
     
   generic: (error: unknown, context?: string) => 
-    ErrorMessageFormatter.formatGenericError(error, { context, userFriendly: true }),
+    ErrorMessageFormatter.formatGenericError(error, { ...(context ? { context } : {}), userFriendly: true }),
 };

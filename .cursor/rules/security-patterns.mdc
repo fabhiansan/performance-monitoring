@@ -1,0 +1,95 @@
+---
+globs: middleware/*.ts,server/*.ts,services/*.ts
+---
+
+# Security Patterns and Best Practices
+
+## Input Validation
+- Validate all user inputs on both client and server
+- Use Zod schemas for runtime validation
+- Sanitize data before processing
+- Implement proper data type checking
+
+## Authentication & Authorization
+- Use [middleware/authMiddleware.ts](mdc:middleware/authMiddleware.ts) for authentication
+- Implement proper session management
+- Use secure session storage
+- Implement proper logout functionality
+
+## Data Validation
+- Use [middleware/dataValidationMiddleware.ts](mdc:middleware/dataValidationMiddleware.ts) for server-side validation
+- Validate data structure against [types.ts](mdc:types.ts) interfaces
+- Use Zod schemas in [schemas/](mdc:schemas/) directory
+- Implement proper error handling for validation failures
+
+## SQL Injection Prevention
+- Use prepared statements for all database queries
+- Use Kysely query builder for type-safe queries
+- Never concatenate user input into SQL queries
+- Validate and sanitize all database inputs
+
+## XSS Prevention
+- Sanitize all user-generated content
+- Use proper HTML escaping
+- Implement Content Security Policy (CSP)
+- Use React's built-in XSS protection
+
+## CSRF Protection
+- Implement CSRF tokens for state-changing operations
+- Use proper HTTP methods (POST, PUT, DELETE)
+- Validate origin headers
+- Use secure cookies
+
+## File Upload Security
+- Validate file types and sizes
+- Scan uploaded files for malware
+- Store files outside web root
+- Use proper file naming conventions
+
+## API Security
+- Use HTTPS for all API communications
+- Implement proper CORS configuration
+- Use rate limiting for API endpoints
+- Implement proper error handling without information leakage
+
+## Data Encryption
+- Encrypt sensitive data at rest
+- Use proper encryption algorithms
+- Implement proper key management
+- Use secure random number generation
+
+## Logging and Monitoring
+- Log security events appropriately
+- Monitor for suspicious activities
+- Implement proper audit trails
+- Use structured logging for security events
+
+## Error Handling
+- Don't expose sensitive information in error messages
+- Use generic error messages for users
+- Log detailed errors for debugging
+- Implement proper error boundaries
+
+## Dependency Security
+- Keep dependencies up to date
+- Use security scanning tools
+- Audit dependencies for vulnerabilities
+- Use package-lock.json for dependency locking
+
+## Environment Security
+- Use environment variables for sensitive configuration
+- Don't commit secrets to version control
+- Use proper secret management
+- Implement proper access controls
+
+## Database Security
+- Use proper database permissions
+- Implement connection encryption
+- Use prepared statements
+- Implement proper backup security
+
+## Client-Side Security
+- Use Content Security Policy
+- Implement proper CORS policies
+- Use secure cookies
+- Implement proper session management

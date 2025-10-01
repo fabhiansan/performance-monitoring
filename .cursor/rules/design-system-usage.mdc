@@ -1,0 +1,84 @@
+---
+globs: design-system/**/*.ts,design-system/**/*.tsx,components/**/*.tsx
+---
+
+# Design System Usage Patterns
+
+## Design System Architecture
+- Component library in [design-system/](mdc:design-system/) directory
+- Design tokens in [constants/designTokens.ts](mdc:constants/designTokens.ts)
+- Organizational levels in [constants/organizationalLevels.ts](mdc:constants/organizationalLevels.ts)
+- UI constants in [constants/ui.ts](mdc:constants/ui.ts)
+
+## Component Usage
+- Use design system components from [design-system/](mdc:design-system/)
+- Prefer design system components over custom implementations
+- Follow component composition patterns
+- Use proper component variants
+
+## Design Tokens
+- Use design tokens from [constants/designTokens.ts](mdc:constants/designTokens.ts)
+- Follow the established color palette
+- Use semantic color names (e.g., `biru.500` for primary blue)
+- Maintain consistency across components
+
+## Styling Patterns
+- Use Tailwind CSS classes for styling
+- Follow responsive design patterns with breakpoint prefixes
+- Use dark mode classes with `dark:` prefix
+- Maintain consistent spacing using Tailwind's spacing scale
+
+## Color Usage
+- Primary blue: `#57B0E2` (biru.100)
+- Use gradient combinations for visual hierarchy
+- Maintain proper contrast for text readability
+- Use consistent color coding for different data types
+
+## Typography
+- Use consistent font sizes and weights
+- Follow proper heading hierarchy
+- Use appropriate line heights for readability
+- Implement proper text color contrast
+
+## Layout Patterns
+- Use flexbox and grid for layouts
+- Maintain consistent component spacing
+- Use proper semantic HTML elements
+- Implement responsive design for different screen sizes
+
+## Interactive Elements
+- Use consistent button styles and states
+- Implement proper hover and focus indicators
+- Use appropriate cursor styles for interactive elements
+- Maintain consistent form styling
+
+## Accessibility
+- Use semantic HTML elements
+- Implement proper ARIA attributes
+- Ensure keyboard navigation support
+- Use proper focus management
+- Test with screen readers
+
+## Component Composition
+- Use compound components for complex UI patterns
+- Implement proper component composition
+- Use render props or children functions when appropriate
+- Create reusable component variants
+
+## Documentation
+- Document component usage and props
+- Include examples and use cases
+- Maintain design system documentation
+- Update documentation when adding new components
+
+## Testing Design System
+- Test component rendering and behavior
+- Test accessibility features
+- Test responsive design
+- Test dark mode functionality
+
+## Performance
+- Optimize component bundle size
+- Use proper tree shaking
+- Implement lazy loading for large components
+- Monitor component performance

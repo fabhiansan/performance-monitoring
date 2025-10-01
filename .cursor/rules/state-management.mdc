@@ -1,0 +1,77 @@
+---
+globs: hooks/*.ts,contexts/*.tsx,services/*Store*.ts
+---
+
+# State Management Patterns
+
+## State Management Architecture
+- Use Zustand for global state management
+- Use React Query for server state management
+- Use React Context for component tree state
+- Use local state (useState) for component-specific state
+
+## Zustand Store Patterns
+- Create stores in [services/](mdc:services/) directory
+- Use TypeScript interfaces for store state
+- Implement proper action typing
+- Use selectors for computed state
+
+## React Query Integration
+- Use React Query for all server state
+- Implement proper query keys for caching
+- Use query invalidation for data refresh
+- Handle loading and error states properly
+
+## Custom Hooks
+- Define custom hooks in [hooks/](mdc:hooks/) directory
+- Use camelCase naming for hook files
+- Return objects for multiple values, arrays for pairs
+- Implement proper TypeScript typing
+
+## Context Usage
+- Use [ErrorContext](mdc:contexts/ErrorContext.tsx) for global error handling
+- Minimize context usage - prefer props for local data
+- Use custom hooks to consume contexts
+- Implement proper context providers
+
+## State Persistence
+- Use localStorage for persistent state
+- Implement proper serialization/deserialization
+- Handle state migration for version updates
+- Use proper error handling for persistence
+
+## State Synchronization
+- Use React Query for server state synchronization
+- Implement optimistic updates where appropriate
+- Handle conflict resolution for concurrent updates
+- Use proper cache invalidation strategies
+
+## Performance Optimization
+- Use proper memoization for expensive computations
+- Implement proper dependency arrays in hooks
+- Use React.memo for components with stable props
+- Avoid unnecessary re-renders
+
+## Error State Management
+- Use global error context for error handling
+- Implement proper error boundaries
+- Handle network errors gracefully
+- Provide retry mechanisms for failed operations
+
+## Data Flow Patterns
+- Use unidirectional data flow
+- Pass data down through props
+- Use callbacks for parent-child communication
+- Implement proper event handling
+
+## State Testing
+- Test state management logic in isolation
+- Mock external dependencies
+- Test state transitions and side effects
+- Use proper test data and fixtures
+
+## State Debugging
+- Use React DevTools for debugging
+- Implement proper logging for state changes
+- Use Zustand devtools for store debugging
+- Monitor state performance

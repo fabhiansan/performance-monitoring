@@ -1,0 +1,108 @@
+{
+  "timestamp": "2025-09-18T16:02:37.217Z",
+  "parsing_test": {
+    "success": true,
+    "employees": [
+      "Bayu Sukmawan",
+      "Setyabudi",
+      "Agustina",
+      "Fista Febriyanti"
+    ],
+    "competencies": [
+      "Analisis",
+      "Kepemimpinan",
+      "Komunikasi",
+      "Inovasi"
+    ],
+    "rowCount": 4
+  },
+  "validation_tests": [
+    {
+      "name": "Valid employee name",
+      "input": "John Doe",
+      "expected": true,
+      "result": true,
+      "passed": true
+    },
+    {
+      "name": "Empty employee name",
+      "input": "",
+      "expected": false,
+      "result": false,
+      "passed": true
+    },
+    {
+      "name": "Valid score",
+      "input": 85,
+      "expected": true,
+      "result": true,
+      "passed": true
+    },
+    {
+      "name": "Score too high",
+      "input": 150,
+      "expected": false,
+      "result": false,
+      "passed": true
+    },
+    {
+      "name": "Score too low",
+      "input": -10,
+      "expected": false,
+      "result": false,
+      "passed": true
+    },
+    {
+      "name": "Indonesian rating - Sangat Baik",
+      "input": "Sangat Baik",
+      "expected": true,
+      "result": true,
+      "passed": true
+    },
+    {
+      "name": "Indonesian rating - Baik",
+      "input": "Baik",
+      "expected": true,
+      "result": true,
+      "passed": true
+    },
+    {
+      "name": "Indonesian rating - Kurang Baik",
+      "input": "Kurang Baik",
+      "expected": true,
+      "result": true,
+      "passed": true
+    }
+  ],
+  "error_handling_tests": [
+    {
+      "name": "Malformed CSV",
+      "data": "invalid,\"csv,data\nno quotes\"properly\"closed",
+      "passed": true,
+      "error": "No employee headers found"
+    },
+    {
+      "name": "Empty file",
+      "data": "",
+      "passed": true,
+      "error": "Empty CSV file"
+    },
+    {
+      "name": "No employee headers",
+      "data": "Competency,Score1,Score2\nAnalysis,80,90",
+      "passed": true,
+      "error": "No employee headers found"
+    },
+    {
+      "name": "Mixed data types",
+      "data": "\"\",\"[Employee1]\"\n\"Competency\",\"text_not_number\"",
+      "passed": false,
+      "expectedFailure": true
+    }
+  ],
+  "summary": {
+    "total_tests": 12,
+    "passed_tests": 11,
+    "parsing_successful": true
+  }
+}

@@ -1,0 +1,70 @@
+---
+globs: *.ts,*.tsx
+---
+
+# TypeScript Conventions
+
+## Strict TypeScript Configuration
+Follow the strict TypeScript settings defined in [tsconfig.json](mdc:tsconfig.json):
+- Use `strict: true` mode with all strict flags enabled
+- Enable `noUnusedLocals` and `noUnusedParameters`
+- Use `noFallthroughCasesInSwitch`
+- Enable `noUncheckedSideEffectImports`
+- Use `noImplicitAny`, `noImplicitReturns`, `noImplicitThis`
+- Enable `strictNullChecks`, `strictFunctionTypes`, `strictBindCallApply`
+- Use `strictPropertyInitialization` and `alwaysStrict`
+
+## Type Definitions
+- Define all interfaces in [types.ts](mdc:types.ts)
+- Use PascalCase for interface names (e.g., `Employee`, `CompetencyScore`)
+- Use camelCase for property names
+- Always define return types for functions
+- Use proper generic constraints where applicable
+- Use union types for discriminated unions
+- Prefer `type` over `interface` for simple object shapes
+
+## Import/Export Patterns
+- Use relative imports for local modules
+- Use absolute imports with `@/` alias for root-level modules
+- Use path aliases: `@/components/*`, `@/services/*`, `@/utils/*`, `@/constants/*`
+- Prefer named exports over default exports for utilities
+- Use default exports only for React components
+- Use `import type` for type-only imports
+
+## Error Handling
+- Use the custom error types from [services/errorHandler.ts](mdc:services/errorHandler.ts)
+- Always handle errors with proper typing
+- Use `AppError`, `createNetworkError`, `createServerError`, `createValidationError`
+- Define error types with proper error codes and context
+
+## API Types
+- Define API response interfaces in [services/api.ts](mdc:services/api.ts)
+- Use generic `ApiResponse<T>` for consistent API responses
+- Include proper metadata typing for API responses
+- Use Zod schemas for runtime validation in [schemas/](mdc:schemas/)
+
+## Component Props
+- Always define explicit prop interfaces
+- Use `React.FC` for functional components
+- Include proper children typing when needed
+- Use optional props with `?` when appropriate
+- Use generic props for reusable components
+
+## Hook Patterns
+- Define custom hooks in [hooks/](mdc:hooks/) directory
+- Use camelCase naming for hook files
+- Return objects for multiple values, arrays for pairs
+- Use proper dependency arrays in useEffect
+- Type hook parameters and return values explicitly
+
+## State Management
+- Use Zustand for global state with proper typing
+- Use React Query for server state with typed queries
+- Define store interfaces with proper state shapes
+- Use type-safe selectors and actions
+
+## Database Types
+- Use Kysely for type-safe database queries
+- Define database schema types in [server/database.schema.ts](mdc:server/database.schema.ts)
+- Use proper table and column typing
+- Handle nullable fields appropriately

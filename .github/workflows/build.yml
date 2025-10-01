@@ -18,37 +18,42 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 10.15.1
+    
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v4
       with:
         node-version: ${{ matrix.node-version }}
-    
-    - name: Clear npm cache
-      run: npm cache clean --force
-    
-    - name: Remove package-lock and node_modules (Unix)
-      run: |
-        rm -f package-lock.json
-        rm -rf node_modules
-      if: matrix.os != 'windows-latest'
-    
-    - name: Remove package-lock and node_modules (Windows)
-      run: |
-        if (Test-Path package-lock.json) { Remove-Item package-lock.json -Force }
-        if (Test-Path node_modules) { Remove-Item node_modules -Recurse -Force }
-      shell: powershell
-      if: matrix.os == 'windows-latest'
+        cache: 'pnpm'
     
     - name: Install dependencies
-      run: npm install --force
+      run: pnpm install --frozen-lockfile
+
+    - name: Lint
+      run: pnpm run lint:check
+
+    - name: Type Check Frontend
+      run: pnpm run check-types:frontend
+
+    - name: Type Check Backend  
+      run: pnpm run check-types:backend
+
+    - name: Build TypeScript Backend
+      run: pnpm run build:node
+
+    - name: Test
+      run: pnpm test
     
     - name: Clean rebuild native modules for Node.js
       run: |
-        npm run rebuild:clean
-        npm run rebuild:node
+        pnpm run rebuild:clean
+        pnpm run rebuild:node
     
     - name: Run native module diagnostics
-      run: npm run check:native -- --verbose
+      run: pnpm run check:native -- --verbose
     
     - name: Test database connection
       run: node --input-type=module -e "import Database from 'better-sqlite3'; const db = new Database(':memory:'); db.exec('SELECT 1'); console.log('✅ Database test passed'); db.close();"
@@ -60,7 +65,7 @@ jobs:
         ls -la node_modules/better-sqlite3/prebuilds/ || echo "No prebuilds directory found"
     
     - name: Build application
-      run: npm run build
+      run: pnpm run build
     
     - name: Test database connection
       run: node -e "console.log('✅ Database test skipped in CI')"
@@ -76,19 +81,24 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 10.15.1
+    
     - name: Use Node.js 20.x
       uses: actions/setup-node@v4
       with:
         node-version: 20.x
-        cache: 'npm'
+        cache: 'pnpm'
     
     - name: Install dependencies
-      run: npm install
+      run: pnpm install --frozen-lockfile
     
     - name: Clean and rebuild native modules for Electron
       run: |
-        npm run rebuild:clean
-        npm run rebuild:electron
+        pnpm run rebuild:clean
+        pnpm run rebuild:electron
     
     - name: Verify Electron native modules
       run: |
@@ -97,11 +107,36 @@ jobs:
         node --version
         npx electron --version
     
+    - name: Build TypeScript Backend for Electron
+      run: pnpm run build:node
+
+    - name: Build Frontend for Production
+      run: pnpm run build
+
     - name: Build Electron app
-      run: npm run electron:build
+      run: pnpm run electron:build
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
+    - name: Verify build artifacts
+      run: |
+        echo "Checking release directory:"
+        ls -la release/ || echo "No release directory found"
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          echo "Windows artifacts:"
+          ls -la release/*.exe || echo "No Windows executables found"
+          ls -la release/*.exe.blockmap || echo "No Windows blockmap files found"
+        elif [[ "$RUNNER_OS" == "macOS" ]]; then
+          echo "macOS artifacts:"
+          ls -la release/*.dmg || echo "No macOS DMG files found"  
+          ls -la release/*.dmg.blockmap || echo "No macOS blockmap files found"
+        elif [[ "$RUNNER_OS" == "Linux" ]]; then
+          echo "Linux artifacts:"
+          ls -la release/*.AppImage || echo "No AppImage files found"
+          ls -la release/*.deb || echo "No DEB packages found"
+          ls -la release/*.rpm || echo "No RPM packages found"
+        fi
+
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:

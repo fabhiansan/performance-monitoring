@@ -1,0 +1,53 @@
+---
+globs: *.tsx,*.ts,services/*.ts
+---
+
+# Performance Optimization Guidelines
+
+## React Performance
+- Use `React.memo` for components that receive stable props
+- Implement `useCallback` for event handlers passed as props
+- Use `useMemo` for expensive calculations and derived state
+- Avoid creating objects/functions in render methods
+
+## Data Loading
+- Use the granular refresh system from [services/refreshService.ts](mdc:services/refreshService.ts)
+- Implement proper debouncing for frequent operations
+- Use refresh keys to track data staleness
+- Cancel pending operations on component unmount
+
+## Database Performance
+- Use prepared statements for database queries
+- Implement proper indexing for frequently queried columns
+- Use transactions for bulk operations
+- Consider pagination for large datasets
+
+## Bundle Optimization
+- Use dynamic imports for code splitting
+- Configure manual chunks in [vite.config.ts](mdc:vite.config.ts)
+- Separate vendor libraries from application code
+- Use tree shaking to eliminate unused code
+
+## Memory Management
+- Clean up event listeners and subscriptions
+- Avoid memory leaks in useEffect cleanup
+- Use proper dependency arrays in hooks
+- Dispose of resources when components unmount
+
+## Network Optimization
+- Implement proper error handling and retry logic
+- Use appropriate timeout values for API calls
+- Cache frequently accessed data
+- Minimize API calls with proper data fetching strategies
+
+## Rendering Optimization
+- Use proper key props for list items
+- Avoid unnecessary re-renders with proper state management
+- Implement virtual scrolling for large lists
+- Use CSS transforms instead of changing layout properties
+
+## File Operations
+- Stream large file uploads when possible
+- Implement progress indicators for long operations
+- Use Web Workers for heavy computations
+- Optimize image and asset loading

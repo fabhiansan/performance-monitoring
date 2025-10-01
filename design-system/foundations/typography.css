@@ -1,0 +1,271 @@
+/**
+ * Typography Foundation
+ * 
+ * Establishes typographic scale, text styles, and reading flow.
+ * Uses CSS custom properties for theme consistency.
+ */
+
+/* Typography CSS Custom Properties */
+:root {
+  /* Font Families */
+  --ds-font-family-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --ds-font-family-mono: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+  
+  /* Font Sizes */
+  --ds-font-size-xs: 0.75rem;     /* 12px */
+  --ds-font-size-sm: 0.875rem;    /* 14px */
+  --ds-font-size-base: 1rem;      /* 16px */
+  --ds-font-size-lg: 1.125rem;    /* 18px */
+  --ds-font-size-xl: 1.25rem;     /* 20px */
+  --ds-font-size-2xl: 1.5rem;     /* 24px */
+  --ds-font-size-3xl: 1.875rem;   /* 30px */
+  --ds-font-size-4xl: 2.25rem;    /* 36px */
+  --ds-font-size-5xl: 3rem;       /* 48px */
+  --ds-font-size-6xl: 3.75rem;    /* 60px */
+  
+  /* Font Weights */
+  --ds-font-weight-light: 300;
+  --ds-font-weight-normal: 400;
+  --ds-font-weight-medium: 500;
+  --ds-font-weight-semibold: 600;
+  --ds-font-weight-bold: 700;
+  --ds-font-weight-extrabold: 800;
+  
+  /* Line Heights */
+  --ds-line-height-none: 1;
+  --ds-line-height-tight: 1.25;
+  --ds-line-height-snug: 1.375;
+  --ds-line-height-normal: 1.5;
+  --ds-line-height-relaxed: 1.625;
+  --ds-line-height-loose: 2;
+  
+  /* Letter Spacing */
+  --ds-letter-spacing-tighter: -0.05em;
+  --ds-letter-spacing-tight: -0.025em;
+  --ds-letter-spacing-normal: 0em;
+  --ds-letter-spacing-wide: 0.025em;
+  --ds-letter-spacing-wider: 0.05em;
+  --ds-letter-spacing-widest: 0.1em;
+}
+
+/* Base Typography Styles */
+.ds-text {
+  font-family: var(--ds-font-family-sans);
+  color: var(--ds-color-text-primary);
+}
+
+/* Heading Styles */
+.ds-heading-1 {
+  font-size: var(--ds-font-size-6xl);
+  font-weight: var(--ds-font-weight-extrabold);
+  line-height: var(--ds-line-height-tight);
+  letter-spacing: var(--ds-letter-spacing-tighter);
+  margin-bottom: 1.5rem;
+}
+
+.ds-heading-2 {
+  font-size: var(--ds-font-size-5xl);
+  font-weight: var(--ds-font-weight-bold);
+  line-height: var(--ds-line-height-tight);
+  letter-spacing: var(--ds-letter-spacing-tight);
+  margin-bottom: 1.25rem;
+}
+
+.ds-heading-3 {
+  font-size: var(--ds-font-size-4xl);
+  font-weight: var(--ds-font-weight-bold);
+  line-height: var(--ds-line-height-snug);
+  letter-spacing: var(--ds-letter-spacing-tight);
+  margin-bottom: 1rem;
+}
+
+.ds-heading-4 {
+  font-size: var(--ds-font-size-3xl);
+  font-weight: var(--ds-font-weight-semibold);
+  line-height: var(--ds-line-height-snug);
+  margin-bottom: 0.875rem;
+}
+
+.ds-heading-5 {
+  font-size: var(--ds-font-size-2xl);
+  font-weight: var(--ds-font-weight-semibold);
+  line-height: var(--ds-line-height-normal);
+  margin-bottom: 0.75rem;
+}
+
+.ds-heading-6 {
+  font-size: var(--ds-font-size-xl);
+  font-weight: var(--ds-font-weight-medium);
+  line-height: var(--ds-line-height-normal);
+  margin-bottom: 0.5rem;
+}
+
+/* Body Text Styles */
+.ds-body-large {
+  font-size: var(--ds-font-size-lg);
+  font-weight: var(--ds-font-weight-normal);
+  line-height: var(--ds-line-height-relaxed);
+  margin-bottom: 1rem;
+}
+
+.ds-body {
+  font-size: var(--ds-font-size-base);
+  font-weight: var(--ds-font-weight-normal);
+  line-height: var(--ds-line-height-normal);
+  margin-bottom: 1rem;
+}
+
+.ds-body-small {
+  font-size: var(--ds-font-size-sm);
+  font-weight: var(--ds-font-weight-normal);
+  line-height: var(--ds-line-height-normal);
+  margin-bottom: 0.75rem;
+}
+
+/* Caption and Help Text */
+.ds-caption {
+  font-size: var(--ds-font-size-xs);
+  font-weight: var(--ds-font-weight-normal);
+  line-height: var(--ds-line-height-normal);
+  color: var(--ds-color-text-tertiary);
+}
+
+.ds-help-text {
+  font-size: var(--ds-font-size-sm);
+  font-weight: var(--ds-font-weight-normal);
+  line-height: var(--ds-line-height-normal);
+  color: var(--ds-color-text-secondary);
+}
+
+/* Label Styles */
+.ds-label {
+  font-size: var(--ds-font-size-sm);
+  font-weight: var(--ds-font-weight-medium);
+  line-height: var(--ds-line-height-normal);
+  color: var(--ds-color-text-primary);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.ds-label-required::after {
+  content: ' *';
+  color: var(--ds-color-status-error);
+}
+
+/* Link Styles */
+.ds-link {
+  color: var(--ds-color-text-link);
+  text-decoration: underline;
+  text-underline-offset: 0.125rem;
+  transition: color var(--ds-transition-fast, 150ms ease);
+}
+
+.ds-link:hover {
+  color: var(--ds-color-text-link-hover);
+}
+
+.ds-link:focus {
+  outline: 2px solid var(--ds-color-border-focus);
+  outline-offset: 2px;
+  border-radius: 0.125rem;
+}
+
+/* Code Styles */
+.ds-code {
+  font-family: var(--ds-font-family-mono);
+  font-size: 0.875em;
+  background-color: var(--ds-color-bg-tertiary);
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  border: 1px solid var(--ds-color-border-primary);
+}
+
+.ds-code-block {
+  font-family: var(--ds-font-family-mono);
+  font-size: var(--ds-font-size-sm);
+  background-color: var(--ds-color-bg-tertiary);
+  padding: 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--ds-color-border-primary);
+  overflow-x: auto;
+  line-height: var(--ds-line-height-relaxed);
+}
+
+/* Text Utilities */
+.ds-text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-text-break {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.ds-text-balance {
+  text-wrap: balance;
+}
+
+.ds-text-pretty {
+  text-wrap: pretty;
+}
+
+/* Text Alignment */
+.ds-text-left { text-align: left; }
+.ds-text-center { text-align: center; }
+.ds-text-right { text-align: right; }
+.ds-text-justify { text-align: justify; }
+
+/* Font Weight Utilities */
+.ds-font-light { font-weight: var(--ds-font-weight-light); }
+.ds-font-normal { font-weight: var(--ds-font-weight-normal); }
+.ds-font-medium { font-weight: var(--ds-font-weight-medium); }
+.ds-font-semibold { font-weight: var(--ds-font-weight-semibold); }
+.ds-font-bold { font-weight: var(--ds-font-weight-bold); }
+.ds-font-extrabold { font-weight: var(--ds-font-weight-extrabold); }
+
+/* Responsive Typography */
+@media (max-width: 640px) {
+  .ds-heading-1 { font-size: var(--ds-font-size-4xl); }
+  .ds-heading-2 { font-size: var(--ds-font-size-3xl); }
+  .ds-heading-3 { font-size: var(--ds-font-size-2xl); }
+  .ds-heading-4 { font-size: var(--ds-font-size-xl); }
+}
+
+@media (max-width: 480px) {
+  .ds-heading-1 { font-size: var(--ds-font-size-3xl); }
+  .ds-heading-2 { font-size: var(--ds-font-size-2xl); }
+  .ds-heading-3 { font-size: var(--ds-font-size-xl); }
+}
+
+/* Print Styles */
+@media print {
+  .ds-heading-1,
+  .ds-heading-2,
+  .ds-heading-3,
+  .ds-heading-4,
+  .ds-heading-5,
+  .ds-heading-6 {
+    page-break-after: avoid;
+    page-break-inside: avoid;
+  }
+  
+  .ds-body,
+  .ds-body-large,
+  .ds-body-small {
+    orphans: 3;
+    widows: 3;
+  }
+  
+  .ds-link {
+    text-decoration: none;
+    color: var(--ds-color-text-primary);
+  }
+  
+  .ds-link::after {
+    content: ' (' attr(href) ')';
+    font-size: 0.8em;
+    color: var(--ds-color-text-secondary);
+  }
+}

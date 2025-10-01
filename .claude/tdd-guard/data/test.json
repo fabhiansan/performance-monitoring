@@ -1,12 +1,830 @@
 {
   "testModules": [
     {
-      "moduleId": "/Volumes/San/employee-performance-analyzer/test/organizationalLevelsValidation.test.js",
-      "tests": []
+      "moduleId": "/Volumes/San/employee-performance-analyzer/build/node/test/organizationalLevelsValidation.test.js",
+      "tests": [
+        {
+          "name": "should pass basic validation test",
+          "fullName": "Organizational Levels Validation > should pass basic validation test",
+          "state": "passed"
+        }
+      ]
     },
     {
-      "moduleId": "/Volumes/San/employee-performance-analyzer/test/organizationalLevelsValidation.test.ts",
-      "tests": []
+      "moduleId": "/Volumes/San/employee-performance-analyzer/build/node/test/staff-classification-integration.test.js",
+      "tests": [
+        {
+          "name": "should pass basic integration test",
+          "fullName": "Staff Classification Integration Tests > should pass basic integration test",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Volumes/San/employee-performance-analyzer/build/node/test/services.test.js",
+      "tests": [
+        {
+          "name": "should parse valid JSON employee data",
+          "fullName": "Data Services > DataParserService > should parse valid JSON employee data",
+          "state": "passed"
+        },
+        {
+          "name": "should handle corrupted JSON with auto-fix",
+          "fullName": "Data Services > DataParserService > should handle corrupted JSON with auto-fix",
+          "state": "passed"
+        },
+        {
+          "name": "should return failure for completely invalid data",
+          "fullName": "Data Services > DataParserService > should return failure for completely invalid data",
+          "state": "passed"
+        },
+        {
+          "name": "should recover employee data with missing fields",
+          "fullName": "Data Services > DataRecoveryService > should recover employee data with missing fields",
+          "state": "passed"
+        },
+        {
+          "name": "should calculate quality score correctly",
+          "fullName": "Data Services > DataRecoveryService > should calculate quality score correctly",
+          "state": "failed",
+          "errors": [
+            {
+              "message": "expected 50 to be greater than 80",
+              "actual": "50",
+              "expected": "80",
+              "showDiff": false,
+              "operator": "strictEqual",
+              "name": "AssertionError",
+              "ok": false,
+              "stack": "AssertionError: expected 50 to be greater than 80\n    at /Volumes/San/employee-performance-analyzer/test/services.test.ts:86:35\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20"
+            }
+          ]
+        },
+        {
+          "name": "should apply default values when requested",
+          "fullName": "Data Services > DataRecoveryService > should apply default values when requested",
+          "state": "passed"
+        },
+        {
+          "name": "should successfully store employee data",
+          "fullName": "Data Services > DatabaseOperationsService > should successfully store employee data",
+          "state": "passed"
+        },
+        {
+          "name": "should generate error reports",
+          "fullName": "Data Services > DatabaseOperationsService > should generate error reports",
+          "state": "passed"
+        },
+        {
+          "name": "should provide quality descriptions",
+          "fullName": "Data Services > DatabaseOperationsService > should provide quality descriptions",
+          "state": "passed"
+        },
+        {
+          "name": "should work together in a processing pipeline",
+          "fullName": "Data Services > Service Integration > should work together in a processing pipeline",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Volumes/San/employee-performance-analyzer/test/services.test.ts",
+      "tests": [
+        {
+          "name": "should parse valid JSON employee data",
+          "fullName": "Data Services > DataParserService > should parse valid JSON employee data",
+          "state": "passed"
+        },
+        {
+          "name": "should handle corrupted JSON with auto-fix",
+          "fullName": "Data Services > DataParserService > should handle corrupted JSON with auto-fix",
+          "state": "passed"
+        },
+        {
+          "name": "should return failure for completely invalid data",
+          "fullName": "Data Services > DataParserService > should return failure for completely invalid data",
+          "state": "passed"
+        },
+        {
+          "name": "should recover employee data with missing fields",
+          "fullName": "Data Services > DataRecoveryService > should recover employee data with missing fields",
+          "state": "passed"
+        },
+        {
+          "name": "should calculate quality score correctly",
+          "fullName": "Data Services > DataRecoveryService > should calculate quality score correctly",
+          "state": "failed",
+          "errors": [
+            {
+              "message": "expected 50 to be greater than 80",
+              "actual": "50",
+              "expected": "80",
+              "showDiff": false,
+              "operator": "strictEqual",
+              "name": "AssertionError",
+              "ok": false,
+              "stack": "AssertionError: expected 50 to be greater than 80\n    at /Volumes/San/employee-performance-analyzer/test/services.test.ts:86:35\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20"
+            }
+          ]
+        },
+        {
+          "name": "should apply default values when requested",
+          "fullName": "Data Services > DataRecoveryService > should apply default values when requested",
+          "state": "passed"
+        },
+        {
+          "name": "should successfully store employee data",
+          "fullName": "Data Services > DatabaseOperationsService > should successfully store employee data",
+          "state": "passed"
+        },
+        {
+          "name": "should generate error reports",
+          "fullName": "Data Services > DatabaseOperationsService > should generate error reports",
+          "state": "passed"
+        },
+        {
+          "name": "should provide quality descriptions",
+          "fullName": "Data Services > DatabaseOperationsService > should provide quality descriptions",
+          "state": "passed"
+        },
+        {
+          "name": "should work together in a processing pipeline",
+          "fullName": "Data Services > Service Integration > should work together in a processing pipeline",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Volumes/San/employee-performance-analyzer/test/staff-classification-integration.test.ts",
+      "tests": [
+        {
+          "name": "should pass basic integration test",
+          "fullName": "Staff Classification Integration Tests > should pass basic integration test",
+          "state": "passed"
+        }
+      ]
+    },
+    {
+      "moduleId": "/Volumes/San/employee-performance-analyzer/test/validators.test.ts",
+      "tests": [
+        {
+          "name": "should validate valid employee data without errors",
+          "fullName": "Validator Services > EmployeeValidator > should validate valid employee data without errors",
+          "state": "passed"
+        },
+        {
+          "name": "should detect missing employee names",
+          "fullName": "Validator Services > EmployeeValidator > should detect missing employee names",
+          "state": "failed",
+          "errors": [
+            {
+              "message": "expected false to be true // Object.is equality",
+              "actual": "false",
+              "expected": "true",
+              "showDiff": true,
+              "operator": "strictEqual",
+              "diff": "\u001b[32m- Expected\u001b[39m\n\u001b[31m+ Received\u001b[39m\n\n\u001b[32m- true\u001b[39m\n\u001b[31m+ false\u001b[39m",
+              "name": "AssertionError",
+              "ok": false,
+              "stack": "AssertionError: expected false to be true // Object.is equality\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:60:75\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)"
+            }
+          ]
+        },
+        {
+          "name": "should detect duplicate employee names",
+          "fullName": "Validator Services > EmployeeValidator > should detect duplicate employee names",
+          "state": "failed",
+          "errors": [
+            {
+              "message": "expected false to be true // Object.is equality",
+              "actual": "false",
+              "expected": "true",
+              "showDiff": true,
+              "operator": "strictEqual",
+              "diff": "\u001b[32m- Expected\u001b[39m\n\u001b[31m+ Received\u001b[39m\n\n\u001b[32m- true\u001b[39m\n\u001b[31m+ false\u001b[39m",
+              "name": "AssertionError",
+              "ok": false,
+              "stack": "AssertionError: expected false to be true // Object.is equality\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:80:80\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)"
+            }
+          ]
+        },
+        {
+          "name": "should handle non-array input gracefully",
+          "fullName": "Validator Services > EmployeeValidator > should handle non-array input gracefully",
+          "state": "failed",
+          "errors": [
+            {
+              "stack": "TypeError: employees.forEach is not a function\n    at EmployeeValidator.validateDuplicateEmployees (/Volumes/San/employee-performance-analyzer/services/validators/EmployeeValidator.ts:54:15)\n    at EmployeeValidator.validate (/Volumes/San/employee-performance-analyzer/services/validators/EmployeeValidator.ts:13:10)\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:84:32\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)",
+              "message": "employees.forEach is not a function",
+              "constructor": "Function<TypeError>",
+              "name": "TypeError",
+              "toString": "Function<toString>"
+            }
+          ]
+        },
+        {
+          "name": "should warn about empty employee array",
+          "fullName": "Validator Services > EmployeeValidator > should warn about empty employee array",
+          "state": "failed",
+          "errors": [
+            {
+              "message": "expected false to be true // Object.is equality",
+              "actual": "false",
+              "expected": "true",
+              "showDiff": true,
+              "operator": "strictEqual",
+              "diff": "\u001b[32m- Expected\u001b[39m\n\u001b[31m+ Received\u001b[39m\n\n\u001b[32m- true\u001b[39m\n\u001b[31m+ false\u001b[39m",
+              "name": "AssertionError",
+              "ok": false,
+              "stack": "AssertionError: expected false to be true // Object.is equality\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:95:82\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)"
+            }
+          ]
+        },
+        {
+          "name": "should validate organizational levels",
+          "fullName": "Validator Services > EmployeeValidator > should validate organizational levels",
+          "state": "failed",
+          "errors": [
+            {
+              "message": "expected false to be true // Object.is equality",
+              "actual": "false",
+              "expected": "true",
+              "showDiff": true,
+              "operator": "strictEqual",
+              "diff": "\u001b[32m- Expected\u001b[39m\n\u001b[31m+ Received\u001b[39m\n\n\u001b[32m- true\u001b[39m\n\u001b[31m+ false\u001b[39m",
+              "name": "AssertionError",
+              "ok": false,
+              "stack": "AssertionError: expected false to be true // Object.is equality\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:112:10\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)"
+            }
+          ]
+        },
+        {
+          "name": "should validate competency names and structures",
+          "fullName": "Validator Services > CompetencyValidator > should validate competency names and structures",
+          "state": "failed",
+          "errors": [
+            {
+              "message": "expected [ { …(5) }, { …(5) }, { …(5) }, …(4) ] to have a length of +0 but got 7",
+              "actual": "7",
+              "expected": "0",
+              "showDiff": true,
+              "diff": "\u001b[32m- Expected\u001b[39m\n\u001b[31m+ Received\u001b[39m\n\n\u001b[32m- 0\u001b[39m\n\u001b[31m+ 7\u001b[39m",
+              "name": "AssertionError",
+              "ok": false,
+              "stack": "AssertionError: expected [ { …(5) }, { …(5) }, { …(5) }, …(4) ] to have a length of +0 but got 7\n    at Proxy.<anonymous> (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/expect/dist/index.js:1257:20)\n    at Proxy.<anonymous> (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/expect/dist/index.js:1029:14)\n    at Proxy.methodWrapper (file:///Volumes/San/employee-performance-analyzer/node_modules/chai/chai.js:1706:25)\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:126:29\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)"
+            }
+          ]
+        },
+        {
+          "name": "should detect missing competency names",
+          "fullName": "Validator Services > CompetencyValidator > should detect missing competency names",
+          "state": "failed",
+          "errors": [
+            {
+              "message": "expected false to be true // Object.is equality",
+              "actual": "false",
+              "expected": "true",
+              "showDiff": true,
+              "operator": "strictEqual",
+              "diff": "\u001b[32m- Expected\u001b[39m\n\u001b[31m+ Received\u001b[39m\n\n\u001b[32m- true\u001b[39m\n\u001b[31m+ false\u001b[39m",
+              "name": "AssertionError",
+              "ok": false,
+              "stack": "AssertionError: expected false to be true // Object.is equality\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:146:10\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)"
+            }
+          ]
+        },
+        {
+          "name": "should detect duplicate competencies within an employee",
+          "fullName": "Validator Services > CompetencyValidator > should detect duplicate competencies within an employee",
+          "state": "failed",
+          "errors": [
+            {
+              "message": "expected 0 to be greater than 0",
+              "actual": "0",
+              "expected": "0",
+              "showDiff": false,
+              "operator": "strictEqual",
+              "name": "AssertionError",
+              "ok": false,
+              "stack": "AssertionError: expected 0 to be greater than 0\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:163:38\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)"
+            }
+          ]
+        },
+        {
+          "name": "should handle invalid competency structures",
+          "fullName": "Validator Services > CompetencyValidator > should handle invalid competency structures",
+          "state": "passed"
+        },
+        {
+          "name": "should validate against required competencies",
+          "fullName": "Validator Services > CompetencyValidator > should validate against required competencies",
+          "state": "passed"
+        },
+        {
+          "name": "should validate score values within acceptable ranges",
+          "fullName": "Validator Services > ScoreValidator > should validate score values within acceptable ranges",
+          "state": "failed",
+          "errors": [
+            {
+              "message": "expected [ { …(4) }, { …(4) }, { …(4) }, …(3) ] to have a length of +0 but got 6",
+              "actual": "6",
+              "expected": "0",
+              "showDiff": true,
+              "diff": "\u001b[32m- Expected\u001b[39m\n\u001b[31m+ Received\u001b[39m\n\n\u001b[32m- 0\u001b[39m\n\u001b[31m+ 6\u001b[39m",
+              "name": "AssertionError",
+              "ok": false,
+              "stack": "AssertionError: expected [ { …(4) }, { …(4) }, { …(4) }, …(3) ] to have a length of +0 but got 6\n    at Proxy.<anonymous> (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/expect/dist/index.js:1257:20)\n    at Proxy.<anonymous> (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/expect/dist/index.js:1029:14)\n    at Proxy.methodWrapper (file:///Volumes/San/employee-performance-analyzer/node_modules/chai/chai.js:1706:25)\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:215:29\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)"
+            }
+          ]
+        },
+        {
+          "name": "should detect scores outside valid range (0-100)",
+          "fullName": "Validator Services > ScoreValidator > should detect scores outside valid range (0-100)",
+          "state": "failed",
+          "errors": [
+            {
+              "message": "expected false to be true // Object.is equality",
+              "actual": "false",
+              "expected": "true",
+              "showDiff": true,
+              "operator": "strictEqual",
+              "diff": "\u001b[32m- Expected\u001b[39m\n\u001b[31m+ Received\u001b[39m\n\n\u001b[32m- true\u001b[39m\n\u001b[31m+ false\u001b[39m",
+              "name": "AssertionError",
+              "ok": false,
+              "stack": "AssertionError: expected false to be true // Object.is equality\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:236:10\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)"
+            }
+          ]
+        },
+        {
+          "name": "should detect non-numeric scores",
+          "fullName": "Validator Services > ScoreValidator > should detect non-numeric scores",
+          "state": "failed",
+          "errors": [
+            {
+              "message": "expected false to be true // Object.is equality",
+              "actual": "false",
+              "expected": "true",
+              "showDiff": true,
+              "operator": "strictEqual",
+              "diff": "\u001b[32m- Expected\u001b[39m\n\u001b[31m+ Received\u001b[39m\n\n\u001b[32m- true\u001b[39m\n\u001b[31m+ false\u001b[39m",
+              "name": "AssertionError",
+              "ok": false,
+              "stack": "AssertionError: expected false to be true // Object.is equality\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:256:10\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)"
+            }
+          ]
+        },
+        {
+          "name": "should validate score consistency across employees",
+          "fullName": "Validator Services > ScoreValidator > should validate score consistency across employees",
+          "state": "passed"
+        },
+        {
+          "name": "should handle missing performance data",
+          "fullName": "Validator Services > ScoreValidator > should handle missing performance data",
+          "state": "failed",
+          "errors": [
+            {
+              "actual": "0",
+              "expected": "0",
+              "showDiff": false,
+              "operator": "strictEqual",
+              "name": "AssertionError",
+              "message": "expected 0 to be greater than 0",
+              "ok": false,
+              "stack": "AssertionError: expected 0 to be greater than 0\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:296:36\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)"
+            }
+          ]
+        },
+        {
+          "name": "should coordinate all validators and return comprehensive results",
+          "fullName": "Validator Services > ValidatorOrchestrator > should coordinate all validators and return comprehensive results",
+          "state": "failed",
+          "errors": [
+            {
+              "stack": "TypeError: orchestrator.validateAll is not a function\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:311:35\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)",
+              "message": "orchestrator.validateAll is not a function",
+              "constructor": "Function<TypeError>",
+              "name": "TypeError",
+              "toString": "Function<toString>"
+            }
+          ]
+        },
+        {
+          "name": "should detect multiple validation issues across validators",
+          "fullName": "Validator Services > ValidatorOrchestrator > should detect multiple validation issues across validators",
+          "state": "failed",
+          "errors": [
+            {
+              "stack": "TypeError: orchestrator.validateAll is not a function\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:335:35\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)",
+              "message": "orchestrator.validateAll is not a function",
+              "constructor": "Function<TypeError>",
+              "name": "TypeError",
+              "toString": "Function<toString>"
+            }
+          ]
+        },
+        {
+          "name": "should provide detailed validation summary",
+          "fullName": "Validator Services > ValidatorOrchestrator > should provide detailed validation summary",
+          "state": "failed",
+          "errors": [
+            {
+              "stack": "TypeError: orchestrator.validateAll is not a function\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:346:35\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)",
+              "message": "orchestrator.validateAll is not a function",
+              "constructor": "Function<TypeError>",
+              "name": "TypeError",
+              "toString": "Function<toString>"
+            }
+          ]
+        },
+        {
+          "name": "should allow selective validation with specific validators",
+          "fullName": "Validator Services > ValidatorOrchestrator > should allow selective validation with specific validators",
+          "state": "failed",
+          "errors": [
+            {
+              "stack": "TypeError: orchestrator.validateSelective is not a function\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:360:35\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)",
+              "message": "orchestrator.validateSelective is not a function",
+              "constructor": "Function<TypeError>",
+              "name": "TypeError",
+              "toString": "Function<toString>"
+            }
+          ]
+        },
+        {
+          "name": "should handle empty datasets gracefully",
+          "fullName": "Validator Services > ValidatorOrchestrator > should handle empty datasets gracefully",
+          "state": "failed",
+          "errors": [
+            {
+              "stack": "TypeError: orchestrator.validateAll is not a function\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:372:35\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)",
+              "message": "orchestrator.validateAll is not a function",
+              "constructor": "Function<TypeError>",
+              "name": "TypeError",
+              "toString": "Function<toString>"
+            }
+          ]
+        },
+        {
+          "name": "should handle complex real-world scenarios",
+          "fullName": "Validator Services > Integration Tests > should handle complex real-world scenarios",
+          "state": "failed",
+          "errors": [
+            {
+              "stack": "TypeError: orchestrator.validateAll is not a function\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:416:35\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)",
+              "message": "orchestrator.validateAll is not a function",
+              "constructor": "Function<TypeError>",
+              "name": "TypeError",
+              "toString": "Function<toString>"
+            }
+          ]
+        },
+        {
+          "name": "should provide actionable validation feedback",
+          "fullName": "Validator Services > Integration Tests > should provide actionable validation feedback",
+          "state": "failed",
+          "errors": [
+            {
+              "stack": "TypeError: orchestrator.validateAll is not a function\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:436:35\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)",
+              "message": "orchestrator.validateAll is not a function",
+              "constructor": "Function<TypeError>",
+              "name": "TypeError",
+              "toString": "Function<toString>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "moduleId": "/Volumes/San/employee-performance-analyzer/build/node/test/validators.test.js",
+      "tests": [
+        {
+          "name": "should validate valid employee data without errors",
+          "fullName": "Validator Services > EmployeeValidator > should validate valid employee data without errors",
+          "state": "passed"
+        },
+        {
+          "name": "should detect missing employee names",
+          "fullName": "Validator Services > EmployeeValidator > should detect missing employee names",
+          "state": "failed",
+          "errors": [
+            {
+              "message": "expected false to be true // Object.is equality",
+              "actual": "false",
+              "expected": "true",
+              "showDiff": true,
+              "operator": "strictEqual",
+              "diff": "\u001b[32m- Expected\u001b[39m\n\u001b[31m+ Received\u001b[39m\n\n\u001b[32m- true\u001b[39m\n\u001b[31m+ false\u001b[39m",
+              "name": "AssertionError",
+              "ok": false,
+              "stack": "AssertionError: expected false to be true // Object.is equality\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:60:75\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)"
+            }
+          ]
+        },
+        {
+          "name": "should detect duplicate employee names",
+          "fullName": "Validator Services > EmployeeValidator > should detect duplicate employee names",
+          "state": "failed",
+          "errors": [
+            {
+              "message": "expected false to be true // Object.is equality",
+              "actual": "false",
+              "expected": "true",
+              "showDiff": true,
+              "operator": "strictEqual",
+              "diff": "\u001b[32m- Expected\u001b[39m\n\u001b[31m+ Received\u001b[39m\n\n\u001b[32m- true\u001b[39m\n\u001b[31m+ false\u001b[39m",
+              "name": "AssertionError",
+              "ok": false,
+              "stack": "AssertionError: expected false to be true // Object.is equality\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:80:80\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)"
+            }
+          ]
+        },
+        {
+          "name": "should handle non-array input gracefully",
+          "fullName": "Validator Services > EmployeeValidator > should handle non-array input gracefully",
+          "state": "failed",
+          "errors": [
+            {
+              "stack": "TypeError: employees.forEach is not a function\n    at EmployeeValidator.validateDuplicateEmployees (/Volumes/San/employee-performance-analyzer/services/validators/EmployeeValidator.ts:54:15)\n    at EmployeeValidator.validate (/Volumes/San/employee-performance-analyzer/services/validators/EmployeeValidator.ts:13:10)\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:84:32\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)",
+              "message": "employees.forEach is not a function",
+              "constructor": "Function<TypeError>",
+              "name": "TypeError",
+              "toString": "Function<toString>"
+            }
+          ]
+        },
+        {
+          "name": "should warn about empty employee array",
+          "fullName": "Validator Services > EmployeeValidator > should warn about empty employee array",
+          "state": "failed",
+          "errors": [
+            {
+              "message": "expected false to be true // Object.is equality",
+              "actual": "false",
+              "expected": "true",
+              "showDiff": true,
+              "operator": "strictEqual",
+              "diff": "\u001b[32m- Expected\u001b[39m\n\u001b[31m+ Received\u001b[39m\n\n\u001b[32m- true\u001b[39m\n\u001b[31m+ false\u001b[39m",
+              "name": "AssertionError",
+              "ok": false,
+              "stack": "AssertionError: expected false to be true // Object.is equality\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:95:82\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)"
+            }
+          ]
+        },
+        {
+          "name": "should validate organizational levels",
+          "fullName": "Validator Services > EmployeeValidator > should validate organizational levels",
+          "state": "failed",
+          "errors": [
+            {
+              "message": "expected false to be true // Object.is equality",
+              "actual": "false",
+              "expected": "true",
+              "showDiff": true,
+              "operator": "strictEqual",
+              "diff": "\u001b[32m- Expected\u001b[39m\n\u001b[31m+ Received\u001b[39m\n\n\u001b[32m- true\u001b[39m\n\u001b[31m+ false\u001b[39m",
+              "name": "AssertionError",
+              "ok": false,
+              "stack": "AssertionError: expected false to be true // Object.is equality\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:112:10\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)"
+            }
+          ]
+        },
+        {
+          "name": "should validate competency names and structures",
+          "fullName": "Validator Services > CompetencyValidator > should validate competency names and structures",
+          "state": "failed",
+          "errors": [
+            {
+              "message": "expected [ { …(5) }, { …(5) }, { …(5) }, …(4) ] to have a length of +0 but got 7",
+              "actual": "7",
+              "expected": "0",
+              "showDiff": true,
+              "diff": "\u001b[32m- Expected\u001b[39m\n\u001b[31m+ Received\u001b[39m\n\n\u001b[32m- 0\u001b[39m\n\u001b[31m+ 7\u001b[39m",
+              "name": "AssertionError",
+              "ok": false,
+              "stack": "AssertionError: expected [ { …(5) }, { …(5) }, { …(5) }, …(4) ] to have a length of +0 but got 7\n    at Proxy.<anonymous> (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/expect/dist/index.js:1257:20)\n    at Proxy.<anonymous> (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/expect/dist/index.js:1029:14)\n    at Proxy.methodWrapper (file:///Volumes/San/employee-performance-analyzer/node_modules/chai/chai.js:1706:25)\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:126:29\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)"
+            }
+          ]
+        },
+        {
+          "name": "should detect missing competency names",
+          "fullName": "Validator Services > CompetencyValidator > should detect missing competency names",
+          "state": "failed",
+          "errors": [
+            {
+              "message": "expected false to be true // Object.is equality",
+              "actual": "false",
+              "expected": "true",
+              "showDiff": true,
+              "operator": "strictEqual",
+              "diff": "\u001b[32m- Expected\u001b[39m\n\u001b[31m+ Received\u001b[39m\n\n\u001b[32m- true\u001b[39m\n\u001b[31m+ false\u001b[39m",
+              "name": "AssertionError",
+              "ok": false,
+              "stack": "AssertionError: expected false to be true // Object.is equality\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:146:10\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)"
+            }
+          ]
+        },
+        {
+          "name": "should detect duplicate competencies within an employee",
+          "fullName": "Validator Services > CompetencyValidator > should detect duplicate competencies within an employee",
+          "state": "failed",
+          "errors": [
+            {
+              "message": "expected 0 to be greater than 0",
+              "actual": "0",
+              "expected": "0",
+              "showDiff": false,
+              "operator": "strictEqual",
+              "name": "AssertionError",
+              "ok": false,
+              "stack": "AssertionError: expected 0 to be greater than 0\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:163:38\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)"
+            }
+          ]
+        },
+        {
+          "name": "should handle invalid competency structures",
+          "fullName": "Validator Services > CompetencyValidator > should handle invalid competency structures",
+          "state": "passed"
+        },
+        {
+          "name": "should validate against required competencies",
+          "fullName": "Validator Services > CompetencyValidator > should validate against required competencies",
+          "state": "passed"
+        },
+        {
+          "name": "should validate score values within acceptable ranges",
+          "fullName": "Validator Services > ScoreValidator > should validate score values within acceptable ranges",
+          "state": "failed",
+          "errors": [
+            {
+              "message": "expected [ { …(4) }, { …(4) }, { …(4) }, …(3) ] to have a length of +0 but got 6",
+              "actual": "6",
+              "expected": "0",
+              "showDiff": true,
+              "diff": "\u001b[32m- Expected\u001b[39m\n\u001b[31m+ Received\u001b[39m\n\n\u001b[32m- 0\u001b[39m\n\u001b[31m+ 6\u001b[39m",
+              "name": "AssertionError",
+              "ok": false,
+              "stack": "AssertionError: expected [ { …(4) }, { …(4) }, { …(4) }, …(3) ] to have a length of +0 but got 6\n    at Proxy.<anonymous> (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/expect/dist/index.js:1257:20)\n    at Proxy.<anonymous> (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/expect/dist/index.js:1029:14)\n    at Proxy.methodWrapper (file:///Volumes/San/employee-performance-analyzer/node_modules/chai/chai.js:1706:25)\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:215:29\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)"
+            }
+          ]
+        },
+        {
+          "name": "should detect scores outside valid range (0-100)",
+          "fullName": "Validator Services > ScoreValidator > should detect scores outside valid range (0-100)",
+          "state": "failed",
+          "errors": [
+            {
+              "message": "expected false to be true // Object.is equality",
+              "actual": "false",
+              "expected": "true",
+              "showDiff": true,
+              "operator": "strictEqual",
+              "diff": "\u001b[32m- Expected\u001b[39m\n\u001b[31m+ Received\u001b[39m\n\n\u001b[32m- true\u001b[39m\n\u001b[31m+ false\u001b[39m",
+              "name": "AssertionError",
+              "ok": false,
+              "stack": "AssertionError: expected false to be true // Object.is equality\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:236:10\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)"
+            }
+          ]
+        },
+        {
+          "name": "should detect non-numeric scores",
+          "fullName": "Validator Services > ScoreValidator > should detect non-numeric scores",
+          "state": "failed",
+          "errors": [
+            {
+              "message": "expected false to be true // Object.is equality",
+              "actual": "false",
+              "expected": "true",
+              "showDiff": true,
+              "operator": "strictEqual",
+              "diff": "\u001b[32m- Expected\u001b[39m\n\u001b[31m+ Received\u001b[39m\n\n\u001b[32m- true\u001b[39m\n\u001b[31m+ false\u001b[39m",
+              "name": "AssertionError",
+              "ok": false,
+              "stack": "AssertionError: expected false to be true // Object.is equality\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:256:10\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)"
+            }
+          ]
+        },
+        {
+          "name": "should validate score consistency across employees",
+          "fullName": "Validator Services > ScoreValidator > should validate score consistency across employees",
+          "state": "passed"
+        },
+        {
+          "name": "should handle missing performance data",
+          "fullName": "Validator Services > ScoreValidator > should handle missing performance data",
+          "state": "failed",
+          "errors": [
+            {
+              "actual": "0",
+              "expected": "0",
+              "showDiff": false,
+              "operator": "strictEqual",
+              "name": "AssertionError",
+              "message": "expected 0 to be greater than 0",
+              "ok": false,
+              "stack": "AssertionError: expected 0 to be greater than 0\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:296:36\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)"
+            }
+          ]
+        },
+        {
+          "name": "should coordinate all validators and return comprehensive results",
+          "fullName": "Validator Services > ValidatorOrchestrator > should coordinate all validators and return comprehensive results",
+          "state": "failed",
+          "errors": [
+            {
+              "stack": "TypeError: orchestrator.validateAll is not a function\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:311:35\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)",
+              "message": "orchestrator.validateAll is not a function",
+              "constructor": "Function<TypeError>",
+              "name": "TypeError",
+              "toString": "Function<toString>"
+            }
+          ]
+        },
+        {
+          "name": "should detect multiple validation issues across validators",
+          "fullName": "Validator Services > ValidatorOrchestrator > should detect multiple validation issues across validators",
+          "state": "failed",
+          "errors": [
+            {
+              "stack": "TypeError: orchestrator.validateAll is not a function\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:335:35\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)",
+              "message": "orchestrator.validateAll is not a function",
+              "constructor": "Function<TypeError>",
+              "name": "TypeError",
+              "toString": "Function<toString>"
+            }
+          ]
+        },
+        {
+          "name": "should provide detailed validation summary",
+          "fullName": "Validator Services > ValidatorOrchestrator > should provide detailed validation summary",
+          "state": "failed",
+          "errors": [
+            {
+              "stack": "TypeError: orchestrator.validateAll is not a function\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:346:35\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)",
+              "message": "orchestrator.validateAll is not a function",
+              "constructor": "Function<TypeError>",
+              "name": "TypeError",
+              "toString": "Function<toString>"
+            }
+          ]
+        },
+        {
+          "name": "should allow selective validation with specific validators",
+          "fullName": "Validator Services > ValidatorOrchestrator > should allow selective validation with specific validators",
+          "state": "failed",
+          "errors": [
+            {
+              "stack": "TypeError: orchestrator.validateSelective is not a function\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:360:35\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)",
+              "message": "orchestrator.validateSelective is not a function",
+              "constructor": "Function<TypeError>",
+              "name": "TypeError",
+              "toString": "Function<toString>"
+            }
+          ]
+        },
+        {
+          "name": "should handle empty datasets gracefully",
+          "fullName": "Validator Services > ValidatorOrchestrator > should handle empty datasets gracefully",
+          "state": "failed",
+          "errors": [
+            {
+              "stack": "TypeError: orchestrator.validateAll is not a function\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:372:35\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)",
+              "message": "orchestrator.validateAll is not a function",
+              "constructor": "Function<TypeError>",
+              "name": "TypeError",
+              "toString": "Function<toString>"
+            }
+          ]
+        },
+        {
+          "name": "should handle complex real-world scenarios",
+          "fullName": "Validator Services > Integration Tests > should handle complex real-world scenarios",
+          "state": "failed",
+          "errors": [
+            {
+              "stack": "TypeError: orchestrator.validateAll is not a function\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:416:35\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)",
+              "message": "orchestrator.validateAll is not a function",
+              "constructor": "Function<TypeError>",
+              "name": "TypeError",
+              "toString": "Function<toString>"
+            }
+          ]
+        },
+        {
+          "name": "should provide actionable validation feedback",
+          "fullName": "Validator Services > Integration Tests > should provide actionable validation feedback",
+          "state": "failed",
+          "errors": [
+            {
+              "stack": "TypeError: orchestrator.validateAll is not a function\n    at /Volumes/San/employee-performance-analyzer/test/validators.test.ts:436:35\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)",
+              "message": "orchestrator.validateAll is not a function",
+              "constructor": "Function<TypeError>",
+              "name": "TypeError",
+              "toString": "Function<toString>"
+            }
+          ]
+        }
+      ]
     },
     {
       "moduleId": "/Volumes/San/employee-performance-analyzer/src/__tests__/setup.test.ts",
@@ -17,28 +835,21 @@
           "state": "passed"
         },
         {
-          "name": "should fail initially to test TDD Guard",
-          "fullName": "TDD Guard Setup > should fail initially to test TDD Guard",
-          "state": "failed",
-          "errors": [
-            {
-              "message": "expected 2 to be 3 // Object.is equality",
-              "actual": "2",
-              "expected": "3",
-              "showDiff": true,
-              "operator": "strictEqual",
-              "diff": "\u001b[32m- Expected\u001b[39m\n\u001b[31m+ Received\u001b[39m\n\n\u001b[32m- 3\u001b[39m\n\u001b[31m+ 2\u001b[39m",
-              "name": "AssertionError",
-              "ok": false,
-              "stack": "AssertionError: expected 2 to be 3 // Object.is equality\n    at /Volumes/San/employee-performance-analyzer/src/__tests__/setup.test.ts:10:19\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///Volumes/San/employee-performance-analyzer/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)"
-            }
-          ]
+          "name": "should pass basic math test",
+          "fullName": "TDD Guard Setup > should pass basic math test",
+          "state": "passed"
         }
       ]
     },
     {
-      "moduleId": "/Volumes/San/employee-performance-analyzer/test/staff-classification-integration.test.js",
-      "tests": []
+      "moduleId": "/Volumes/San/employee-performance-analyzer/test/organizationalLevelsValidation.test.ts",
+      "tests": [
+        {
+          "name": "should pass basic validation test",
+          "fullName": "Organizational Levels Validation > should pass basic validation test",
+          "state": "passed"
+        }
+      ]
     }
   ],
   "unhandledErrors": [],

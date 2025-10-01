@@ -1,24 +1,64 @@
+/**
+ * Type definitions for Employee Performance Analyzer
+ * 
+ * All types are now generated from Zod schemas for consistency
+ * between frontend and backend.
+ */
 
+// Import schema-generated types
+export type {
+  CreateEmployee,
+  UpdateEmployee,
+  EmployeeSuggestions,
+  OrgLevelMapping,
+  EmployeeFormData,
+  EmployeeSearchData,
+  EmployeePerformanceFormData,
+  EmployeeSummaryFormData,
+  PerformanceScoreData
+} from './schemas/employee.schemas';
 
+export type {
+  ApiResponse,
+  ErrorResponse,
+  HealthCheck,
+  Pagination,
+  PaginatedResponse,
+  IdParam,
+  NameParam,
+  TimeRange
+} from './schemas/api.schemas';
+
+export type {
+  UploadSession,
+  CreateUploadSession,
+  SessionEmployeeData,
+  CurrentDataset,
+  DatasetList,
+  SaveDataset,
+  LeadershipScore,
+  SetLeadershipScore
+} from './schemas/session.schemas';
+
+// Import Employee schema type for transformation
+import type { Employee as SchemaEmployee } from './schemas/employee.schemas';
+
+// Legacy compatibility - CompetencyScore interface
 export interface CompetencyScore {
   name: string;
   score: number;
+  /**
+   * Legacy field used by older parsing logic; kept optional for backward compatibility.
+   */
+  competency?: string | undefined;
 }
 
-export interface Employee {
-  id: number;
-  name: string;
-  nip: string;
-  gol: string;
-  pangkat: string;
-  position: string;
-  sub_position: string;
-  organizational_level: string;
-  performance: CompetencyScore[];
-  created_at?: string;
-  updated_at?: string;
+// Extended types for specific use cases
+// UI-friendly employee type with camelCase aliases
+export interface Employee extends SchemaEmployee {
+  subPosition?: string;
+  organizationalLevel?: string;
 }
-
 
 export interface EmployeeWithSummary extends Employee {
   summary?: string;
@@ -30,4 +70,3 @@ export interface Dataset {
   createdAt: string;
   employeeCount: number;
 }
-

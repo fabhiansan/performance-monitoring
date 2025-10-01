@@ -1,0 +1,53 @@
+---
+globs: *.ts,*.tsx,services/*.ts,contexts/*.tsx
+---
+
+# Error Handling Patterns
+
+## Error Context System
+- Use [ErrorContext](mdc:contexts/ErrorContext.tsx) for global error management
+- Display errors with [ErrorDisplay](mdc:components/ErrorDisplay.tsx) component
+- Provide meaningful error context and recovery options
+
+## Custom Error Types
+- Use error classes from [services/errorHandler.ts](mdc:services/errorHandler.ts)
+- `AppError` - Base application error
+- `NetworkError` - Network connectivity issues
+- `ServerError` - Server-side errors
+- `ValidationError` - Data validation failures
+
+## Error Context Information
+- Include component name where error occurred
+- Include operation being performed
+- Include relevant data context (sessionId, dataLength, etc.)
+- Provide retry mechanisms where appropriate
+
+## API Error Handling
+- Use consistent `ApiResponse<T>` format from [services/api.ts](mdc:services/api.ts)
+- Include error metadata with codes and retry information
+- Handle different error types appropriately
+- Provide user-friendly error messages
+
+## Component Error Boundaries
+- Wrap components with error boundaries where needed
+- Use the global error context for error display
+- Provide fallback UI for error states
+- Allow users to retry failed operations
+
+## Validation Error Handling
+- Use [services/validationService.ts](mdc:services/validationService.ts) for data validation
+- Display validation errors inline with form fields
+- Provide clear error messages for each validation rule
+- Allow users to correct errors and retry
+
+## Logging and Debugging
+- Log errors with appropriate detail level
+- Include stack traces for debugging
+- Use consistent error logging format
+- Provide debug information in development mode
+
+## Recovery Strategies
+- Implement retry mechanisms for transient errors
+- Provide alternative workflows for critical failures
+- Save user data before showing errors
+- Allow graceful degradation of functionality

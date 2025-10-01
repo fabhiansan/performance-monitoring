@@ -9,23 +9,31 @@
  * - External validation function for programmatic use
  */
 
+// Constants for repeated strings
+const STAFF_ASN_PREFIX = 'Staff ASN';
+const ESELON_II = 'Eselon II';
+const ESELON_III = 'Eselon III';
+const ESELON_IV = 'Eselon IV';
+const STAFF = 'Staff';
+const NON_ASN = 'non asn';
+
 /**
  * Predefined organizational levels in the system
  */
 export const ORGANIZATIONAL_LEVELS = [
-  'Eselon II',
-  'Eselon III',
-  'Eselon IV',
-  'Staff ASN Sekretariat',
+  ESELON_II,
+  ESELON_III,
+  ESELON_IV,
+  `${STAFF_ASN_PREFIX} Sekretariat`,
   'Staff Non ASN Sekretariat',
-  'Staff ASN Bidang Hukum',
-  'Staff ASN Bidang Pemberdayaan Sosial',
+  `${STAFF_ASN_PREFIX} Bidang Hukum`,
+  `${STAFF_ASN_PREFIX} Bidang Pemberdayaan Sosial`,
   'Staff Non ASN Bidang Pemberdayaan Sosial',
-  'Staff ASN Bidang Rehabilitasi Sosial',
+  `${STAFF_ASN_PREFIX} Bidang Rehabilitasi Sosial`,
   'Staff Non ASN Bidang Rehabilitasi Sosial',
-  'Staff ASN Bidang Perlindungan dan Jaminan Sosial',
+  `${STAFF_ASN_PREFIX} Bidang Perlindungan dan Jaminan Sosial`,
   'Staff Non ASN Bidang Perlindungan dan Jaminan Sosial',
-  'Staff ASN Bidang Penanganan Bencana',
+  `${STAFF_ASN_PREFIX} Bidang Penanganan Bencana`,
   'Staff Non ASN Bidang Penanganan Bencana'
 ] as const;
 
@@ -122,12 +130,12 @@ export const parseGolongan = (golongan: string | undefined | null): ParsedGolong
   
   // Regular expression to match various golongan formats
   // Supports: IV/a, III-b, II c, 4/a, 3-b, 2 c, etc.
-  const golonganPattern = /^(IV|III|II|I|4|3|2|1)[\s\-\/]?([A-E])$/;
+  const golonganPattern = /^(IV|III|II|I|4|3|2|1)[\s\-/]?([A-E])$/;
   const match = normalized.match(golonganPattern);
   
   if (!match) return null;
   
-  let [, levelPart, gradePart] = match;
+  const [, levelPart, gradePart] = match;
   
   // Convert Arabic numerals to Roman numerals
   const levelMap: Record<string, GolonganLevel> = {
@@ -224,23 +232,23 @@ export const inferEselonFromGolongan = (golongan: string | undefined | null): Or
   
   // Eselon II: Typically Golongan IV/c and above
   if (level === 'IV' && ['c', 'd', 'e'].includes(grade)) {
-    return 'Eselon II';
+    return ESELON_II;
   }
   
   // Eselon III: Typically Golongan IV/a, IV/b, and III/d
   if ((level === 'IV' && ['a', 'b'].includes(grade)) || 
       (level === 'III' && grade === 'd')) {
-    return 'Eselon III';
+    return ESELON_III;
   }
   
   // Eselon IV: Typically Golongan III/c and III/b
   if (level === 'III' && ['b', 'c'].includes(grade)) {
-    return 'Eselon IV';
+    return ESELON_IV;
   }
   
   // All other golongan levels are typically Staff positions
   // This includes: III/a, II/x, I/x
-  return 'Staff';
+  return STAFF;
 };
 
 /**
@@ -273,22 +281,19 @@ export const isValidOrganizationalLevel = (level: string): level is Organization
 const matchEselonLevel = (normalizedLevel: string): 'Eselon II' | 'Eselon III' | 'Eselon IV' | null => {
   const lower = normalizedLevel.toLowerCase();
   
-  // Pattern matching for various Eselon formats
-  const eselonPatterns = [
-    // Standard formats
-    { pattern: /\b(eselon|echelon|es|esl)\s*(ii|2)\b/, category: 'Eselon II' as const },
-    { pattern: /\b(eselon|echelon|es|esl)\s*(iii|3)\b/, category: 'Eselon III' as const },
-    { pattern: /\b(eselon|echelon|es|esl)\s*(iv|4)\b/, category: 'Eselon IV' as const },
-    // Roman numeral variations
-    { pattern: /\beselon\s*2\b/, category: 'Eselon II' as const },
-    { pattern: /\beselon\s*3\b/, category: 'Eselon III' as const },
-    { pattern: /\beselon\s*4\b/, category: 'Eselon IV' as const }
-  ];
+  // Check Eselon II patterns
+  if (/\b(eselon|echelon|es|esl)\s*(ii|2)\b/.test(lower) || /\beselon\s*2\b/.test(lower)) {
+    return ESELON_II;
+  }
   
-  for (const { pattern, category } of eselonPatterns) {
-    if (pattern.test(lower)) {
-      return category;
-    }
+  // Check Eselon III patterns  
+  if (/\b(eselon|echelon|es|esl)\s*(iii|3)\b/.test(lower) || /\beselon\s*3\b/.test(lower)) {
+    return ESELON_III;
+  }
+  
+  // Check Eselon IV patterns
+  if (/\b(eselon|echelon|es|esl)\s*(iv|4)\b/.test(lower) || /\beselon\s*4\b/.test(lower)) {
+    return ESELON_IV;
   }
   
   return null;
@@ -328,10 +333,10 @@ const validateDataConsistency = (
 ): DataInconsistencyWarning | null => {
   // Define hierarchy levels for comparison
   const levelHierarchy: Record<OrganizationalCategory, number> = {
-    'Eselon II': 4,
-    'Eselon III': 3,
-    'Eselon IV': 2,
-    'Staff': 1,
+    [ESELON_II]: 4,
+    [ESELON_III]: 3,
+    [ESELON_IV]: 2,
+    [STAFF]: 1,
     'Other': 0
   };
 
@@ -421,74 +426,57 @@ export const categorizeOrganizationalLevel = (
   level: string | undefined | null, 
   golongan?: string | undefined | null
 ): OrganizationalCategory => {
-  let golonganInference: OrganizationalCategory | null = null;
-  let positionInference: OrganizationalCategory | null = null;
-  
-  // Get golongan-based inference if available
-  if (golongan) {
-    golonganInference = inferEselonFromGolongan(golongan);
-  }
-  
-  // Get position-based inference
-  if (level && typeof level === 'string') {
-    // Normalize the input
-    const normalized = normalizeOrganizationalLevel(level);
-    if (normalized) {
-      // Check for exact match with predefined levels (case-insensitive)
-      const exactMatch = ORGANIZATIONAL_LEVELS.find(validLevel => 
-        validLevel.toLowerCase() === normalized.toLowerCase()
-      );
-      
-      if (exactMatch) {
-        // Use pattern matching for Eselon levels
-        const eselonMatch = matchEselonLevel(exactMatch);
-        positionInference = eselonMatch || 'Staff';
-      } else {
-        // Fallback pattern matching for non-standard or legacy data
-        const eselonMatch = matchEselonLevel(normalized);
-        if (eselonMatch) {
-          positionInference = eselonMatch;
-        } else {
-          // Check if it's a staff position (contains 'staff' keyword)
-          const lower = normalized.toLowerCase();
-          if (lower.includes('staff') || lower.includes('staf')) {
-            positionInference = 'Staff';
-          } else {
-            positionInference = 'Other';
-          }
-        }
-      }
-    } else {
-      positionInference = 'Other';
-    }
-  } else {
-    positionInference = 'Other';
-  }
-  
-  // Validate data consistency if both inferences are available
+  const golonganInference = golongan ? inferEselonFromGolongan(golongan) : null;
+  const positionInference = determinePositionInference(level);
+
   if (golonganInference && positionInference && golongan) {
     const warning = validateDataConsistency(golonganInference, positionInference, golongan);
     if (warning) {
       logDataInconsistencyWarning(warning);
     }
   }
-  
-  // Priority 1: If position-based inference is 'Staff', it takes precedence
-  // This ensures Sub-Jabatan staff detection overrides golongan-based inference
-  if (positionInference === 'Staff') {
-    return 'Staff';
+
+  if (positionInference === STAFF) {
+    return STAFF;
   }
 
-  // Priority 2: Use golongan-based inference if golongan data is available
-  if (golonganInference) {
-    // Only use golongan inference if it provides a definitive result
-    if (golonganInference !== 'Staff' || !level) {
-      return golonganInference;
-    }
+  if (golonganInference && (golonganInference !== STAFF || !level)) {
+    return golonganInference;
   }
 
-  // Priority 3: Use position-based inference
   return positionInference || 'Other';
+};
+
+const determinePositionInference = (level: string | undefined | null): OrganizationalCategory | null => {
+  if (!level || typeof level !== 'string') {
+    return 'Other';
+  }
+
+  const normalized = normalizeOrganizationalLevel(level);
+  if (!normalized) {
+    return 'Other';
+  }
+
+  const exactMatch = ORGANIZATIONAL_LEVELS.find(validLevel =>
+    validLevel.toLowerCase() === normalized.toLowerCase()
+  );
+
+  if (exactMatch) {
+    const eselonMatch = matchEselonLevel(exactMatch);
+    return eselonMatch || STAFF;
+  }
+
+  const eselonMatch = matchEselonLevel(normalized);
+  if (eselonMatch) {
+    return eselonMatch;
+  }
+
+  return isStaffDescriptor(normalized) ? STAFF : 'Other';
+};
+
+const isStaffDescriptor = (value: string): boolean => {
+  const lower = value.toLowerCase();
+  return lower.includes('staff') || lower.includes('staf');
 };
 
 /**
@@ -540,6 +528,65 @@ const normalizePosition = (position: string): string => {
   }
   
   return normalized;
+};
+
+/**
+ * Helper function to check if ASN status matches between input and level
+ */
+const isAsnStatusMatch = (inputText: string, levelText: string): boolean => {
+  const hasNonAsn = inputText.includes(NON_ASN);
+  const levelHasNonAsn = levelText.includes(NON_ASN);
+  const levelHasAsn = levelText.includes('asn') && !levelHasNonAsn;
+  
+  return hasNonAsn ? levelHasNonAsn : levelHasAsn;
+};
+
+/**
+ * Helper function to match staff department
+ */
+const matchStaffDepartment = (inputText: string, levelText: string): boolean => {
+  const departments = ['sekretariat', 'hukum', 'pemberdayaan', 'rehabilitasi', 'perlindungan', 'bencana'];
+  
+  for (const dept of departments) {
+    if (inputText.includes(dept) && levelText.includes(dept)) {
+      return isAsnStatusMatch(inputText, levelText);
+    }
+  }
+  
+  return false;
+};
+
+/**
+ * Matches organizational level directly from sub-position/department string
+ * @param subPosition - The sub-position or department information
+ * @returns The matched organizational level or null if no match found
+ */
+export const matchOrganizationalLevelFromSubPosition = (subPosition: string | undefined | null): OrganizationalLevel | null => {
+  if (!subPosition || typeof subPosition !== 'string') return null;
+  
+  const normalized = normalizeOrganizationalLevel(subPosition);
+  if (!normalized) return null;
+  
+  // Try exact match first (case-insensitive)
+  const exactMatch = ORGANIZATIONAL_LEVELS.find(validLevel => 
+    validLevel.toLowerCase() === normalized.toLowerCase()
+  );
+  
+  if (exactMatch) return exactMatch;
+  
+  // Try partial matching for staff positions
+  const lowerNormalized = normalized.toLowerCase();
+  
+  if (lowerNormalized.includes('staff') || lowerNormalized.includes('staf')) {
+    const staffMatches = ORGANIZATIONAL_LEVELS.filter(level => {
+      const lowerLevel = level.toLowerCase();
+      return lowerLevel.includes('staff') && matchStaffDepartment(lowerNormalized, lowerLevel);
+    });
+    
+    return staffMatches.length > 0 ? staffMatches[0] : null;
+  }
+  
+  return null;
 };
 
 /**
@@ -614,7 +661,7 @@ export const determineOrganizationalLevelFromPosition = (
   
   for (const pattern of eselonIIIPatterns) {
     if (pattern.test(fullContext)) {
-      return 'Eselon III';
+      return ESELON_III;
     }
   }
   
@@ -805,12 +852,12 @@ export const countEmployeesByOrganizationalLevel = (employees: Array<{ organizat
 export const getOrganizationalSummary = (employees: Array<{ organizational_level?: string }>) => {
   const employeesByLevel = groupEmployeesByOrganizationalLevel(employees);
   
-  const eselonCount = (employeesByLevel['Eselon II']?.length || 0) + 
-                     (employeesByLevel['Eselon III']?.length || 0) + 
-                     (employeesByLevel['Eselon IV']?.length || 0);
+  const eselonCount = (employeesByLevel[ESELON_II]?.length || 0) + 
+                     (employeesByLevel[ESELON_III]?.length || 0) + 
+                     (employeesByLevel[ESELON_IV]?.length || 0);
   
   const asnStaffCount = Object.keys(employeesByLevel)
-    .filter(level => level.includes('Staff ASN'))
+    .filter(level => level.includes(STAFF_ASN_PREFIX))
     .reduce((sum, level) => sum + (employeesByLevel[level]?.length || 0), 0);
   
   const nonAsnStaffCount = Object.keys(employeesByLevel)
@@ -943,7 +990,7 @@ export const getOrganizationalLevelTestCases = () => {
     { input: 'Echelon IV', expected: 'Eselon IV' },
     
     // Staff positions
-    { input: 'Staff ASN Sekretariat', expected: 'Staff' },
+    { input: `${STAFF_ASN_PREFIX} Sekretariat`, expected: 'Staff' },
     { input: 'staff asn sek', expected: 'Staff' },
     { input: 'STAFF NON ASN BIDANG HUKUM', expected: 'Staff' },
     
@@ -974,15 +1021,15 @@ export const getOrganizationalLevelTestCases = () => {
     
     // Golongan priority over position
     { input: 'Eselon IV', golongan: 'IV/e', expected: 'Eselon II' },
-    { input: 'Staff ASN', golongan: 'III/c', expected: 'Eselon IV' },
+    { input: STAFF_ASN_PREFIX, golongan: 'III/c', expected: 'Eselon IV' },
     
     // Edge cases
     { input: '', expected: 'Other' },
     { input: '   ', expected: 'Other' },
     { input: 'Invalid Level', expected: 'Other' },
-    { input: null as any, expected: 'Other' },
-    { input: undefined as any, expected: 'Other' },
-    { input: null as any, golongan: 'IV/a', expected: 'Eselon III' }
+    { input: null as unknown, expected: 'Other' },
+    { input: undefined as unknown, expected: 'Other' },
+    { input: null as unknown, golongan: 'IV/a', expected: 'Eselon III' }
   ];
 };
 

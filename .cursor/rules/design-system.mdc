@@ -1,0 +1,46 @@
+---
+globs: *.tsx,*.css,constants/designTokens.ts
+---
+
+# Design System and Styling
+
+## Design Tokens
+- Use design tokens from [constants/designTokens.ts](mdc:constants/designTokens.ts)
+- Follow the color palette defined in the design system
+- Use semantic color names (e.g., `biru.500` for primary blue)
+
+## Tailwind CSS Usage
+- Use Tailwind classes for styling
+- Follow responsive design patterns with breakpoint prefixes
+- Use dark mode classes with `dark:` prefix
+- Maintain consistent spacing using Tailwind's spacing scale
+
+## Component Styling
+- Use consistent padding and margins across components
+- Follow the established color scheme for different states
+- Use proper contrast ratios for accessibility
+- Implement hover and focus states consistently
+
+## Layout Patterns
+- Use flexbox and grid for layouts
+- Maintain consistent component spacing
+- Use proper semantic HTML elements
+- Implement responsive design for different screen sizes
+
+## Color Usage
+- Primary blue: `#57B0E2` (biru.100)
+- Use gradient combinations for visual hierarchy
+- Maintain proper contrast for text readability
+- Use consistent color coding for different data types
+
+## Typography
+- Use consistent font sizes and weights
+- Follow proper heading hierarchy
+- Use appropriate line heights for readability
+- Implement proper text color contrast
+
+## Interactive Elements
+- Use consistent button styles and states
+- Implement proper hover and focus indicators
+- Use appropriate cursor styles for interactive elements
+- Maintain consistent form styling

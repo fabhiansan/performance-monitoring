@@ -1,10 +1,25 @@
 import { Employee } from '../types';
+
+// Constants for repeated strings
+const UNKNOWN_ERROR_MESSAGE = 'Unknown error';
 import { DataIntegrityValidator, DataIntegrityResult, RecoveryOption } from './dataIntegrityService';
 import { ValidationResult } from './validationService';
+import { 
+  DataRecoveryCoordinator, 
+  RecoveryOptions as RecoveryOpts, 
+  DataCleaningUtils 
+} from '../utils/dataRecoveryStrategies';
+import { 
+  AutoFixStrategy,
+  DefaultValuesStrategy,
+  DataQualityCalculator,
+  RecoveryOptionsAnalyzer,
+  ErrorReportGenerator
+} from '../utils/dataValidationUtils';
 
 export interface DatabaseOperationResult {
   success: boolean;
-  data?: any;
+  data?: Employee[] | Record<string, unknown>;
   integrityResult?: DataIntegrityResult;
   validationResult?: ValidationResult;
   errors: string[];
@@ -19,19 +34,21 @@ export interface DatabaseOperationResult {
   };
 }
 
-export interface DataRecoveryOptions {
-  autoFix: boolean;
-  useDefaultValues: boolean;
-  skipCorruptedRecords: boolean;
-  promptForMissingData: boolean;
-  maxRecoveryAttempts: number;
-}
+export interface DataRecoveryOptions extends RecoveryOpts {}
 
 /**
  * Enhanced database service with data integrity validation and recovery
  */
 export class EnhancedDatabaseService {
   private integrityValidator: DataIntegrityValidator;
+  private dataRecoveryCoordinator: DataRecoveryCoordinator;
+  private dataCleaningUtils: DataCleaningUtils;
+  private autoFixStrategy: AutoFixStrategy;
+  private defaultValuesStrategy: DefaultValuesStrategy;
+  private dataQualityCalculator: DataQualityCalculator;
+  private recoveryOptionsAnalyzer: RecoveryOptionsAnalyzer;
+  private errorReportGenerator: ErrorReportGenerator;
+  
   private defaultRecoveryOptions: DataRecoveryOptions = {
     autoFix: true,
     useDefaultValues: true,
@@ -42,6 +59,13 @@ export class EnhancedDatabaseService {
 
   constructor() {
     this.integrityValidator = new DataIntegrityValidator();
+    this.dataRecoveryCoordinator = new DataRecoveryCoordinator();
+    this.dataCleaningUtils = new DataCleaningUtils();
+    this.autoFixStrategy = new AutoFixStrategy();
+    this.defaultValuesStrategy = new DefaultValuesStrategy();
+    this.dataQualityCalculator = new DataQualityCalculator();
+    this.recoveryOptionsAnalyzer = new RecoveryOptionsAnalyzer();
+    this.errorReportGenerator = new ErrorReportGenerator();
   }
 
   /**
@@ -53,95 +77,159 @@ export class EnhancedDatabaseService {
   ): DatabaseOperationResult {
     const options = { ...this.defaultRecoveryOptions, ...recoveryOptions };
     const timestamp = new Date().toISOString();
-    const errors: string[] = [];
-    const warnings: string[] = [];
-    let recoveredData: any = null;
-    let recordsProcessed = 0;
-    let recordsRecovered = 0;
+    const context = {
+      errors: [] as string[],
+      warnings: [] as string[],
+      recoveredData: null as Employee[] | null,
+      recordsProcessed: 0,
+      recordsRecovered: 0
+    };
 
     try {
-      // Step 1: Validate JSON integrity
-      const integrityResult = this.integrityValidator.validateJsonIntegrity(rawJsonData);
-      
-      if (!integrityResult.isValid) {
-        // Attempt recovery if enabled
-        if (options.autoFix && integrityResult.recoveryOptions.length > 0) {
-          const recoveryResult = this.attemptDataRecovery(rawJsonData, integrityResult, options);
-          if (recoveryResult.success) {
-            recoveredData = recoveryResult.data;
-            recordsRecovered = recoveryResult.recordsRecovered;
-            warnings.push(`Data recovery successful: ${recordsRecovered} records recovered`);
-          } else {
-            errors.push(`Data recovery failed: ${recoveryResult.error}`);
-          }
-        } else {
-          errors.push('JSON integrity validation failed and recovery is disabled');
-        }
-      } else {
-        // Parse successful data
-        try {
-          recoveredData = JSON.parse(rawJsonData);
-        } catch (parseError) {
-          errors.push(`JSON parsing failed: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
-        }
-      }
+      const integrityResult = this.validateJsonIntegrity(rawJsonData, options, context);
+      const validationResult = this.processEmployeeData(context, options);
+      const dataQualityScore = this.dataQualityCalculator.calculateDataQualityScore(
+        integrityResult, 
+        validationResult ? {
+          errors: validationResult.errors.map(e => e.message),
+          warnings: validationResult.warnings.map(w => w.message)
+        } : undefined
+      );
 
-      // Step 2: Validate employee data structure if we have data
-      let validationResult: ValidationResult | undefined;
-      if (recoveredData && Array.isArray(recoveredData)) {
-        recordsProcessed = recoveredData.length;
-        
-        // Apply data cleaning and normalization
-        const cleanedData = this.cleanAndNormalizeData(recoveredData, options);
-        
-        // Validate performance data integrity
-        const performanceIntegrityResult = this.integrityValidator.validatePerformanceDataIntegrity(cleanedData);
-        
-        if (!performanceIntegrityResult.isValid && options.autoFix) {
-          const fixedData = this.applyAutoFixes(cleanedData, performanceIntegrityResult);
-          recoveredData = fixedData.data;
-          recordsRecovered += fixedData.recordsFixed;
-          warnings.push(`Auto-fixed ${fixedData.recordsFixed} data issues`);
-        }
-      }
-
-      // Calculate data quality score
-      const dataQualityScore = this.calculateDataQualityScore(integrityResult, validationResult);
-
-      return {
-        success: errors.length === 0,
-        data: recoveredData,
-        integrityResult,
-        validationResult,
-        errors,
-        warnings,
-        recoveryOptions: integrityResult.recoveryOptions,
-        metadata: {
-          operation: 'parsePerformanceDataWithIntegrity',
-          timestamp,
-          recordsProcessed,
-          recordsRecovered,
-          dataQualityScore
-        }
-      };
+      return this.createSuccessResult(context, integrityResult, validationResult, timestamp, dataQualityScore);
 
     } catch (error) {
-      errors.push(`Unexpected error during data processing: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      
-      return {
-        success: false,
-        errors,
-        warnings,
-        recoveryOptions: [],
-        metadata: {
-          operation: 'parsePerformanceDataWithIntegrity',
-          timestamp,
-          recordsProcessed,
-          recordsRecovered,
-          dataQualityScore: 0
-        }
-      };
+      return this.createErrorResult(context, timestamp, error);
     }
+  }
+
+  private validateJsonIntegrity(
+    rawJsonData: string, 
+    options: DataRecoveryOptions, 
+    context: { errors: string[]; warnings: string[]; recoveredData: Employee[] | null; recordsRecovered: number }
+  ) {
+    const integrityResult = this.integrityValidator.validateJsonIntegrity(rawJsonData);
+    
+    if (!integrityResult.isValid) {
+      this.handleInvalidJson(rawJsonData, options, context, integrityResult);
+    } else {
+      this.handleValidJson(rawJsonData, context);
+    }
+    
+    return integrityResult;
+  }
+
+  private handleInvalidJson(
+    rawJsonData: string,
+    options: DataRecoveryOptions,
+    context: { errors: string[]; warnings: string[]; recoveredData: Employee[] | null; recordsRecovered: number },
+    integrityResult: DataIntegrityResult
+  ) {
+    if (options.autoFix && integrityResult.recoveryOptions.length > 0) {
+      const recoveryResult = this.dataRecoveryCoordinator.attemptDataRecovery(rawJsonData, options);
+      if (recoveryResult.success) {
+        context.recoveredData = recoveryResult.data ?? null;
+        context.recordsRecovered = recoveryResult.recordsRecovered;
+        context.warnings.push(`Data recovery successful: ${context.recordsRecovered} records recovered`);
+      } else {
+        context.errors.push(`Data recovery failed: ${recoveryResult.error}`);
+      }
+    } else {
+      context.errors.push('JSON integrity validation failed and recovery is disabled');
+    }
+  }
+
+  private handleValidJson(
+    rawJsonData: string,
+    context: { errors: string[]; recoveredData: Employee[] | null }
+  ) {
+    try {
+      const parsed = JSON.parse(rawJsonData) as unknown;
+      context.recoveredData = Array.isArray(parsed)
+        ? (parsed as unknown as Employee[])
+        : [parsed as unknown as Employee];
+    } catch (parseError) {
+      context.errors.push(`JSON parsing failed: ${parseError instanceof Error ? parseError.message : UNKNOWN_ERROR_MESSAGE}`);
+    }
+  }
+
+  private processEmployeeData(
+    context: { recoveredData: Employee[] | null; recordsProcessed: number; recordsRecovered: number; warnings: string[] },
+    options: DataRecoveryOptions
+  ): ValidationResult | undefined {
+    if (!context.recoveredData || !Array.isArray(context.recoveredData)) {
+      return undefined;
+    }
+
+    context.recordsProcessed = context.recoveredData.length;
+    
+    // Apply data cleaning and normalization
+    const cleanedData = this.dataCleaningUtils.cleanAndNormalizeData(
+      context.recoveredData as Array<Record<string, unknown> | Employee>,
+      options
+    );
+    
+    // Validate performance data integrity
+    const performanceIntegrityResult = this.integrityValidator.validatePerformanceDataIntegrity(cleanedData);
+    
+    if (!performanceIntegrityResult.isValid && options.autoFix) {
+      const fixedData = this.autoFixStrategy.applyAutoFixes(cleanedData, performanceIntegrityResult);
+      context.recoveredData = fixedData.data;
+      context.recordsRecovered += fixedData.recordsFixed;
+      context.warnings.push(`Auto-fixed ${fixedData.recordsFixed} data issues`);
+    }
+
+    return undefined; // Return actual validation result when available
+  }
+
+  private createSuccessResult(
+    context: { errors: string[]; warnings: string[]; recoveredData: Employee[] | null; recordsProcessed: number; recordsRecovered: number },
+    integrityResult: DataIntegrityResult,
+    validationResult: ValidationResult | undefined,
+    timestamp: string,
+    dataQualityScore: number
+  ): DatabaseOperationResult {
+    const operationName = 'parsePerformanceDataWithIntegrity';
+    
+    return {
+      success: context.errors.length === 0,
+      data: context.recoveredData ?? undefined,
+      integrityResult,
+      validationResult,
+      errors: context.errors,
+      warnings: context.warnings,
+      recoveryOptions: integrityResult.recoveryOptions,
+      metadata: {
+        operation: operationName,
+        timestamp,
+        recordsProcessed: context.recordsProcessed,
+        recordsRecovered: context.recordsRecovered,
+        dataQualityScore
+      }
+    };
+  }
+
+  private createErrorResult(
+    context: { errors: string[]; warnings: string[]; recordsProcessed: number; recordsRecovered: number },
+    timestamp: string,
+    error: unknown
+  ): DatabaseOperationResult {
+    const operationName = 'parsePerformanceDataWithIntegrity';
+    context.errors.push(`Unexpected error during data processing: ${error instanceof Error ? error.message : UNKNOWN_ERROR_MESSAGE}`);
+    
+    return {
+      success: false,
+      errors: context.errors,
+      warnings: context.warnings,
+      recoveryOptions: [],
+      metadata: {
+        operation: operationName,
+        timestamp,
+        recordsProcessed: context.recordsProcessed,
+        recordsRecovered: context.recordsRecovered,
+        dataQualityScore: 0
+      }
+    };
   }
 
   /**
@@ -156,7 +244,7 @@ export class EnhancedDatabaseService {
     const errors: string[] = [];
     const warnings: string[] = [];
     let processedData = employees;
-    let recordsProcessed = employees.length;
+    const recordsProcessed = employees.length;
     let recordsRecovered = 0;
 
     try {
@@ -165,7 +253,7 @@ export class EnhancedDatabaseService {
       
       if (!integrityResult.isValid) {
         if (options.autoFix) {
-          const fixResult = this.applyAutoFixes(employees, integrityResult);
+          const fixResult = this.autoFixStrategy.applyAutoFixes(employees, integrityResult);
           processedData = fixResult.data;
           recordsRecovered = fixResult.recordsFixed;
           warnings.push(`Auto-fixed ${recordsRecovered} data integrity issues`);
@@ -176,7 +264,7 @@ export class EnhancedDatabaseService {
 
       // Apply additional data cleaning
       if (options.useDefaultValues) {
-        const cleanResult = this.applyDefaultValues(processedData);
+        const cleanResult = this.defaultValuesStrategy.applyDefaultValues(processedData);
         processedData = cleanResult.data;
         if (cleanResult.recordsModified > 0) {
           warnings.push(`Applied default values to ${cleanResult.recordsModified} records`);
@@ -184,7 +272,7 @@ export class EnhancedDatabaseService {
       }
 
       // Calculate data quality score
-      const dataQualityScore = this.calculateDataQualityScore(integrityResult);
+      const dataQualityScore = this.dataQualityCalculator.calculateDataQualityScore(integrityResult);
 
       return {
         success: errors.length === 0,
@@ -203,7 +291,7 @@ export class EnhancedDatabaseService {
       };
 
     } catch (error) {
-      errors.push(`Error during data retrieval: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      errors.push(`Error during data retrieval: ${error instanceof Error ? error.message : UNKNOWN_ERROR_MESSAGE}`);
       
       return {
         success: false,
@@ -222,361 +310,42 @@ export class EnhancedDatabaseService {
     }
   }
 
-  /**
-   * Attempt to recover corrupted JSON data
-   */
-  private attemptDataRecovery(
-    rawData: string,
-    integrityResult: DataIntegrityResult,
-    options: DataRecoveryOptions
-  ): { success: boolean; data?: any; recordsRecovered: number; error?: string } {
-    let attempts = 0;
-    let recoveredData: any = null;
-    let recordsRecovered = 0;
+  // Data recovery methods have been moved to DataRecoveryCoordinator
 
-    while (attempts < options.maxRecoveryAttempts) {
-      attempts++;
-      
-      try {
-        // Attempt 1: Fix common JSON syntax issues
-        if (attempts === 1) {
-          const fixedJson = this.fixCommonJsonIssues(rawData);
-          recoveredData = JSON.parse(fixedJson);
-          recordsRecovered = Array.isArray(recoveredData) ? recoveredData.length : 1;
-          return { success: true, data: recoveredData, recordsRecovered };
-        }
-        
-        // Attempt 2: Extract partial data
-        if (attempts === 2) {
-          const partialData = this.extractPartialJsonData(rawData);
-          if (partialData && partialData.length > 0) {
-            recordsRecovered = partialData.length;
-            return { success: true, data: partialData, recordsRecovered };
-          }
-        }
-        
-        // Attempt 3: Use fallback parsing
-        if (attempts === 3) {
-          const fallbackData = this.fallbackJsonParsing(rawData);
-          if (fallbackData) {
-            recordsRecovered = Array.isArray(fallbackData) ? fallbackData.length : 1;
-            return { success: true, data: fallbackData, recordsRecovered };
-          }
-        }
-        
-      } catch (error) {
-        // Continue to next attempt
-        continue;
-      }
-    }
+  // JSON fixing methods have been moved to JsonSyntaxFixStrategy
 
-    return { 
-      success: false, 
-      recordsRecovered: 0, 
-      error: `Failed to recover data after ${attempts} attempts` 
-    };
-  }
+  // Partial data extraction methods have been moved to PartialDataExtractionStrategy
 
-  /**
-   * Fix common JSON syntax issues
-   */
-  private fixCommonJsonIssues(jsonString: string): string {
-    let fixed = jsonString;
-    
-    // Remove trailing commas
-    fixed = fixed.replace(/,\s*([}\]])/g, '$1');
-    
-    // Fix unquoted keys
-    fixed = fixed.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
-    
-    // Fix single quotes to double quotes
-    fixed = fixed.replace(/'/g, '"');
-    
-    // Remove comments
-    fixed = fixed.replace(/\/\*[\s\S]*?\*\//g, '');
-    fixed = fixed.replace(/\/\/.*$/gm, '');
-    
-    // Fix missing quotes around string values
-    fixed = fixed.replace(/:\s*([a-zA-Z][a-zA-Z0-9\s]*[a-zA-Z0-9])\s*([,}])/g, ': "$1"$2');
-    
-    return fixed;
-  }
+  // Fallback parsing methods have been moved to FallbackParsingStrategy
 
-  /**
-   * Extract partial data from corrupted JSON
-   */
-  private extractPartialJsonData(jsonString: string): any[] {
-    const results: any[] = [];
-    
-    // Try to extract individual JSON objects
-    const objectMatches = jsonString.match(/\{[^{}]*\}/g);
-    if (objectMatches) {
-      objectMatches.forEach(match => {
-        try {
-          const obj = JSON.parse(match);
-          results.push(obj);
-        } catch {
-          // Skip invalid objects
-        }
-      });
-    }
-    
-    return results;
-  }
+  // Data cleaning and normalization methods have been moved to DataCleaningUtils
 
-  /**
-   * Fallback JSON parsing using regex extraction
-   */
-  private fallbackJsonParsing(jsonString: string): any[] {
-    const results: any[] = [];
-    
-    // Extract employee-like data using regex patterns
-    const namePattern = /"name"\s*:\s*"([^"]+)"/g;
-    const scorePattern = /"score"\s*:\s*(\d+(?:\.\d+)?)/g;
-    
-    let nameMatch;
-    const names: string[] = [];
-    while ((nameMatch = namePattern.exec(jsonString)) !== null) {
-      names.push(nameMatch[1]);
-    }
-    
-    let scoreMatch;
-    const scores: number[] = [];
-    while ((scoreMatch = scorePattern.exec(jsonString)) !== null) {
-      scores.push(parseFloat(scoreMatch[1]));
-    }
-    
-    // Create basic employee objects
-    names.forEach((name, index) => {
-      results.push({
-        name,
-        performance: scores[index] ? [{ name: 'recovered_score', score: scores[index] }] : []
-      });
-    });
-    
-    return results;
-  }
+  // String cleaning methods have been moved to DataCleaningUtils
 
-  /**
-   * Clean and normalize data
-   */
-  private cleanAndNormalizeData(data: any[], options: DataRecoveryOptions): Employee[] {
-    return data.map(item => {
-      // Ensure required fields exist
-      const employee: Employee = {
-        id: item.id || 0,
-        name: this.cleanString(item.name) || 'Unknown Employee',
-        nip: this.cleanString(item.nip) || '',
-        gol: this.cleanString(item.gol) || '',
-        pangkat: this.cleanString(item.pangkat) || '',
-        position: this.cleanString(item.position) || '',
-        sub_position: this.cleanString(item.sub_position || item.subPosition) || '',
-        organizational_level: this.cleanString(item.organizational_level || item.organizationalLevel) || 'Staff/Other',
-        performance: this.cleanPerformanceData(item.performance) || []
-      };
-      
-      return employee;
-    }).filter(emp => emp.name !== 'Unknown Employee' || options.useDefaultValues);
-  }
+  // Performance data cleaning methods have been moved to DataCleaningUtils
 
-  /**
-   * Clean string data
-   */
-  private cleanString(value: any): string {
-    if (typeof value !== 'string') {
-      return String(value || '');
-    }
-    
-    return value
-      .trim()
-      .replace(/\s+/g, ' ') // Normalize whitespace
-      .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
-      .replace(/\uFFFD/g, ''); // Remove replacement characters
-  }
+  // Score normalization methods have been moved to DataCleaningUtils
 
-  /**
-   * Clean performance data
-   */
-  private cleanPerformanceData(performance: any): any[] {
-    if (!Array.isArray(performance)) {
-      return [];
-    }
-    
-    return performance
-      .filter(perf => perf && typeof perf === 'object')
-      .map(perf => ({
-        name: this.cleanString(perf.name) || 'Unknown Competency',
-        score: this.normalizeScore(perf.score)
-      }))
-      .filter(perf => perf.name !== 'Unknown Competency' && !isNaN(perf.score));
-  }
+  // Auto-fix methods have been moved to AutoFixStrategy
 
-  /**
-   * Normalize score values
-   */
-  private normalizeScore(score: any): number {
-    const numScore = parseFloat(score);
-    if (isNaN(numScore)) {
-      return 0;
-    }
-    
-    // Clamp score to valid range
-    return Math.max(0, Math.min(100, numScore));
-  }
+  // Default values methods have been moved to DefaultValuesStrategy
 
-  /**
-   * Apply automatic fixes to data issues
-   */
-  private applyAutoFixes(
-    employees: Employee[],
-    integrityResult: DataIntegrityResult
-  ): { data: Employee[]; recordsFixed: number } {
-    let recordsFixed = 0;
-    const fixedEmployees = employees.map(employee => {
-      let wasFixed = false;
-      const fixedEmployee = { ...employee };
-      
-      // Fix missing names
-      if (!fixedEmployee.name || fixedEmployee.name.trim() === '') {
-        fixedEmployee.name = `Employee_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        wasFixed = true;
-      }
-      
-      // Fix missing performance data
-      if (!fixedEmployee.performance || !Array.isArray(fixedEmployee.performance)) {
-        fixedEmployee.performance = [];
-        wasFixed = true;
-      }
-      
-      // Fix invalid scores
-      fixedEmployee.performance = fixedEmployee.performance.map(perf => {
-        if (typeof perf.score !== 'number' || isNaN(perf.score)) {
-          wasFixed = true;
-          return { ...perf, score: 0 };
-        }
-        if (perf.score < 0 || perf.score > 100) {
-          wasFixed = true;
-          return { ...perf, score: Math.max(0, Math.min(100, perf.score)) };
-        }
-        return perf;
-      });
-      
-      // Fix missing organizational level
-      if (!fixedEmployee.organizational_level || fixedEmployee.organizational_level.trim() === '') {
-        fixedEmployee.organizational_level = 'Staff/Other';
-        wasFixed = true;
-      }
-      
-      if (wasFixed) {
-        recordsFixed++;
-      }
-      
-      return fixedEmployee;
-    });
-    
-    return { data: fixedEmployees, recordsFixed };
-  }
-
-  /**
-   * Apply default values to missing fields
-   */
-  private applyDefaultValues(employees: Employee[]): { data: Employee[]; recordsModified: number } {
-    let recordsModified = 0;
-    
-    const processedEmployees = employees.map(employee => {
-      let wasModified = false;
-      const processed = { ...employee };
-      
-      // Apply defaults for empty fields
-      const defaults = {
-        nip: 'N/A',
-        gol: 'N/A',
-        pangkat: 'N/A',
-        position: 'Staff',
-        sub_position: 'General',
-        organizational_level: 'Staff/Other'
-      };
-      
-      Object.entries(defaults).forEach(([field, defaultValue]) => {
-        if (!processed[field as keyof Employee] || 
-            (typeof processed[field as keyof Employee] === 'string' && 
-             (processed[field as keyof Employee] as string).trim() === '')) {
-          (processed as any)[field] = defaultValue;
-          wasModified = true;
-        }
-      });
-      
-      if (wasModified) {
-        recordsModified++;
-      }
-      
-      return processed;
-    });
-    
-    return { data: processedEmployees, recordsModified };
-  }
-
-  /**
-   * Calculate overall data quality score
-   */
-  private calculateDataQualityScore(
-    integrityResult: DataIntegrityResult,
-    validationResult?: ValidationResult
-  ): number {
-    let score = integrityResult.summary.integrityScore;
-    
-    // Adjust score based on validation results
-    if (validationResult) {
-      const errorPenalty = validationResult.errors.length * 5;
-      const warningPenalty = validationResult.warnings.length * 2;
-      score = Math.max(0, score - errorPenalty - warningPenalty);
-    }
-    
-    return Math.round(score);
-  }
+  // Data quality calculation methods have been moved to DataQualityCalculator
 
   /**
    * Generate detailed error report
    */
   generateErrorReport(result: DatabaseOperationResult): string {
-    const report: string[] = [];
-    
-    report.push('=== Data Integrity Report ===');
-    report.push(`Operation: ${result.metadata.operation}`);
-    report.push(`Timestamp: ${result.metadata.timestamp}`);
-    report.push(`Records Processed: ${result.metadata.recordsProcessed}`);
-    report.push(`Records Recovered: ${result.metadata.recordsRecovered}`);
-    report.push(`Data Quality Score: ${result.metadata.dataQualityScore}/100`);
-    report.push('');
-    
-    if (result.errors.length > 0) {
-      report.push('ERRORS:');
-      result.errors.forEach((error, index) => {
-        report.push(`${index + 1}. ${error}`);
-      });
-      report.push('');
-    }
-    
-    if (result.warnings.length > 0) {
-      report.push('WARNINGS:');
-      result.warnings.forEach((warning, index) => {
-        report.push(`${index + 1}. ${warning}`);
-      });
-      report.push('');
-    }
-    
-    if (result.recoveryOptions.length > 0) {
-      report.push('RECOVERY OPTIONS:');
-      result.recoveryOptions.forEach((option, index) => {
-        report.push(`${index + 1}. ${option.description}`);
-        report.push(`   Action: ${option.action}`);
-        report.push(`   Confidence: ${option.confidence}`);
-        report.push(`   Risk Level: ${option.riskLevel}`);
-        report.push('');
-      });
-    }
-    
-    return report.join('\n');
+    return this.errorReportGenerator.generateErrorReport(
+      result.metadata.operation,
+      result.metadata.timestamp,
+      result.metadata.recordsProcessed,
+      result.metadata.recordsRecovered,
+      result.metadata.dataQualityScore,
+      result.errors,
+      result.warnings,
+      result.recoveryOptions
+    );
   }
 
   /**
@@ -588,36 +357,11 @@ export class EnhancedDatabaseService {
     recommendations: string[];
     actions: { label: string; action: string; risk: string }[];
   } {
-    const canProceed = result.success || result.metadata.dataQualityScore >= 70;
-    const requiresUserAction = result.recoveryOptions.some(opt => opt.type === 'user_input_required' || opt.type === 'manual_review');
-    
-    const recommendations: string[] = [];
-    const actions: { label: string; action: string; risk: string }[] = [];
-    
-    if (result.metadata.dataQualityScore >= 90) {
-      recommendations.push('Data quality is excellent. Safe to proceed.');
-    } else if (result.metadata.dataQualityScore >= 70) {
-      recommendations.push('Data quality is acceptable with minor issues.');
-    } else if (result.metadata.dataQualityScore >= 40) {
-      recommendations.push('Data quality has significant issues. Review recommended.');
-    } else {
-      recommendations.push('Data quality is poor. Manual intervention required.');
-    }
-    
-    result.recoveryOptions.forEach(option => {
-      actions.push({
-        label: option.description,
-        action: option.action,
-        risk: option.riskLevel
-      });
-    });
-    
-    return {
-      canProceed,
-      requiresUserAction,
-      recommendations,
-      actions
-    };
+    return this.recoveryOptionsAnalyzer.getRecoveryOptionsForUser(
+      result.success,
+      result.metadata.dataQualityScore,
+      result.recoveryOptions
+    );
   }
 }
 
@@ -627,8 +371,5 @@ export function createEnhancedDatabaseService(): EnhancedDatabaseService {
 }
 
 export function getDataQualityLevel(score: number): 'excellent' | 'good' | 'fair' | 'poor' {
-  if (score >= 90) return 'excellent';
-  if (score >= 70) return 'good';
-  if (score >= 40) return 'fair';
-  return 'poor';
+  return new DataQualityCalculator().getDataQualityLevel(score);
 }

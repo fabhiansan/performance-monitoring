@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 /**
  * Hook to observe viewport dimensions
@@ -34,7 +34,7 @@ interface ResizeObserverEntry {
 interface UseResizeObserverResult {
   width: number;
   height: number;
-  ref: React.RefObject<HTMLDivElement>;
+  ref: React.RefObject<HTMLDivElement | null>;
   aspectRatio: number;
   isSmallScreen: boolean;
   isMediumScreen: boolean;
@@ -54,7 +54,7 @@ interface DynamicHeightOptions {
  * Returns the current width, height, and responsive breakpoint information
  */
 export const useResizeObserver = (): UseResizeObserverResult => {
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLDivElement | null>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
@@ -162,7 +162,7 @@ export const calculateYAxisWidth = (containerWidth: number): number => {
  * @param containerHeight - The height of the container
  * @returns Chart margins object
  */
-export const calculateChartMargins = (containerWidth: number, containerHeight: number = 0) => {
+export const calculateChartMargins = (containerWidth: number) => {
   const yAxisWidth = calculateYAxisWidth(containerWidth);
   
   // Dynamic margins based on container size
@@ -184,7 +184,7 @@ export const calculateChartMargins = (containerWidth: number, containerHeight: n
  * @param containerHeight - The height of the container
  * @returns Chart configuration object
  */
-export const getResponsiveChartConfig = (containerWidth: number, containerHeight: number = 0) => {
+export const getResponsiveChartConfig = (containerWidth: number) => {
   const isSmall = containerWidth < 640;
   const isMedium = containerWidth >= 640 && containerWidth < 1024;
   

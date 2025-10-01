@@ -1,0 +1,71 @@
+---
+alwaysApply: true
+---
+
+# Development Workflow and Commands
+
+## Package Manager
+- Use **pnpm** (version 10.15.1+) as the package manager
+- Run `pnpm install` to install dependencies
+- Native modules are automatically rebuilt on install via postinstall script
+
+## Development Setup
+- Run `pnpm install` to install dependencies
+- Run `pnpm run check:native` if native modules change
+- Use `pnpm run dev` for frontend + Electron development
+- Use `pnpm run dev:full` for full stack development (includes API server)
+
+## Build Commands
+- `pnpm run build` - Build web bundle with Vite
+- `pnpm run build:complete` - Full production build with Electron packaging
+- `pnpm run dist:win|mac|linux` - Platform-specific builds
+- `pnpm run build:clean` - Clean build artifacts
+- `pnpm run build:node` - Build Node.js server code
+- `pnpm run build:production` - Production build with environment variables
+
+## Testing Commands
+- `pnpm test` - Run all tests with Vitest
+- `pnpm run test:watch` - Run tests in watch mode
+- `pnpm run test:ui` - Open Vitest UI
+- `pnpm run test:run` - Run tests once and exit
+- `pnpm run test:server` - Test server startup
+
+## Code Quality
+- `pnpm run lint:check` - Check for linting errors
+- `pnpm run lint:fix` - Auto-fix linting issues
+- `pnpm run lint:check:quiet` - Check linting errors (quiet mode)
+- `pnpm run check-types` - TypeScript type checking (both frontend and backend)
+- `pnpm run check-types:frontend` - Frontend type checking only
+- `pnpm run check-types:backend` - Backend type checking only
+
+## Server Management
+- `pnpm run server:start` - Start API server in watch mode with tsx
+- `pnpm run dev:server` - Development server with hot reload
+- `pnpm run debug:server` - Debug server with verbose logging
+- `pnpm run server:node` - Run built Node.js server
+
+## Native Module Management
+- `pnpm run rebuild:native` - Rebuild native modules for Electron
+- `pnpm run rebuild:node` - Rebuild native modules for Node.js
+- `pnpm run rebuild:electron` - Rebuild native modules for Electron only
+- `pnpm run rebuild:clean` - Clean and rebuild native modules
+- `pnpm run check:native` - Check native module compatibility
+
+## Database Operations
+- Database file: [server/performance_analyzer.db](mdc:server/performance_analyzer.db)
+- Development database: [server/dev_performance_analyzer.db](mdc:server/dev_performance_analyzer.db)
+- Use [services/enhancedDatabaseService.ts](mdc:services/enhancedDatabaseService.ts) for operations
+- Sample data available in [docs/sample-data/](mdc:docs/sample-data/) directory
+
+## Electron Development
+- `pnpm run electron:dev` - Start Electron in development mode
+- `pnpm run electron` - Start Electron with built app
+- `pnpm run preelectron` - Pre-build steps before Electron
+- `pnpm run preelectron:dev` - Pre-build steps for development
+
+## Git Workflow
+- Follow conventional commit format: `feat:`, `fix:`, `refactor:`, etc.
+- Keep commits focused on single changes
+- Test changes before committing
+- Update documentation when adding features
+- Use pnpm for all package management operations

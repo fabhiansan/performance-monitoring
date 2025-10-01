@@ -157,8 +157,9 @@ export const generateEmployeeRecap = (
   penilaianPimpinan: number = 80
 ): RecapEmployee => {
   const positionType = getPositionType(employee);
-  const perilakuKinerja = calculatePerilakuKinerja(employee.performance);
-  const kualitasKerja = calculateKualitasKerja(employee.performance, positionType);
+  const performance = employee.performance ?? [];
+  const perilakuKinerja = calculatePerilakuKinerja(performance);
+  const kualitasKerja = calculateKualitasKerja(performance, positionType);
   
   // For staff positions, penilaianPimpinan is not used in calculation
   const effectivePenilaianPimpinan = positionType === 'staff' ? 0 : penilaianPimpinan;

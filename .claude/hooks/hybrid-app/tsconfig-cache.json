@@ -1,0 +1,148 @@
+{
+  "hashes": {
+    "tsconfig.node.json": "1fb1da40baec72270f1ce8c2af6030c8aa2813b05ff8e5348ad49ccc10c08e41",
+    "tsconfig.json": "992041587ef7b627a02c2b29523706783631cbb3ccbc796cae3f87e48287dfbb",
+    "tsconfig.playwright.json": "0f325272f08311ae29315ecf2259de4724e71c4807f358edff839d72cb656ed0"
+  },
+  "mappings": {
+    "server/**/*": {
+      "configPath": "tsconfig.node.json",
+      "excludes": [
+        "node_modules",
+        "test"
+      ]
+    },
+    "services/**/*": {
+      "configPath": "tsconfig.node.json",
+      "excludes": [
+        "node_modules",
+        "test"
+      ]
+    },
+    "scripts/**/*": {
+      "configPath": "tsconfig.node.json",
+      "excludes": [
+        "node_modules",
+        "test"
+      ]
+    },
+    "middleware/**/*": {
+      "configPath": "tsconfig.node.json",
+      "excludes": [
+        "node_modules",
+        "test"
+      ]
+    },
+    "main.ts": {
+      "configPath": "tsconfig.node.json",
+      "excludes": [
+        "node_modules",
+        "test"
+      ]
+    },
+    "electron-config.ts": {
+      "configPath": "tsconfig.node.json",
+      "excludes": [
+        "node_modules",
+        "test"
+      ]
+    },
+    "start-server.ts": {
+      "configPath": "tsconfig.node.json",
+      "excludes": [
+        "node_modules",
+        "test"
+      ]
+    },
+    "components/**/*": {
+      "configPath": "tsconfig.json",
+      "excludes": [
+        "node_modules",
+        "test"
+      ]
+    },
+    "contexts/**/*": {
+      "configPath": "tsconfig.json",
+      "excludes": [
+        "node_modules",
+        "test"
+      ]
+    },
+    "hooks/**/*": {
+      "configPath": "tsconfig.json",
+      "excludes": [
+        "node_modules",
+        "test"
+      ]
+    },
+    "design-system/**/*": {
+      "configPath": "tsconfig.json",
+      "excludes": [
+        "node_modules",
+        "test"
+      ]
+    },
+    "utils/**/*": {
+      "configPath": "tsconfig.json",
+      "excludes": [
+        "node_modules",
+        "test"
+      ]
+    },
+    "constants/**/*": {
+      "configPath": "tsconfig.json",
+      "excludes": [
+        "node_modules",
+        "test"
+      ]
+    },
+    "App.tsx": {
+      "configPath": "tsconfig.json",
+      "excludes": [
+        "node_modules",
+        "test"
+      ]
+    },
+    "index.tsx": {
+      "configPath": "tsconfig.json",
+      "excludes": [
+        "node_modules",
+        "test"
+      ]
+    },
+    "types.ts": {
+      "configPath": "tsconfig.json",
+      "excludes": [
+        "node_modules",
+        "test"
+      ]
+    },
+    "vite.config.ts": {
+      "configPath": "tsconfig.json",
+      "excludes": [
+        "node_modules",
+        "test"
+      ]
+    },
+    "vitest.config.ts": {
+      "configPath": "tsconfig.json",
+      "excludes": [
+        "node_modules",
+        "test"
+      ]
+    },
+    "tailwind.config.ts": {
+      "configPath": "tsconfig.json",
+      "excludes": [
+        "node_modules",
+        "test"
+      ]
+    },
+    "test/**/*": {
+      "configPath": "tsconfig.playwright.json",
+      "excludes": [
+        "node_modules"
+      ]
+    }
+  }
+}

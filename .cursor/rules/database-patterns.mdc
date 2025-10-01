@@ -1,0 +1,72 @@
+---
+globs: server/*.ts,services/*Database*.ts,services/*database*.ts
+---
+
+# Database Patterns and Best Practices
+
+## Database Architecture
+- Use SQLite with better-sqlite3 for local database
+- Main database: [server/performance_analyzer.db](mdc:server/performance_analyzer.db)
+- Development database: [server/dev_performance_analyzer.db](mdc:server/dev_performance_analyzer.db)
+- Use Kysely for type-safe database queries
+- Database schema: [server/database.schema.ts](mdc:server/database.schema.ts)
+
+## Database Service Layer
+- Use [services/enhancedDatabaseService.ts](mdc:services/enhancedDatabaseService.ts) for database operations
+- Use [server/kyselyDatabase.ts](mdc:server/kyselyDatabase.ts) for Kysely client
+- Implement proper connection management
+- Use prepared statements for performance
+
+## Query Patterns
+- Use Kysely query builder for type-safe queries
+- Implement proper error handling for database operations
+- Use transactions for multi-step operations
+- Handle database locks and concurrency properly
+
+## Data Validation
+- Validate data before database operations
+- Use Zod schemas for runtime validation
+- Implement proper data sanitization
+- Handle nullable fields appropriately
+
+## Migration Management
+- Use database migrations for schema changes
+- Version control database schema changes
+- Handle migration rollbacks properly
+- Test migrations with sample data
+
+## Performance Optimization
+- Use proper indexing for frequently queried columns
+- Implement query optimization
+- Use connection pooling for concurrent operations
+- Monitor database performance
+
+## Data Integrity
+- Use foreign key constraints where appropriate
+- Implement proper data validation rules
+- Handle data consistency across operations
+- Use transactions for atomic operations
+
+## Backup and Recovery
+- Implement regular database backups
+- Handle database corruption scenarios
+- Provide data export/import functionality
+- Test recovery procedures
+
+## Security Considerations
+- Sanitize all user inputs
+- Use parameterized queries to prevent SQL injection
+- Implement proper access controls
+- Encrypt sensitive data if needed
+
+## Error Handling
+- Handle database connection errors gracefully
+- Implement proper retry mechanisms
+- Log database errors appropriately
+- Provide meaningful error messages to users
+
+## Testing Database Operations
+- Use test database for unit tests
+- Mock database operations when appropriate
+- Test database migrations
+- Test data integrity constraints

@@ -1,4 +1,5 @@
-import { determineOrganizationalLevelFromPosition, categorizeOrganizationalLevel } from '../utils/organizationalLevels';
+import { determineOrganizationalLevelFromPosition, categorizeOrganizationalLevel, matchOrganizationalLevelFromSubPosition } from '../utils/organizationalLevels.js';
+import { logger } from './logger.js';
 
 export interface EmployeeData {
   name: string;
@@ -7,7 +8,7 @@ export interface EmployeeData {
   pangkat: string;
   position: string;
   subPosition: string;
-  organizational_level: string;
+  organizationalLevel: string;
 }
 
 /**
@@ -67,6 +68,58 @@ const parseCsvLine = (line: string): string[] => {
   return fields.filter(field => field.length > 0);
 };
 
+// Helper function to create employee object from columns
+function createEmployeeFromColumns(columns: string[], nameIndex: number, nipIndex: number, golIndex: number, positionIndex: number, subPositionIndex: number): EmployeeData | null {
+  const position = columns[positionIndex]?.trim() || '-';
+  const subPosition = columns[subPositionIndex]?.trim() || '-';
+  
+  // First try to match organizational level directly from sub-position
+  const directMatch = matchOrganizationalLevelFromSubPosition(subPosition);
+  
+  let organizationalLevel: string;
+  if (directMatch) {
+    // Use the direct match from sub-position
+    organizationalLevel = directMatch;
+  } else {
+    // Fall back to position-based determination
+    const positionBasedLevel = determineOrganizationalLevelFromPosition(position, subPosition);
+    organizationalLevel = String(categorizeOrganizationalLevel(positionBasedLevel, columns[golIndex]?.trim()));
+  }
+  
+  const employee = {
+    name: columns[nameIndex]?.trim() || '',
+    nip: columns[nipIndex]?.trim() || '-',
+    gol: columns[golIndex]?.trim() || '',
+    pangkat: columns[golIndex]?.trim() || '-',
+    position: position,
+    subPosition: subPosition,
+    organizationalLevel: organizationalLevel
+  };
+  
+  // Only return if name and gol are not empty (minimum required fields)
+  if (employee.name && employee.gol) {
+    return employee;
+  }
+  return null;
+}
+
+// Helper function to parse a single line and create employee
+function parseEmployeeLine(line: string): EmployeeData | null {
+  const columns = parseCsvLine(line).map(col => col.trim());
+  
+  // Handle format: No, Nama, NIP, Pangkat, Jabatan, Sub-Jabatan (6 columns)
+  if (columns.length >= 6 && columns[1].trim()) {
+    return createEmployeeFromColumns(columns, 1, 2, 3, 4, 5);
+  }
+  
+  // Fallback: if no number column, assume format: Nama, NIP, Pangkat, Jabatan, Sub-Jabatan
+  if (columns.length >= 5 && !columns[0].match(/^\d+$/) && columns[0].trim()) {
+    return createEmployeeFromColumns(columns, 0, 1, 2, 3, 4);
+  }
+  
+  return null;
+}
+
 export function parseEmployeeCSV(csvText: string): EmployeeData[] {
   try {
     const lines = csvText.trim().split('\n');
@@ -87,57 +140,18 @@ export function parseEmployeeCSV(csvText: string): EmployeeData[] {
       const line = dataLines[i].trim();
       if (!line) continue;
       
-      // Use the robust CSV parser to handle comma-separated values with quotes
-      const columns = parseCsvLine(line).map(col => col.trim());
-      
-      // Handle format: No, Nama, NIP, Pangkat, Jabatan, Sub-Jabatan (6 columns)
-      if (columns.length >= 6 && columns[1].trim()) { // Check that name is not empty
-        const position = columns[4]?.trim() || '-';      // Jabatan (index 4) - default to "-"
-        const subPosition = columns[5]?.trim() || '-';    // Sub-Jabatan (index 5) - default to "-"
-        const positionBasedLevel = determineOrganizationalLevelFromPosition(position, subPosition);
-        const organizationalLevel = categorizeOrganizationalLevel(positionBasedLevel, columns[3]?.trim());
-        
-        const employee = {
-          name: columns[1]?.trim() || '',           // Nama (index 1)
-          nip: columns[2]?.trim() || '-',           // NIP (index 2) - default to "-"
-          gol: columns[3]?.trim() || '',            // Pangkat as Gol (index 3)
-          pangkat: columns[3]?.trim() || '-',       // Pangkat (index 3) - same as gol
-          position: position,
-          subPosition: subPosition,
-          organizational_level: String(organizationalLevel)
-        };
-        
-        // Only add if name and gol are not empty (minimum required fields)
-        if (employee.name && employee.gol) {
-          employees.push(employee);
-        }
-      } else if (columns.length >= 5 && !columns[0].match(/^\d+$/) && columns[0].trim()) {
-        // Fallback: if no number column, assume format: Nama, NIP, Pangkat, Jabatan, Sub-Jabatan
-        const position = columns[3]?.trim() || '-';
-        const subPosition = columns[4]?.trim() || '-';
-        const positionBasedLevel = determineOrganizationalLevelFromPosition(position, subPosition);
-        const organizationalLevel = categorizeOrganizationalLevel(positionBasedLevel, columns[2]?.trim());
-        
-        const employee = {
-          name: columns[0]?.trim() || '',
-          nip: columns[1]?.trim() || '-',
-          gol: columns[2]?.trim() || '',            // Pangkat as Gol
-          pangkat: columns[2]?.trim() || '-',       // Pangkat (same as gol)
-          position: position,
-          subPosition: subPosition,
-          organizational_level: String(organizationalLevel)
-        };
-        
-        // Only add if name and gol are not empty (minimum required fields)
-        if (employee.name && employee.gol) {
-          employees.push(employee);
-        }
+      const employee = parseEmployeeLine(line);
+      if (employee) {
+        employees.push(employee);
       }
     }
     
     return employees;
   } catch (error) {
-    console.error('Error parsing CSV:', error);
+    logger.error('Error parsing CSV data', { 
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined 
+    });
     throw new Error('Failed to parse CSV data');
   }
 }
@@ -181,9 +195,9 @@ export function validateEmployeeData(employees: EmployeeData[]): { valid: boolea
     }
   });
   
-  // Log warnings to console but don't include them in errors
+  // Log warnings but don't include them in errors
   if (warnings.length > 0) {
-    console.warn('Data warnings:', warnings);
+    logger.warn('Employee data validation warnings', { warnings });
   }
   
   return { valid: errors.length === 0, errors };

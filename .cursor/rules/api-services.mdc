@@ -1,0 +1,75 @@
+---
+globs: services/*.ts,server/*.ts
+---
+
+# API and Services Patterns
+
+## Service Layer Architecture
+- All API calls go through [services/api.ts](mdc:services/api.ts)
+- Business logic in dedicated service files (e.g., [services/scoringService.ts](mdc:services/scoringService.ts))
+- Database operations in [services/enhancedDatabaseService.ts](mdc:services/enhancedDatabaseService.ts)
+- Server implementation using Fastify in [server/](mdc:server/) directory
+
+## Fastify Server Architecture
+- Main server file: [server/server.ts](mdc:server/server.ts)
+- Fastify server implementation: [server/fastifyServer.ts](mdc:server/fastifyServer.ts)
+- Database schema: [server/database.schema.ts](mdc:server/database.schema.ts)
+- Kysely database client: [server/kyselyDatabase.ts](mdc:server/kyselyDatabase.ts)
+
+## API Response Format
+- Use consistent `ApiResponse<T>` interface from [services/api.ts](mdc:services/api.ts)
+- Include success boolean, data, message, and metadata
+- Handle errors with proper error types from [services/errorHandler.ts](mdc:services/errorHandler.ts)
+- Use response formatter from [server/responseFormatter.ts](mdc:server/responseFormatter.ts)
+
+## Error Handling
+- Use custom error classes: `AppError`, `NetworkError`, `ServerError`, `ValidationError`
+- Include context information in error objects
+- Provide retry mechanisms for network errors
+- Log errors with appropriate detail level using Pino logger
+- Use error utilities from [contexts/errorUtils.ts](mdc:contexts/errorUtils.ts)
+
+## Data Validation
+- Use [services/validationService.ts](mdc:services/validationService.ts) for data validation
+- Validate employee data structure against [types.ts](mdc:types.ts) interfaces
+- Use Zod schemas in [schemas/](mdc:schemas/) directory for runtime validation
+- Use [middleware/dataValidationMiddleware.ts](mdc:middleware/dataValidationMiddleware.ts) for server-side validation
+
+## Database Operations
+- Use better-sqlite3 with prepared statements
+- Use Kysely for type-safe database queries
+- Implement proper transaction handling
+- Use connection pooling for concurrent operations
+- Handle database migrations properly
+- Database files: [server/performance_analyzer.db](mdc:server/performance_analyzer.db) and [server/dev_performance_analyzer.db](mdc:server/dev_performance_analyzer.db)
+
+## Refresh System
+- Use [services/refreshService.ts](mdc:services/refreshService.ts) for granular data refreshing
+- Implement debouncing for frequent refresh operations
+- Use refresh keys to track data staleness
+- Cancel pending refresh operations on component unmount
+
+## File Operations
+- CSV parsing in [services/csvParser.ts](mdc:services/csvParser.ts)
+- Handle large files with streaming when possible
+- Validate file formats before processing
+- Provide progress feedback for long operations
+- Use multipart handling with Fastify
+
+## Authentication & Security
+- Use [middleware/authMiddleware.ts](mdc:middleware/authMiddleware.ts) for authentication
+- Implement proper session management
+- Use secure headers and CORS configuration
+- Validate all input data
+
+## Health Checks
+- Implement server health checks in [server/server-health-check.ts](mdc:server/server-health-check.ts)
+- Monitor database connectivity
+- Provide system status information
+- Use proper logging for monitoring
+
+## API Documentation
+- Use Fastify Swagger for API documentation
+- Document all endpoints with proper schemas
+- Include request/response examples
+- Use OpenAPI 3.0 specification

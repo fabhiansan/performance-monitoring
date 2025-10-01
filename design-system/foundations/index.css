@@ -1,0 +1,209 @@
+/**
+ * Design System Foundations
+ * 
+ * Import all foundation styles in the correct order.
+ * This file should be imported once at the root of your application.
+ */
+
+/* Reset and Base Styles */
+@import './reset.css';
+
+/* Foundation Styles */
+@import './typography.css';
+@import './layout.css';
+@import './animations.css';
+
+/* CSS Custom Properties for Theme Support */
+:root {
+  /* Light Theme Colors */
+  --ds-color-bg-primary: #ffffff;
+  --ds-color-bg-secondary: #f7f7f8;
+  --ds-color-bg-tertiary: #ececf1;
+  --ds-color-bg-inverse: #2e2e4e;
+  --ds-color-bg-brand: #3b82f6;
+  --ds-color-bg-overlay: rgba(0, 0, 0, 0.5);
+
+  --ds-color-text-primary: #2e2e4e;
+  --ds-color-text-secondary: #60607b;
+  --ds-color-text-tertiary: #9292a8;
+  --ds-color-text-inverse: #ffffff;
+  --ds-color-text-brand: #2563eb;
+  --ds-color-text-link: #2563eb;
+  --ds-color-text-link-hover: #1d4ed8;
+
+  --ds-color-border-primary: #d9d9e3;
+  --ds-color-border-secondary: #c5c5d5;
+  --ds-color-border-tertiary: #acacbe;
+  --ds-color-border-focus: #3b82f6;
+  --ds-color-border-brand: #3b82f6;
+
+  --ds-color-interactive-primary: #2563eb;
+  --ds-color-interactive-primary-hover: #1d4ed8;
+  --ds-color-interactive-primary-active: #1e40af;
+  --ds-color-interactive-primary-disabled: #c5c5d5;
+
+  --ds-color-interactive-secondary: #ececf1;
+  --ds-color-interactive-secondary-hover: #d9d9e3;
+  --ds-color-interactive-secondary-active: #c5c5d5;
+  --ds-color-interactive-secondary-disabled: #ececf1;
+
+  --ds-color-interactive-tertiary: transparent;
+  --ds-color-interactive-tertiary-hover: #ececf1;
+  --ds-color-interactive-tertiary-active: #d9d9e3;
+  --ds-color-interactive-tertiary-disabled: transparent;
+
+  --ds-color-status-success: #16a34a;
+  --ds-color-status-success-bg: #f0fdf4;
+  --ds-color-status-success-border: #bbf7d0;
+
+  --ds-color-status-warning: #ca8a04;
+  --ds-color-status-warning-bg: #fefce8;
+  --ds-color-status-warning-border: #fef08a;
+
+  --ds-color-status-error: #dc2626;
+  --ds-color-status-error-bg: #fef2f2;
+  --ds-color-status-error-border: #fecaca;
+
+  --ds-color-status-info: #2563eb;
+  --ds-color-status-info-bg: #eff6ff;
+  --ds-color-status-info-border: #bfdbfe;
+
+  --ds-color-form-bg: #ffffff;
+  --ds-color-form-border: #c5c5d5;
+  --ds-color-form-border-hover: #acacbe;
+  --ds-color-form-border-focus: #3b82f6;
+  --ds-color-form-border-error: #dc2626;
+  --ds-color-form-placeholder: #acacbe;
+  --ds-color-form-label: #60607b;
+  --ds-color-form-help: #797992;
+}
+
+/* Dark Theme Colors */
+.dark {
+  --ds-color-bg-primary: #2e2e4e;
+  --ds-color-bg-secondary: #474765;
+  --ds-color-bg-tertiary: #60607b;
+  --ds-color-bg-inverse: #ffffff;
+  --ds-color-bg-brand: #2563eb;
+  --ds-color-bg-overlay: rgba(0, 0, 0, 0.7);
+
+  --ds-color-text-primary: #ececf1;
+  --ds-color-text-secondary: #c5c5d5;
+  --ds-color-text-tertiary: #acacbe;
+  --ds-color-text-inverse: #2e2e4e;
+  --ds-color-text-brand: #60a5fa;
+  --ds-color-text-link: #60a5fa;
+  --ds-color-text-link-hover: #93c5fd;
+
+  --ds-color-border-primary: #60607b;
+  --ds-color-border-secondary: #797992;
+  --ds-color-border-tertiary: #9292a8;
+  --ds-color-border-focus: #60a5fa;
+  --ds-color-border-brand: #3b82f6;
+
+  --ds-color-interactive-primary: #3b82f6;
+  --ds-color-interactive-primary-hover: #60a5fa;
+  --ds-color-interactive-primary-active: #2563eb;
+  --ds-color-interactive-primary-disabled: #60607b;
+
+  --ds-color-interactive-secondary: #474765;
+  --ds-color-interactive-secondary-hover: #60607b;
+  --ds-color-interactive-secondary-active: #797992;
+  --ds-color-interactive-secondary-disabled: #474765;
+
+  --ds-color-interactive-tertiary: transparent;
+  --ds-color-interactive-tertiary-hover: #474765;
+  --ds-color-interactive-tertiary-active: #60607b;
+  --ds-color-interactive-tertiary-disabled: transparent;
+
+  --ds-color-status-success: #4ade80;
+  --ds-color-status-success-bg: #052e16;
+  --ds-color-status-success-border: #166534;
+
+  --ds-color-status-warning: #fde047;
+  --ds-color-status-warning-bg: #422006;
+  --ds-color-status-warning-border: #a16207;
+
+  --ds-color-status-error: #f87171;
+  --ds-color-status-error-bg: #450a0a;
+  --ds-color-status-error-border: #991b1b;
+
+  --ds-color-status-info: #60a5fa;
+  --ds-color-status-info-bg: #172554;
+  --ds-color-status-info-border: #1e40af;
+
+  --ds-color-form-bg: #2e2e4e;
+  --ds-color-form-border: #797992;
+  --ds-color-form-border-hover: #9292a8;
+  --ds-color-form-border-focus: #60a5fa;
+  --ds-color-form-border-error: #f87171;
+  --ds-color-form-placeholder: #9292a8;
+  --ds-color-form-label: #c5c5d5;
+  --ds-color-form-help: #acacbe;
+}
+
+/* System Theme Support */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --ds-color-bg-primary: #2e2e4e;
+    --ds-color-bg-secondary: #474765;
+    --ds-color-bg-tertiary: #60607b;
+    --ds-color-bg-inverse: #ffffff;
+    --ds-color-bg-brand: #2563eb;
+    --ds-color-bg-overlay: rgba(0, 0, 0, 0.7);
+
+    --ds-color-text-primary: #ececf1;
+    --ds-color-text-secondary: #c5c5d5;
+    --ds-color-text-tertiary: #acacbe;
+    --ds-color-text-inverse: #2e2e4e;
+    --ds-color-text-brand: #60a5fa;
+    --ds-color-text-link: #60a5fa;
+    --ds-color-text-link-hover: #93c5fd;
+
+    --ds-color-border-primary: #60607b;
+    --ds-color-border-secondary: #797992;
+    --ds-color-border-tertiary: #9292a8;
+    --ds-color-border-focus: #60a5fa;
+    --ds-color-border-brand: #3b82f6;
+
+    --ds-color-interactive-primary: #3b82f6;
+    --ds-color-interactive-primary-hover: #60a5fa;
+    --ds-color-interactive-primary-active: #2563eb;
+    --ds-color-interactive-primary-disabled: #60607b;
+
+    --ds-color-interactive-secondary: #474765;
+    --ds-color-interactive-secondary-hover: #60607b;
+    --ds-color-interactive-secondary-active: #797992;
+    --ds-color-interactive-secondary-disabled: #474765;
+
+    --ds-color-interactive-tertiary: transparent;
+    --ds-color-interactive-tertiary-hover: #474765;
+    --ds-color-interactive-tertiary-active: #60607b;
+    --ds-color-interactive-tertiary-disabled: transparent;
+
+    --ds-color-status-success: #4ade80;
+    --ds-color-status-success-bg: #052e16;
+    --ds-color-status-success-border: #166534;
+
+    --ds-color-status-warning: #fde047;
+    --ds-color-status-warning-bg: #422006;
+    --ds-color-status-warning-border: #a16207;
+
+    --ds-color-status-error: #f87171;
+    --ds-color-status-error-bg: #450a0a;
+    --ds-color-status-error-border: #991b1b;
+
+    --ds-color-status-info: #60a5fa;
+    --ds-color-status-info-bg: #172554;
+    --ds-color-status-info-border: #1e40af;
+
+    --ds-color-form-bg: #2e2e4e;
+    --ds-color-form-border: #797992;
+    --ds-color-form-border-hover: #9292a8;
+    --ds-color-form-border-focus: #60a5fa;
+    --ds-color-form-border-error: #f87171;
+    --ds-color-form-placeholder: #9292a8;
+    --ds-color-form-label: #c5c5d5;
+    --ds-color-form-help: #acacbe;
+  }
+}

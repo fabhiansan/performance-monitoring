@@ -1,5 +1,5 @@
 import { Employee, CompetencyScore } from '../types';
-import { REQUIRED_COMPETENCIES, validatePerformanceData } from './validationService';
+import { REQUIRED_COMPETENCIES, validatePerformanceData, ValidationWarning, CompetencyRequirement, ValidationResult } from './validationService';
 
 export interface DataQualityReport {
   overallQuality: 'excellent' | 'good' | 'fair' | 'poor';
@@ -80,12 +80,14 @@ function analyzeEmployeeQuality(employee: Employee): EmployeeQualityInfo {
     };
   }
   
+  const performance = employee.performance!;
+
   // Find which required competencies are present
   const foundCompetencies: string[] = [];
   const missingCompetencies: string[] = [];
   
   REQUIRED_COMPETENCIES.forEach(required => {
-    const hasCompetency = findMatchingCompetency(employee.performance, required);
+    const hasCompetency = findMatchingCompetency(performance, required);
     if (hasCompetency) {
       foundCompetencies.push(required.name);
     } else {
@@ -132,7 +134,7 @@ function analyzeEmployeeQuality(employee: Employee): EmployeeQualityInfo {
 /**
  * Find matching competency using fuzzy matching
  */
-function findMatchingCompetency(performance: CompetencyScore[], required: any): boolean {
+function findMatchingCompetency(performance: CompetencyScore[], required: CompetencyRequirement): boolean {
   const normalizeCompetencyName = (name: string): string => {
     return name
       .toLowerCase()
@@ -170,7 +172,7 @@ function findMatchingCompetency(performance: CompetencyScore[], required: any): 
 /**
  * Generate actionable recommendations based on data quality analysis
  */
-function generateRecommendations(validation: any, employeeQuality: EmployeeQualityInfo[]): string[] {
+function generateRecommendations(validation: ValidationResult, employeeQuality: EmployeeQualityInfo[]): string[] {
   const recommendations: string[] = [];
   
   // Critical errors recommendations
@@ -196,7 +198,7 @@ function generateRecommendations(validation: any, employeeQuality: EmployeeQuali
   }
   
   // Organizational level recommendations
-  const defaultOrgLevelCount = validation.warnings.filter(w => w.type === 'org_level_default').length;
+  const defaultOrgLevelCount = validation.warnings.filter((warning: ValidationWarning) => warning.type === 'org_level_default').length;
   if (defaultOrgLevelCount > 0) {
     recommendations.push('🏢 Import employee roster data to get accurate organizational levels for better scoring');
   }

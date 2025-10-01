@@ -1,0 +1,51 @@
+---
+alwaysApply: true
+---
+
+# Cursor Rules Overview
+
+This project uses comprehensive Cursor rules to maintain code quality, consistency, and best practices. Below is an overview of all available rules:
+
+## Always Applied Rules
+- **project-structure.mdc** - Project architecture and directory structure
+- **development-workflow.mdc** - Development commands and workflow
+- **README.mdc** - This overview file
+
+## File-Specific Rules
+- **typescript-conventions.mdc** - TypeScript patterns and conventions (*.ts, *.tsx)
+- **react-patterns.mdc** - React component patterns (*.tsx, *.jsx)
+- **api-services.mdc** - API and service layer patterns (services/*.ts, server/*.ts)
+- **electron-development.mdc** - Electron development patterns (main.ts, electron-config.ts)
+- **testing-standards.mdc** - Testing patterns and TDD (*.test.ts, *.test.tsx)
+- **database-patterns.mdc** - Database patterns and best practices (server/*.ts, services/*Database*.ts)
+- **state-management.mdc** - State management patterns (hooks/*.ts, contexts/*.tsx)
+- **security-patterns.mdc** - Security best practices (middleware/*.ts, server/*.ts)
+- **design-system-usage.mdc** - Design system usage patterns (design-system/**/*.ts, components/**/*.tsx)
+
+## Feature-Specific Rules
+- **error-handling.mdc** - Error handling patterns (*.ts, *.tsx, services/*.ts, contexts/*.tsx)
+- **performance-optimization.mdc** - Performance optimization guidelines (*.tsx, *.ts, services/*.ts)
+- **design-system.mdc** - Design system and styling patterns (*.tsx, *.css, constants/designTokens.ts)
+
+## Key Technologies
+- **Frontend**: React 19, TypeScript, Vite, Tailwind CSS
+- **Backend**: Fastify, better-sqlite3, Kysely
+- **Desktop**: Electron with native module support
+- **State Management**: Zustand, React Query
+- **Testing**: Vitest, React Testing Library, MSW
+- **Package Manager**: pnpm
+
+## Development Commands
+- `pnpm run dev` - Frontend + Electron development
+- `pnpm run dev:full` - Full stack development
+- `pnpm run build:complete` - Production build
+- `pnpm test` - Run tests
+- `pnpm run lint:check` - Check linting
+
+## Architecture Highlights
+- Type-safe database queries with Kysely
+- Comprehensive error handling system
+- Design system with reusable components
+- Security-first approach with input validation
+- Performance-optimized with proper caching
+- Cross-platform Electron application

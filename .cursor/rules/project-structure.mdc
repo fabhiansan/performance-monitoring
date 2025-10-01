@@ -1,0 +1,51 @@
+---
+alwaysApply: true
+---
+
+# Project Structure & Architecture
+
+This is an Electron + React + TypeScript employee performance monitoring dashboard for Dinas Sosial (Social Services Department).
+
+## Core Architecture
+- **Frontend**: React 19 SPA with Vite bundling, entry point at [index.tsx](mdc:index.tsx)
+- **Backend**: Fastify + better-sqlite3 server in [server/](mdc:server/) directory
+- **Electron**: Main process in [main.ts](mdc:main.ts), config in [electron-config.ts](mdc:electron-config.ts)
+- **Database**: SQLite with better-sqlite3, located at [server/performance_analyzer.db](mdc:server/performance_analyzer.db)
+- **State Management**: Zustand for global state, React Query for server state
+- **Package Manager**: pnpm (version 10.15.1+)
+
+## Directory Structure
+- **Components**: React components in [components/](mdc:components/) - use PascalCase naming
+  - [dashboard/](mdc:components/dashboard/) - Dashboard-specific components
+  - [data/](mdc:components/data/) - Data management components
+  - [employees/](mdc:components/employees/) - Employee-related components
+  - [layout/](mdc:components/layout/) - Layout and navigation components
+  - [reporting/](mdc:components/reporting/) - Report generation components
+  - [shared/](mdc:components/shared/) - Reusable shared components
+- **Services**: API and business logic in [services/](mdc:services/) - use camelCase naming
+- **Contexts**: React contexts in [contexts/](mdc:contexts/) - use PascalCase naming
+- **Hooks**: Custom React hooks in [hooks/](mdc:hooks/) - use camelCase naming
+- **Types**: TypeScript interfaces in [types.ts](mdc:types.ts)
+- **Constants**: Design tokens and constants in [constants/](mdc:constants/)
+- **Utils**: Utility functions in [utils/](mdc:utils/)
+- **Design System**: Component library in [design-system/](mdc:design-system/)
+- **Server**: Fastify backend in [server/](mdc:server/) directory
+- **Tests**: Unit tests in [src/__tests__/](mdc:src/__tests__/), integration tests in [test/](mdc:test/)
+- **Assets**: Static files in [assets/](mdc:assets/)
+- **Build Output**: Compiled files in [dist/](mdc:dist/) and [build/](mdc:build/)
+- **Release**: Distribution packages in [release/](mdc:release/)
+
+## Key Files
+- Main app component: [App.tsx](mdc:App.tsx)
+- TypeScript config: [tsconfig.json](mdc:tsconfig.json)
+- Vite config: [vite.config.ts](mdc:vite.config.ts)
+- Package scripts: [package.json](mdc:package.json)
+- ESLint config: [eslint.config.js](mdc:eslint.config.js)
+- Vitest config: [vitest.config.ts](mdc:vitest.config.ts)
+- Tailwind config: [tailwind.config.ts](mdc:tailwind.config.ts)
+
+## Design System
+- Component library in [design-system/](mdc:design-system/)
+- Design tokens in [constants/designTokens.ts](mdc:constants/designTokens.ts)
+- Organizational levels in [constants/organizationalLevels.ts](mdc:constants/organizationalLevels.ts)
+- UI constants in [constants/ui.ts](mdc:constants/ui.ts)

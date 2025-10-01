@@ -1,0 +1,82 @@
+---
+globs: *.test.ts,*.test.tsx,test/**/*.ts
+---
+
+# Testing Standards and TDD
+
+## Test Organization
+- Unit tests in [src/__tests__/](mdc:src/__tests__/) directory
+- Integration tests in [test/](mdc:test/) directory
+- Use `.test.ts` or `.test.tsx` extension for test files
+- Colocate test files with source when appropriate
+- Test setup file: [src/__tests__/setup.ts](mdc:src/__tests__/setup.ts)
+
+## Testing Framework
+- Use Vitest as the primary testing framework
+- Configure in [vitest.config.ts](mdc:vitest.config.ts)
+- Use `jsdom` environment for React component testing
+- Run tests with `pnpm test` or `pnpm run test:watch`
+- Use `pnpm run test:ui` for Vitest UI
+- Use `pnpm run test:run` for single run
+
+## Test Structure
+- Use `describe` blocks to group related tests
+- Use `it` or `test` for individual test cases
+- Use `beforeEach` and `afterEach` for setup/teardown
+- Use `expect` for assertions
+- Use `globals: true` for global test functions
+
+## Component Testing
+- Test component rendering and user interactions
+- Mock external dependencies and API calls
+- Test error states and loading states
+- Use React Testing Library patterns
+- Test accessibility with proper ARIA attributes
+- Use `@testing-library/react` and `@testing-library/user-event`
+
+## Service Testing
+- Test business logic in service files
+- Mock database operations
+- Test error handling scenarios
+- Test data validation and transformation
+- Use MSW for API mocking when needed
+
+## Integration Testing
+- Test API endpoints with real database
+- Use sample data from [docs/sample-data/](mdc:docs/sample-data/) directory
+- Test file upload and parsing workflows
+- Test data migration scenarios
+- Test server startup with `pnpm run test:server`
+
+## TDD Workflow
+- Write failing tests first
+- Implement minimal code to pass tests
+- Refactor while keeping tests green
+- Use `pnpm run test:watch` for continuous testing
+- Use `pnpm run test:ui` for interactive testing
+
+## Test Data
+- Use fixtures from [test/fixtures/](mdc:test/fixtures/) directory
+- Create realistic test data that matches production structure
+- Use sample data from [docs/sample-data/](mdc:docs/sample-data/) for integration tests
+- Mock external API responses consistently
+- Use MSW for API mocking
+
+## Coverage
+- Use v8 provider for code coverage
+- Generate text, JSON, and HTML coverage reports
+- Exclude test files, config files, and build artifacts from coverage
+- Aim for high coverage on critical business logic
+
+## Mocking
+- Mock external dependencies appropriately
+- Use MSW for API mocking
+- Mock database operations in unit tests
+- Use real database for integration tests
+- Mock file system operations when testing file handling
+
+## Performance Testing
+- Test component rendering performance
+- Test data processing performance
+- Use performance benchmarks for critical operations
+- Test memory usage and cleanup

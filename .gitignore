@@ -45,3 +45,5 @@ Thumbs.db
 *.temp
 *.bak
 *.orig
+
+build

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
-import { ErrorDetails, ErrorHandler, errorHandler } from '../services/errorHandler';
+import { ErrorDetails, errorHandler } from '../services/errorHandler';
 
 interface ErrorState {
   errors: ErrorDetails[];
@@ -13,14 +13,14 @@ interface ErrorContextValue {
   isErrorVisible: boolean;
   
   // Error actions
-  showError: (error: unknown, context?: Record<string, any>) => void;
-  clearError: (errorCode?: string) => void;
+  showError: (_error: unknown, _context?: Record<string, unknown>) => void;
+  clearError: (_errorCode?: string) => void;
   clearAllErrors: () => void;
   dismissError: () => void;
   
   // Error management
   retryLastAction: () => void;
-  setRetryAction: (action: () => void) => void;
+  setRetryAction: (_action: () => void) => void;
 }
 
 const ErrorContext = createContext<ErrorContextValue | undefined>(undefined);
@@ -43,27 +43,8 @@ export const ErrorProvider: React.FC<ErrorProviderProps> = ({
   
   const [retryAction, setRetryAction] = useState<(() => void) | null>(null);
 
-  // Subscribe to error handler events
-  useEffect(() => {
-    const unsubscribe = errorHandler.onError((error: ErrorDetails) => {
-      setErrorState(prev => ({
-        errors: [error, ...prev.errors].slice(0, maxErrors),
-        isVisible: true,
-      }));
-
-      // Auto-hide low severity errors
-      if (error.severity === 'low' && autoHideDelay > 0) {
-        setTimeout(() => {
-          clearError(error.code);
-        }, autoHideDelay);
-      }
-    });
-
-    return unsubscribe;
-  }, [maxErrors, autoHideDelay]);
-
-  const showError = useCallback((error: unknown, context?: Record<string, any>) => {
-    const errorDetails = errorHandler.handleError(error, context);
+  const showError = useCallback((error: unknown, context?: Record<string, unknown>) => {
+    errorHandler.handleError(error, context);
     // Error is automatically added via the subscription above
   }, []);
 
@@ -85,6 +66,23 @@ export const ErrorProvider: React.FC<ErrorProviderProps> = ({
       };
     });
   }, []);
+
+  // Subscribe to error handler events
+  useEffect(() => {
+    return errorHandler.onError((error: ErrorDetails) => {
+      setErrorState(prev => ({
+        errors: [error, ...prev.errors].slice(0, maxErrors),
+        isVisible: true,
+      }));
+
+      // Auto-hide low severity errors
+      if (error.severity === 'low' && autoHideDelay > 0) {
+        setTimeout(() => {
+          clearError(error.code);
+        }, autoHideDelay);
+      }
+    });
+  }, [maxErrors, autoHideDelay, clearError]);
 
   const clearAllErrors = useCallback(() => {
     setErrorState({
@@ -108,7 +106,7 @@ export const ErrorProvider: React.FC<ErrorProviderProps> = ({
   }, [retryAction]);
 
   const setRetryActionCallback = useCallback((action: () => void) => {
-    setRetryAction(() => action);
+    setRetryAction(action);
   }, []);
 
   const value: ErrorContextValue = {
@@ -136,59 +134,4 @@ export const useError = (): ErrorContextValue => {
     throw new Error('useError must be used within an ErrorProvider');
   }
   return context;
-};
-
-// Hook for handling async operations with error handling
-export const useAsyncError = () => {
-  const { showError, setRetryAction } = useError();
-
-  const executeAsync = useCallback(async <T,>(
-    operation: () => Promise<T>,
-    context?: Record<string, any>,
-    retryable: boolean = true
-  ): Promise<T | null> => {
-    try {
-      const result = await operation();
-      return result;
-    } catch (error) {
-      showError(error, context);
-      
-      if (retryable) {
-        setRetryAction(operation);
-      }
-      
-      return null;
-    }
-  }, [showError, setRetryAction]);
-
-  return executeAsync;
-};
-
-// Hook for wrapping functions with error handling
-export const useErrorHandler = () => {
-  const { showError } = useError();
-
-  const withErrorHandling = useCallback(<T extends any[], R>(
-    fn: (...args: T) => R | Promise<R>,
-    context?: Record<string, any>
-  ) => {
-    return async (...args: T): Promise<R | null> => {
-      try {
-        const result = await fn(...args);
-        return result;
-      } catch (error) {
-        showError(error, context);
-        return null;
-      }
-    };
-  }, [showError]);
-
-  return withErrorHandling;
-};
-
-// Utility function to create error boundaries for specific operations
-export const createErrorBoundary = (context: Record<string, any>) => {
-  return (error: unknown) => {
-    errorHandler.handleError(error, context);
-  };
 };

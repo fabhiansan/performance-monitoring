@@ -1,0 +1,106 @@
+{
+  "timestamp": "2025-09-18T16:08:32.516Z",
+  "dry_run": false,
+  "summary": {
+    "files_removed": 3,
+    "files_archived": 16,
+    "errors": 0
+  },
+  "removed_files": [
+    {
+      "path": "demo-enhanced-validation.ts",
+      "reason": "Demo file no longer needed"
+    },
+    {
+      "path": "test-data",
+      "reason": "Temporary test data from validation scripts"
+    },
+    {
+      "path": "test.db",
+      "reason": "Test database file"
+    }
+  ],
+  "archived_files": [
+    {
+      "path": "server/server-wrapper.ts",
+      "reason": "Replaced by server-entry.cjs",
+      "archived_to": "./docs/migration/archived-server-files"
+    },
+    {
+      "path": "server/server-unified.ts",
+      "reason": "Consolidated into fastifyServer.ts",
+      "archived_to": "./docs/migration/archived-server-files"
+    },
+    {
+      "path": "server/server-standardized.ts",
+      "reason": "Replaced by fastify.ts",
+      "archived_to": "./docs/migration/archived-server-files"
+    },
+    {
+      "path": "server/serverFactory.ts",
+      "reason": "Functionality moved to fastifyServer.ts",
+      "archived_to": "./docs/migration/archived-server-files"
+    },
+    {
+      "path": "server/index.ts",
+      "reason": "Replaced by fastify.ts entry point",
+      "archived_to": "./docs/migration/archived-server-files"
+    },
+    {
+      "path": "start-server.ts",
+      "reason": "Replaced by server/fastify.ts",
+      "archived_to": "./docs/migration/archived-scripts"
+    },
+    {
+      "path": "build-scripts.cjs",
+      "reason": "Functionality moved to package.json scripts",
+      "archived_to": "./docs/migration/archived-scripts"
+    },
+    {
+      "path": "COMPREHENSIVE_CODE_SMELL_REPORT.md",
+      "reason": "Pre-migration analysis document",
+      "archived_to": "./docs/migration/archived-docs"
+    },
+    {
+      "path": "REFACTORING_HANDOFF.md",
+      "reason": "Historical refactoring notes",
+      "archived_to": "./docs/migration/archived-docs"
+    },
+    {
+      "path": "CRUSH.md",
+      "reason": "Legacy documentation",
+      "archived_to": "./docs/migration/archived-docs"
+    },
+    {
+      "path": "GEMINI.md",
+      "reason": "Legacy documentation",
+      "archived_to": "./docs/migration/archived-docs"
+    },
+    {
+      "path": "AGENTS.md",
+      "reason": "Development process documentation",
+      "archived_to": "./docs/migration/archived-docs"
+    },
+    {
+      "path": "TASK.md",
+      "reason": "Task-specific documentation",
+      "archived_to": "./docs/migration/archived-docs"
+    },
+    {
+      "path": "knowledge.md",
+      "reason": "Legacy knowledge base",
+      "archived_to": "./docs/migration/archived-docs"
+    },
+    {
+      "path": "tdd-guard-doc.md",
+      "reason": "TDD process documentation",
+      "archived_to": "./docs/migration/archived-docs"
+    },
+    {
+      "path": "sample-data",
+      "reason": "Reorganize sample data",
+      "archived_to": "./docs/sample-data"
+    }
+  ],
+  "errors": []
+}

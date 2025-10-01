@@ -1,0 +1,127 @@
+{
+  "typescript": {
+    "enabled": true,
+    "showDependencyErrors": false,
+    "jsx": "react-jsx",
+    "strictMode": true,
+    "checkBothConfigs": true,
+    "performance": {
+      "enabled": true,
+      "cacheTimeout": 30000,
+      "skipConfigFiles": true,
+      "skipBuildFiles": true,
+      "useIncremental": true,
+      "timeout": 10000
+    }
+  },
+  "eslint": {
+    "enabled": true,
+    "autofix": true,
+    "configFile": "eslint.config.js",
+    "extensions": [".ts", ".tsx", ".js", ".jsx"]
+  },
+  "prettier": {
+    "enabled": false,
+    "autofix": false
+  },
+  "vitest": {
+    "enabled": true,
+    "testPatterns": [
+      "**/*.test.ts",
+      "**/*.test.tsx", 
+      "**/*.spec.ts",
+      "**/*.spec.tsx",
+      "test/**/*"
+    ]
+  },
+  "rules": {
+    "console": {
+      "enabled": true,
+      "severity": "warning",
+      "allowIn": {
+        "paths": [
+          "components/",
+          "contexts/",
+          "utils/",
+          "hooks/",
+          "design-system/",
+          "server/",
+          "services/",
+          "scripts/",
+          "middleware/",
+          "test/",
+          "src/__tests__/"
+        ],
+        "fileTypes": [
+          "component",
+          "test",
+          "server",
+          "scripts",
+          "hooks",
+          "design-system"
+        ]
+      }
+    },
+    "asAny": {
+      "enabled": true,
+      "severity": "warning"
+    },
+    "todo": {
+      "enabled": true,
+      "severity": "info"
+    },
+    "cognitiveComplexity": {
+      "enabled": true,
+      "maxComplexity": 20,
+      "severity": "error"
+    },
+    "unusedImports": {
+      "enabled": true,
+      "severity": "warning"
+    },
+    "reactHooks": {
+      "enabled": true,
+      "severity": "error"
+    }
+  },
+  "filePatterns": {
+    "frontend": [
+      "components/**/*",
+      "contexts/**/*", 
+      "hooks/**/*",
+      "design-system/**/*",
+      "utils/**/*",
+      "constants/**/*",
+      "App.tsx",
+      "index.tsx",
+      "types.ts",
+      "vite.config.ts",
+      "vitest.config.ts",
+      "tailwind.config.ts"
+    ],
+    "backend": [
+      "server/**/*",
+      "services/**/*",
+      "scripts/**/*",
+      "middleware/**/*",
+      "main.ts",
+      "electron-config.ts",
+      "start-server.ts"
+    ],
+    "tests": [
+      "**/*.test.ts",
+      "**/*.test.tsx",
+      "**/*.spec.ts", 
+      "**/*.spec.tsx",
+      "test/**/*",
+      "src/__tests__/**/*"
+    ],
+    "config": [
+      "*.config.js",
+      "*.config.ts",
+      "*.config.cjs",
+      "*.config.mjs",
+      "tsconfig*.json"
+    ]
+  }
+}

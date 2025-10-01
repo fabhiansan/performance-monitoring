@@ -33,7 +33,14 @@ export interface ValidationSummary {
   requiredCompetencies: string[];
   missingCompetencies: string[];
   dataCompleteness: number; // percentage
+  completeness: number; // percentage (alias for dataCompleteness)
   scoreQuality: 'excellent' | 'good' | 'fair' | 'poor';
+  errorCount?: number;
+  warningCount?: number;
+  validationTimestamp?: string;
+  totalErrors?: number;
+  totalWarnings?: number;
+  overallScore?: number;
 }
 
 export interface CompetencyRequirement {
@@ -175,7 +182,7 @@ export class PerformanceDataValidator {
       this.errors.push({
         type: 'duplicate_employee',
         message: 'Duplicate employee names found',
-        details: `Employees: ${[...new Set(duplicates)].join(', ')}`,
+        details: `Employees: ${Array.from(new Set(duplicates)).join(', ')}`,
         affectedCount: duplicates.length
       });
     }
@@ -213,7 +220,7 @@ export class PerformanceDataValidator {
     // Check for required competencies
     const missingRequiredCompetencies: string[] = [];
     REQUIRED_COMPETENCIES.forEach(required => {
-      const hasCompetency = this.findMatchingCompetency([...allCompetencies], required);
+      const hasCompetency = this.findMatchingCompetency(Array.from(allCompetencies), required);
       if (!hasCompetency && required.required) {
         missingRequiredCompetencies.push(required.name);
       }
@@ -243,7 +250,7 @@ export class PerformanceDataValidator {
       const missingForEmployee: string[] = [];
 
       REQUIRED_COMPETENCIES.forEach(required => {
-        const hasCompetency = this.findMatchingCompetency([...empCompetencies], required);
+        const hasCompetency = this.findMatchingCompetency(Array.from(empCompetencies), required);
         if (!hasCompetency && required.required) {
           missingForEmployee.push(required.name);
         }
@@ -577,11 +584,11 @@ export class PerformanceDataValidator {
     });
 
     const foundRequired = REQUIRED_COMPETENCIES.filter(req => 
-      this.findMatchingCompetency([...allCompetencies], req)
+      this.findMatchingCompetency(Array.from(allCompetencies), req)
     );
 
     const missingRequired = REQUIRED_COMPETENCIES.filter(req => 
-      !this.findMatchingCompetency([...allCompetencies], req) && req.required
+      !this.findMatchingCompetency(Array.from(allCompetencies), req) && req.required
     );
 
     // Calculate data completeness
@@ -612,6 +619,7 @@ export class PerformanceDataValidator {
       requiredCompetencies: foundRequired.map(req => req.name),
       missingCompetencies: missingRequired.map(req => req.name),
       dataCompleteness: Math.round(completeness * 100) / 100,
+      completeness: Math.round(completeness * 100) / 100,
       scoreQuality
     };
   }

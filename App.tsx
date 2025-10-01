@@ -1,45 +1,126 @@
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Employee } from './types';
-import { api, UploadSession } from './services/api';
+import { sessionApi, employeeApi, apiClientFactory, UploadSession } from './services/api';
 import { ErrorProvider, useError } from './contexts/ErrorContext';
-import { useGranularRefresh, getRequiredRefreshTypes } from './services/refreshService';
-import ErrorDisplay from './components/ErrorDisplay';
-import Sidebar from './components/Sidebar';
-import DashboardOverview from './components/DashboardOverview';
-import EmployeeAnalytics from './components/EmployeeAnalytics';
-import RekapKinerja from './components/RekapKinerja';
-import DataManagement from './components/DataManagement';
-import TableView from './components/TableView';
-import EmployeeManagement from './components/EmployeeManagement';
-import Report from './components/Report';
-import { IconSparkles } from './components/Icons';
+import ErrorDisplay from './components/shared/ErrorDisplay';
+import { ErrorBoundary } from './components/shared/ErrorBoundary';
+import Sidebar from './components/layout/Sidebar';
+import DashboardOverview from './components/dashboard/DashboardOverview';
+import EmployeeAnalytics from './components/employees/EmployeeAnalytics';
+import RekapKinerja from './components/dashboard/RekapKinerja';
+import DataManagement from './components/data/DataManagement';
+import TableView from './components/dashboard/TableView';
+import EmployeeManagement from './components/employees/EmployeeManagement';
+import Report from './components/reporting/Report';
+import { IconSparkles } from './components/shared/Icons';
+import { useAppState } from './hooks/useAppState';
+import { Button } from './design-system';
+import { LAYOUT_SPACING } from './constants/ui';
+import { logger } from './services/logger';
+
+interface PerformanceTracker {
+  id: string;
+  label: string;
+  startMark: string;
+  context?: Record<string, unknown> | undefined;
+}
+
+const hasPerformanceApi = typeof performance !== 'undefined' && typeof performance.mark === 'function' && typeof performance.measure === 'function';
+
+// Constants for view names
+const VIEW_NAMES = {
+  EMPLOYEE_MANAGEMENT: 'employee-management',
+  DATA: 'data',
+  OVERVIEW: 'overview'
+} as const;
+
+const createPerformanceTracker = (label: string, context?: Record<string, unknown>): PerformanceTracker | null => {
+  if (!hasPerformanceApi) {
+    logger.performance(`${label} tracking unavailable`, { reason: 'Performance API missing', ...context });
+    return null;
+  }
+
+  const id = `${label}-${Date.now()}`;
+  const startMark = `${id}-start`;
+
+  try {
+    performance.mark(startMark);
+    logger.performance(`${label} started`, { trackerId: id, ...context });
+    return { id, label, startMark, context };
+  } catch (error) {
+    logger.warn(`${label} mark start failed`, { error, label, trackerId: id }, 'Performance');
+    return null;
+  }
+};
+
+const completePerformanceTracker = (
+  tracker: PerformanceTracker | null,
+  status: 'success' | 'error',
+  extraContext?: Record<string, unknown>
+) => {
+  if (!tracker || !hasPerformanceApi) {
+    return;
+  }
+
+  const endMark = `${tracker.id}-end`;
+  const measureName = `${tracker.id}-measure`;
+
+  try {
+    performance.mark(endMark);
+    performance.measure(measureName, tracker.startMark, endMark);
+    const entry = performance.getEntriesByName(measureName).pop();
+    const duration = entry?.duration ?? 0;
+
+    logger.performance(`${tracker.label} ${status}`, {
+      trackerId: tracker.id,
+      durationMs: Math.round(duration),
+      status,
+      ...tracker.context,
+      ...extraContext
+    });
+  } catch (error) {
+    logger.warn(`${tracker.label} measurement failed`, { error, trackerId: tracker.id }, 'Performance');
+  } finally {
+    performance.clearMarks(tracker.startMark);
+    performance.clearMarks(endMark);
+    performance.clearMeasures(measureName);
+  }
+};
+
+interface RefreshOptions {
+  tracker?: PerformanceTracker | null;
+  targetSessionId?: string;
+}
 
 const AppContent: React.FC = () => {
-  const [employeeData, setEmployeeData] = useState<Employee[]>([]);
-  const [uploadSessions, setUploadSessions] = useState<UploadSession[]>([]);
-  const [organizationalMappings, setOrganizationalMappings] = useState<Record<string, string>>({});
-  const [manualScores, setManualScores] = useState<Record<string, number>>({});
-  
-  // Map upload sessions to Dataset-like objects expected by Sidebar
-  const datasets = React.useMemo(() => uploadSessions.map(sess => ({ id: sess.session_id, name: sess.session_name })), [uploadSessions]);
-  const [selectedSessionId, setSelectedSessionId] = useState<string>('');
-  const [activeView, setActiveView] = useState('overview');
-  const [isLoading, setIsLoading] = useState(true);
-  const [pendingSaves, setPendingSaves] = useState<Set<string>>(new Set());
-  const [savingStatus, setSavingStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const [isDatasetSwitching, setIsDatasetSwitching] = useState(false);
-  
-  // Use granular refresh system
+  // Use centralized state management
   const {
-    refreshKeys,
-    isRefreshing,
-    refresh,
-    refreshMultiple,
-    cancelAllRefresh
-  } = useGranularRefresh();
+    employeeData,
+    organizationalMappings,
+    selectedSessionId,
+    activeView,
+    isLoading,
+    pendingSaves,
+    savingStatus,
+    isDatasetSwitching,
+    datasets,
+    setEmployeeData,
+    setUploadSessions,
+    setOrganizationalMappings,
+    setSelectedSessionId,
+    setActiveView,
+    setLoading,
+    addPendingSave,
+    removePendingSave,
+    setSavingStatus,
+    setDatasetSwitching,
+  } = useAppState();
   
-  const { showError, clearAllErrors } = useError();
+  // Local state for master employees (used in EmployeeManagement)
+  const [masterEmployees, setMasterEmployees] = useState<Employee[]>([]);
+  
+  const { showError } = useError();
   
 
   const handleDataUpdate = useCallback(async (newEmployeeData: Employee[], sessionName?: string) => {
@@ -49,41 +130,26 @@ const AppContent: React.FC = () => {
     const saveOperationId = `save_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     // Track this save operation
-    setPendingSaves(prev => new Set(prev).add(saveOperationId));
+    addPendingSave(saveOperationId);
     setSavingStatus('saving');
     
     // Auto-save to database using new unified API
     try {
-      const sessionId = await api.saveEmployeeData(newEmployeeData, sessionName);
+      const sessionId = await sessionApi.saveEmployeeData(newEmployeeData, sessionName);
       setSelectedSessionId(sessionId);
       setSavingStatus('saved');
       
-      // Use granular refresh to update specific data types
-      const refreshTypes = getRequiredRefreshTypes('bulk_import');
-      await refreshMultiple(refreshTypes, {
-        sessionId,
-        force: true, // Skip debouncing for immediate update
-        onSuccess: (type, data) => {
-          switch (type) {
-            case 'upload_sessions':
-              setUploadSessions(data);
-              break;
-            case 'organizational_mappings':
-              setOrganizationalMappings(data);
-              break;
-            case 'manual_scores':
-              setManualScores(data);
-              break;
-          }
-        },
-        onError: (type, error) => {
-          showError(error, {
-            component: 'App',
-            operation: `refresh_${type}`,
-            sessionId
-          });
-        }
-      });
+      // Reload upload sessions after data update
+      try {
+        const sessions = await sessionApi.getAllUploadSessions();
+        setUploadSessions(sessions);
+      } catch (error) {
+        showError(error, {
+          component: 'App',
+          operation: 'refresh_upload_sessions',
+          sessionId
+        });
+      }
       
       // Auto-reset saving status after 2 seconds
       setTimeout(() => setSavingStatus('idle'), 2000);
@@ -97,93 +163,161 @@ const AppContent: React.FC = () => {
       setSavingStatus('error');
     } finally {
       // Remove from pending saves
-      setPendingSaves(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(saveOperationId);
-        return newSet;
-      });
+      removePendingSave(saveOperationId);
     }
     
     if (newEmployeeData.length > 0 && activeView === 'data') {
       setActiveView('overview');
     }
-  }, [activeView, showError, refreshMultiple]);
+  }, [activeView, showError, setEmployeeData, setSelectedSessionId, setSavingStatus, setUploadSessions, addPendingSave, removePendingSave, setActiveView]);
+
+  // Helper function to refresh employee data
+  const refreshEmployeeDataCore = useCallback(async (targetSessionId: string, isDatasetSwitch: boolean, tracker: PerformanceTracker | null, refreshErrors: Array<{ type: string; error: unknown }>) => {
+    try {
+      const employeeData = await sessionApi.getEmployeeDataBySession(targetSessionId);
+      setEmployeeData(employeeData);
+
+      // Validate that performance data was loaded
+      const employeesWithPerformance = employeeData.filter((emp: Employee) => emp.performance && emp.performance.length > 0);
+      logger.performance('Employee data refreshed', {
+        trackerId: tracker?.id,
+        sessionId: targetSessionId,
+        employees: employeeData.length,
+        withPerformance: employeesWithPerformance.length,
+        isDatasetSwitch
+      });
+    } catch (error) {
+      showError(error, {
+        component: 'App',
+        operation: 'refreshEmployeeData',
+        selectedSessionId: targetSessionId
+      });
+      refreshErrors.push({ type: 'employee_data', error });
+    }
+  }, [showError, setEmployeeData]);
+
+  // Helper function to refresh organizational mappings
+  const refreshOrganizationalMappingsCore = useCallback(async (targetSessionId: string, refreshErrors: Array<{ type: string; error: unknown }>) => {
+    try {
+      const data = await employeeApi.getEmployeeOrgLevelMapping();
+      setOrganizationalMappings(data);
+    } catch (error) {
+      showError(error, {
+        component: 'App',
+        operation: 'refreshOrganizationalMappings',
+        selectedSessionId: targetSessionId
+      });
+      refreshErrors.push({ type: 'organizational_mappings', error });
+    }
+  }, [showError, setOrganizationalMappings]);
+
+  // Helper function to refresh master employees
+  const refreshMasterEmployees = useCallback(async () => {
+    try {
+      const employees = await employeeApi.getAllEmployees();
+      setMasterEmployees(employees);
+    } catch (error) {
+      showError(error, {
+        component: 'App',
+        operation: 'refresh_master_employees'
+      });
+    }
+  }, [showError]);
+
+  // Helper function to complete performance tracker
+  const completeTracker = useCallback((tracker: PerformanceTracker, refreshErrors: Array<{ type: string; error: unknown }>, targetSessionId: string, isDatasetSwitch: boolean) => {
+    if (refreshErrors.length > 0) {
+      const [firstError] = refreshErrors;
+      completePerformanceTracker(tracker, 'error', {
+        sessionId: targetSessionId,
+        refreshTypes: refreshErrors.map((item) => item.type),
+        reason: firstError?.error instanceof Error ? firstError.error.message : String(firstError?.error)
+      });
+    } else {
+      completePerformanceTracker(tracker, 'success', {
+        sessionId: targetSessionId,
+        refreshTypes: isDatasetSwitch ? ['employee_data', 'organizational_mappings'] : ['employee_data']
+      });
+    }
+  }, []);
 
   // Enhanced refresh function using granular refresh system
-  const refreshEmployeeData = useCallback(async (isDatasetSwitch = false) => {
-    if (!selectedSessionId) return;
-    
+  const refreshEmployeeData = useCallback(async (isDatasetSwitch = false, options?: RefreshOptions) => {
+    const targetSessionId = options?.targetSessionId ?? selectedSessionId;
+    if (!targetSessionId) return;
+
+    const tracker = isDatasetSwitch
+      ? options?.tracker ?? createPerformanceTracker('dataset-switch', {
+        sessionId: targetSessionId,
+        previousSessionId: selectedSessionId
+      })
+      : options?.tracker ?? null;
+    const refreshErrors: Array<{ type: string; error: unknown }> = [];
+    let trackerCompleted = false;
+
     try {
-      setIsLoading(true);
+      setLoading(true);
       if (isDatasetSwitch) {
-        setIsDatasetSwitching(true);
+        setDatasetSwitching(true);
       }
-      
-      // Refresh employee data and related information
-      await refresh('employee_data', {
-        sessionId: selectedSessionId,
-        debounceMs: isDatasetSwitch ? 100 : 300,
-        onSuccess: (type, data) => {
-          setEmployeeData(data);
-          
-          // Validate that performance data was loaded
-          const employeesWithPerformance = data.filter((emp: Employee) => emp.performance && emp.performance.length > 0);
-          console.log(`✅ Refreshed data: ${data.length} employees, ${employeesWithPerformance.length} with performance data`);
-        },
-        onError: (type, error) => {
-          showError(error, {
-            component: 'App',
-            operation: 'refreshEmployeeData',
-            selectedSessionId,
-            refreshType: type
-          });
-        }
-      });
-      
+
+      // Refresh employee data
+      await refreshEmployeeDataCore(targetSessionId, isDatasetSwitch, tracker, refreshErrors);
+
       // Also refresh organizational mappings if this is a dataset switch
       if (isDatasetSwitch) {
-        await refresh('organizational_mappings', {
-          onSuccess: (type, data) => {
-            setOrganizationalMappings(data);
-          },
-          onError: (type, error) => {
-            showError(error, {
-              component: 'App',
-              operation: 'refreshOrganizationalMappings',
-              selectedSessionId,
-              refreshType: type
-            });
-          }
-        });
+        await refreshOrganizationalMappingsCore(targetSessionId, refreshErrors);
+      }
+
+      // Complete tracker if present
+      if (tracker && !trackerCompleted) {
+        completeTracker(tracker, refreshErrors, targetSessionId, isDatasetSwitch);
+        trackerCompleted = true;
       }
     } catch (error) {
       showError(error, {
         component: 'App',
         operation: 'refreshEmployeeData',
-        selectedSessionId
+        selectedSessionId: targetSessionId
       });
+      if (tracker && !trackerCompleted) {
+        completePerformanceTracker(tracker, 'error', {
+          sessionId: targetSessionId,
+          reason: error instanceof Error ? error.message : String(error)
+        });
+        trackerCompleted = true;
+      }
     } finally {
-      setIsLoading(false);
-      setIsDatasetSwitching(false);
+      setLoading(false);
+      setDatasetSwitching(false);
     }
-  }, [selectedSessionId, refresh, showError]);
+  }, [selectedSessionId, refreshEmployeeDataCore, refreshOrganizationalMappingsCore, completeTracker, showError, setLoading, setDatasetSwitching]);
 
   // Handle dataset selection changes
   const handleDatasetChange = useCallback(async (sessionId: string) => {
     if (sessionId === selectedSessionId) return;
-    
+
     setSelectedSessionId(sessionId);
-    await refreshEmployeeData(true); // isDatasetSwitch = true
-  }, [selectedSessionId, refreshEmployeeData]);
+    const tracker = createPerformanceTracker('dataset-switch', {
+      sessionId,
+      previousSessionId: selectedSessionId
+    });
+    await refreshEmployeeData(true, { tracker, targetSessionId: sessionId });
+  }, [selectedSessionId, refreshEmployeeData, setSelectedSessionId]);
 
   // Load data on app start
   useEffect(() => {
     const initializeApp = async () => {
+      const tracker = createPerformanceTracker('initial-load');
+      let sessionCount = 0;
+      let initialSessionId: string | undefined;
+      let sessionLoadError: unknown = null;
+
       try {
         // Check if API server is running (retry up to 5 times)
         let isHealthy = false;
         for (let attempt = 0; attempt < 5; attempt++) {
-          isHealthy = await api.checkHealth();
+          isHealthy = await apiClientFactory.checkHealth();
           if (isHealthy) break;
           await new Promise(r => setTimeout(r, 1000));
         }
@@ -193,83 +327,104 @@ const AppContent: React.FC = () => {
             operation: 'initializeApp',
             healthCheck: 'failed'
           });
-          setIsLoading(false);
+          completePerformanceTracker(tracker, 'error', {
+            reason: 'health-check-failed'
+          });
+          setLoading(false);
           return;
         }
 
-        // Load upload sessions using granular refresh
-        await refresh('upload_sessions', {
-          force: true,
-          onSuccess: (type, sessions) => {
-            setUploadSessions(sessions);
-            
-            // Load most recent session data if any
-            if (sessions.length > 0) {
-              const latest = sessions.sort((a: UploadSession, b: UploadSession) => 
-                new Date(b.upload_timestamp).getTime() - new Date(a.upload_timestamp).getTime()
-              )[0];
-              setSelectedSessionId(latest.session_id);
-              
-              // Load employee data for the latest session
-              refresh('employee_data', {
-                sessionId: latest.session_id,
-                force: true,
-                onSuccess: (type, employeeData) => {
-                  setEmployeeData(employeeData);
-                },
-                onError: (type, error) => {
-                  showError(error, {
-                    component: 'App',
-                    operation: 'initializeApp_employeeData',
-                    sessionId: latest.session_id
-                  });
-                }
-              });
-              
-              // Also load organizational mappings
-              refresh('organizational_mappings', {
-                force: true,
-                onSuccess: (type, mappings) => {
-                  setOrganizationalMappings(mappings);
-                },
-                onError: (type, error) => {
-                  showError(error, {
-                    component: 'App',
-                    operation: 'initializeApp_orgMappings'
-                  });
-                }
-              });
-            } else {
-              // No sessions yet, start with empty data
-              setEmployeeData([]);
-            }
-          },
-          onError: (type, error) => {
-            showError(error, {
-              component: 'App',
-              operation: 'initializeApp_sessions'
-            });
-          }
-        });
+        // Load master employees first (needed for Dashboard Overview)
+        try {
+          const masterEmployeeData = await employeeApi.getAllEmployees();
+          setMasterEmployees(masterEmployeeData);
+        } catch (error) {
+          showError(error, {
+            component: 'App',
+            operation: 'initializeApp_masterEmployees'
+          });
+        }
 
+        // Load upload sessions
+        try {
+          const uploadSessions = await sessionApi.getAllUploadSessions();
+          setUploadSessions(uploadSessions);
+          sessionCount = uploadSessions.length;
+          
+          // Load most recent session data if any
+          if (uploadSessions.length > 0) {
+            const latest = uploadSessions.sort((a: UploadSession, b: UploadSession) => 
+              new Date(b.upload_timestamp).getTime() - new Date(a.upload_timestamp).getTime()
+            )[0];
+            setSelectedSessionId(latest.session_id);
+            initialSessionId = latest.session_id;
+            
+            // Load employee data for the latest session
+            try {
+              const employeeData = await sessionApi.getEmployeeDataBySession(latest.session_id);
+              setEmployeeData(employeeData);
+            } catch (error) {
+              showError(error, {
+                component: 'App',
+                operation: 'initializeApp_employeeData',
+                sessionId: latest.session_id
+              });
+            }
+            
+            // Also load organizational mappings
+            try {
+              const mappings = await employeeApi.getEmployeeOrgLevelMapping();
+              setOrganizationalMappings(mappings);
+            } catch (error) {
+              showError(error, {
+                component: 'App',
+                operation: 'initializeApp_orgMappings'
+              });
+            }
+          } else {
+            // No sessions yet, start with empty data
+            setEmployeeData([]);
+          }
+        } catch (error) {
+          showError(error, {
+            component: 'App',
+            operation: 'initializeApp_sessions'
+          });
+          sessionLoadError = error;
+        }
+
+        if (sessionLoadError) {
+          completePerformanceTracker(tracker, 'error', {
+            reason: sessionLoadError instanceof Error ? sessionLoadError.message : String(sessionLoadError)
+          });
+        } else {
+          completePerformanceTracker(tracker, 'success', {
+            sessionCount,
+            initialSessionId: initialSessionId ?? null,
+            hasSessions: sessionCount > 0
+          });
+        }
       } catch (error) {
         showError(error, { 
           component: 'App',
           operation: 'initializeApp' 
         });
+        completePerformanceTracker(tracker, 'error', {
+          reason: error instanceof Error ? error.message : String(error)
+        });
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
     initializeApp();
-  }, [showError, refresh]);
+  }, [showError, setUploadSessions, setSelectedSessionId, setEmployeeData, setOrganizationalMappings, setLoading]);
 
-  // Cleanup refresh operations on unmount
+  // Load master employees when switching to employee management or overview view
   useEffect(() => {
-    return () => {
-      cancelAllRefresh();
-    };
-  }, [cancelAllRefresh]);
+    if (activeView === VIEW_NAMES.EMPLOYEE_MANAGEMENT || activeView === 'overview') {
+      refreshMasterEmployees();
+    }
+  }, [activeView, refreshMasterEmployees]);
 
   if (isLoading) {
     return (
@@ -286,89 +441,88 @@ const AppContent: React.FC = () => {
     switch (activeView) {
       case 'overview':
         return (
-          <DashboardOverview 
-            key={`overview_${refreshKeys.employee_data}_${refreshKeys.organizational_mappings}`}
-            employees={employeeData}
-            organizationalMappings={organizationalMappings}
-          />
+          <ErrorBoundary>
+            <DashboardOverview 
+              employees={masterEmployees}
+              organizationalMappings={organizationalMappings}
+              onNavigateToDataManagement={() => setActiveView('data')}
+            />
+          </ErrorBoundary>
         );
       case 'analytics':
         return (
-          <EmployeeAnalytics 
-            key={`analytics_${refreshKeys.employee_data}_${refreshKeys.performance_scores}`}
-            employees={employeeData}
-          />
+          <ErrorBoundary>
+            <EmployeeAnalytics 
+              employees={employeeData}
+            />
+          </ErrorBoundary>
         );
       case 'rekap-kinerja':
         return (
-          <RekapKinerja 
-            key={`rekap_${refreshKeys.employee_data}_${refreshKeys.performance_scores}`}
-            employees={employeeData}
-          />
+          <ErrorBoundary>
+            <RekapKinerja 
+              employees={employeeData}
+            />
+          </ErrorBoundary>
         );
       case 'employees':
         return (
           <EmployeeAnalytics 
-            key={`employees_${refreshKeys.employee_data}_${refreshKeys.performance_scores}`}
             employees={employeeData}
           />
         );
       case 'report':
         return (
           <Report 
-            key={`report_${refreshKeys.employee_data}_${refreshKeys.performance_scores}`}
             employees={employeeData}
           />
         );
       case 'table':
         return (
           <TableView 
-            key={`table_${refreshKeys.employee_data}_${refreshKeys.organizational_mappings}`}
             employees={employeeData}
           />
         );
-      case 'employee-management':
+      case VIEW_NAMES.EMPLOYEE_MANAGEMENT:
         return (
           <EmployeeManagement 
-            key={`mgmt_${refreshKeys.employee_data}`}
-            onEmployeeUpdate={() => {
-              // Refresh employee data and organizational mappings when employees are updated
-              const refreshTypes = getRequiredRefreshTypes('employee_updated');
-              refreshMultiple(refreshTypes, {
-                sessionId: selectedSessionId,
-                force: true,
-                onSuccess: (type, data) => {
-                  switch (type) {
-                    case 'employee_data':
-                      setEmployeeData(data);
-                      break;
-                    case 'organizational_mappings':
-                      setOrganizationalMappings(data);
-                      break;
-                  }
-                }
-              });
+            employees={masterEmployees}
+            onEmployeeUpdate={async () => {
+              // Refresh master employee data and organizational mappings when employees are updated
+              try {
+                await refreshMasterEmployees();
+                const mappings = await employeeApi.getEmployeeOrgLevelMapping();
+                setOrganizationalMappings(mappings);
+              } catch (error) {
+                showError(error, {
+                  component: 'App',
+                  operation: 'onEmployeeUpdate'
+                });
+              }
             }}
           />
         );
       case 'data':
         return (
-          <DataManagement 
-            key={`data_${refreshKeys.upload_sessions}`}
-            employees={employeeData} 
-            onDataUpdate={handleDataUpdate} 
-            pendingSaves={pendingSaves}
-            savingStatus={savingStatus}
-            selectedSessionId={selectedSessionId}
-          />
+          <ErrorBoundary>
+            <DataManagement 
+              employees={employeeData} 
+              onDataUpdate={handleDataUpdate} 
+              pendingSaves={pendingSaves}
+              savingStatus={savingStatus}
+              selectedSessionId={selectedSessionId}
+            />
+          </ErrorBoundary>
         );
       default:
         return (
-          <DashboardOverview 
-            key={`default_${refreshKeys.employee_data}_${refreshKeys.organizational_mappings}`}
-            employees={employeeData}
-            organizationalMappings={organizationalMappings}
-          />
+          <ErrorBoundary>
+            <DashboardOverview 
+              employees={masterEmployees}
+              organizationalMappings={organizationalMappings}
+              onNavigateToDataManagement={() => setActiveView('data')}
+            />
+          </ErrorBoundary>
         );
     }
   };
@@ -382,7 +536,7 @@ const AppContent: React.FC = () => {
           onDatasetChange={handleDatasetChange}
           activeView={activeView} 
           onViewChange={setActiveView} 
-          isDatasetSwitching={isDatasetSwitching || isRefreshing('employee_data')} 
+          isDatasetSwitching={isDatasetSwitching} 
         />
         
         <main className="flex-1 overflow-auto relative">
@@ -402,9 +556,11 @@ const AppContent: React.FC = () => {
             </div>
           )}
           
-          <div className="p-8">
-            <ErrorDisplay className="mb-6" />
-            {employeeData.length === 0 && activeView !== 'data' && activeView !== 'employee-management' ? (
+          <div style={{ padding: LAYOUT_SPACING.PAGE_PADDING }}>
+            <div style={{ marginBottom: LAYOUT_SPACING.COMPONENT_GAP }}>
+              <ErrorDisplay />
+            </div>
+            {masterEmployees.length === 0 && activeView !== VIEW_NAMES.DATA && activeView !== VIEW_NAMES.EMPLOYEE_MANAGEMENT ? (
               <div className="text-center py-24">
                 <div className="inline-block bg-gradient-to-r from-blue-500 to-teal-400 p-0.5 rounded-lg shadow-lg mb-6">
                    <div className="bg-gray-100 dark:bg-gray-900 p-4 rounded-md">
@@ -418,12 +574,14 @@ const AppContent: React.FC = () => {
                   No employee data available. Please go to Manage Employees to import employee data first.
                 </p>
                 <div className="flex gap-4 justify-center">
-                  <button
-                    onClick={() => setActiveView('employee-management')}
-                    className="inline-flex items-center px-8 py-3 bg-gradient-to-r from-green-600 to-blue-500 text-white font-bold rounded-lg shadow-lg hover:shadow-xl hover:from-green-700 hover:to-blue-600 transform hover:scale-105 transition-all duration-300"
+                  <Button
+                    onClick={() => setActiveView(VIEW_NAMES.EMPLOYEE_MANAGEMENT)}
+                    variant="success"
+                    size="lg"
+                    className="transform hover:scale-105 transition-transform duration-300"
                   >
                     Go to Manage Employees
-                  </button>
+                  </Button>
                 </div>
               </div>
             ) : (

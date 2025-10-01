@@ -1,3 +1,5 @@
+import { logger } from './logger';
+
 export interface ErrorDetails {
   code: string;
   message: string;
@@ -5,7 +7,7 @@ export interface ErrorDetails {
   severity: 'low' | 'medium' | 'high' | 'critical';
   category: 'network' | 'validation' | 'parsing' | 'server' | 'permission' | 'unknown';
   timestamp: Date;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
   retryable: boolean;
   actionable: boolean;
   suggestions?: string[];
@@ -16,7 +18,8 @@ export interface ErrorContext {
   operation?: string;
   userId?: string;
   sessionId?: string;
-  additionalData?: Record<string, any>;
+  additionalData?: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
 export class AppError extends Error {
@@ -25,10 +28,11 @@ export class AppError extends Error {
   public readonly severity: ErrorDetails['severity'];
   public readonly category: ErrorDetails['category'];
   public readonly timestamp: Date;
-  public readonly context: Record<string, any>;
+  public readonly context: Record<string, unknown>;
   public readonly retryable: boolean;
   public readonly actionable: boolean;
   public readonly suggestions: string[];
+  public cause?: Error;
 
   constructor(
     message: string,
@@ -37,7 +41,7 @@ export class AppError extends Error {
       userMessage?: string;
       severity?: ErrorDetails['severity'];
       category?: ErrorDetails['category'];
-      context?: Record<string, any>;
+      context?: Record<string, unknown>;
       retryable?: boolean;
       actionable?: boolean;
       suggestions?: string[];
@@ -79,7 +83,7 @@ export class AppError extends Error {
 
 export class ErrorHandler {
   private static instance: ErrorHandler;
-  private errorListeners: Array<(error: ErrorDetails) => void> = [];
+  private errorListeners: Array<(_error: ErrorDetails) => void> = [];
 
   private constructor() {}
 
@@ -91,7 +95,7 @@ export class ErrorHandler {
   }
 
   // Subscribe to error events
-  onError(listener: (error: ErrorDetails) => void): () => void {
+  onError(listener: (_error: ErrorDetails) => void): () => void {
     this.errorListeners.push(listener);
     return () => {
       const index = this.errorListeners.indexOf(listener);
@@ -377,23 +381,37 @@ export class ErrorHandler {
 
   // Logging
   private logError(error: ErrorDetails): void {
-    const logLevel = this.getLogLevel(error.severity);
     const logMessage = `[${error.category.toUpperCase()}] ${error.code}: ${error.message}`;
     
-    console[logLevel](logMessage, {
-      timestamp: error.timestamp,
-      context: error.context,
-      suggestions: error.suggestions,
-    });
-  }
-
-  private getLogLevel(severity: ErrorDetails['severity']): 'log' | 'warn' | 'error' {
-    switch (severity) {
-      case 'low': return 'log';
-      case 'medium': return 'warn';
+    switch (error.severity) {
+      case 'low':
+        logger.debug(logMessage, {
+          timestamp: error.timestamp,
+          context: error.context,
+          suggestions: error.suggestions,
+        });
+        break;
+      case 'medium':
+        logger.warn(logMessage, {
+          timestamp: error.timestamp,
+          context: error.context,
+          suggestions: error.suggestions,
+        });
+        break;
       case 'high':
-      case 'critical': return 'error';
-      default: return 'log';
+      case 'critical':
+        logger.error(logMessage, {
+          timestamp: error.timestamp,
+          context: error.context,
+          suggestions: error.suggestions,
+        });
+        break;
+      default:
+        logger.info(logMessage, {
+          timestamp: error.timestamp,
+          context: error.context,
+          suggestions: error.suggestions,
+        });
     }
   }
 
@@ -403,7 +421,9 @@ export class ErrorHandler {
       try {
         listener(error);
       } catch (err) {
-        console.error('Error in error listener:', err);
+        logger.error('Error in error listener', { 
+          error: err instanceof Error ? err.message : String(err) 
+        });
       }
     });
   }

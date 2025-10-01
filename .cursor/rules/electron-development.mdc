@@ -1,0 +1,69 @@
+---
+globs: main.ts,electron-config.ts,*.electron.*
+---
+
+# Electron Development Patterns
+
+## Main Process
+- Main process entry point: [main.ts](mdc:main.ts)
+- Configuration: [electron-config.ts](mdc:electron-config.ts)
+- Use `@/` alias for imports from root directory
+- Server entry point: [server-entry.cjs](mdc:server-entry.cjs)
+
+## Build Configuration
+- Electron Builder config in [package.json](mdc:package.json) under "build" section
+- Native modules require rebuilding with `pnpm run rebuild:electron`
+- Use `better-sqlite3` for database operations in main process
+- Use `@electron/rebuild` for native module rebuilding
+
+## Development Workflow
+- Use `pnpm run dev` for development (Vite + Electron)
+- Use `pnpm run dev:full` for full stack development (includes API server)
+- Use `pnpm run build:complete` for production builds
+- Platform-specific builds: `pnpm run dist:win|mac|linux`
+- Use `pnpm run electron:dev` for Electron development mode
+
+## Native Module Handling
+- Run `pnpm run rebuild:electron` after dependency changes
+- Run `pnpm run rebuild:native` for all native modules
+- Check native modules with `pnpm run check:native`
+- Use `electron-rebuild` for better-sqlite3 compatibility
+- Use `pnpm run rebuild:clean` for clean rebuild
+
+## Security Considerations
+- Keep sensitive data in main process
+- Use contextIsolation and nodeIntegration: false
+- Validate all data from renderer process
+- Use preload scripts for secure IPC communication
+- Use secure headers and CORS configuration
+
+## Packaging
+- Output directory: [release/](mdc:release/)
+- Include database file in build: [server/performance_analyzer.db](mdc:server/performance_analyzer.db)
+- Use asarUnpack for native modules and server files
+- Platform-specific icons in [assets/](mdc:assets/)
+- Support for Windows (NSIS, Portable), macOS (DMG), and Linux (AppImage)
+
+## Build Artifacts
+- Windows: NSIS installer and portable executable
+- macOS: DMG for both x64 and ARM64 architectures
+- Linux: AppImage for x64 architecture
+- All builds include proper code signing and notarization
+
+## Environment Configuration
+- Use environment variables for different build modes
+- Configure Vite base path for production builds
+- Handle development vs production database paths
+- Use proper logging configuration for different environments
+
+## Database Integration
+- Include SQLite database in packaged application
+- Use development database for dev builds
+- Handle database migrations in packaged app
+- Ensure database file permissions are correct
+
+## Performance Optimization
+- Use proper chunking for large applications
+- Optimize bundle size with manual chunks
+- Use tree shaking to eliminate unused code
+- Implement proper caching strategies
