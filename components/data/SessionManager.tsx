@@ -210,43 +210,74 @@ const SessionManager: React.FC<SessionManagerProps> = ({
       )}
 
       {/* Save Dialog */}
-      {showSaveDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              Save Session
-            </h3>
-            <input
-              type="text"
-              value={sessionName}
-              onChange={(e) => setSessionName(e.target.value)}
-              placeholder="Enter session name..."
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 mb-4"
-              autoFocus
-            />
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setShowSaveDialog(false)}
-                className="flex-1 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  if (sessionName.trim()) {
-                    // This will be handled by the parent component
+      {showSaveDialog && (() => {
+        const trimmedName = sessionName.trim();
+        const isValidLength = trimmedName.length >= 2 && trimmedName.length <= 100;
+        const hasInvalidChars = /[<>:"/\\|?*]/.test(trimmedName);
+        const isValid = isValidLength && !hasInvalidChars;
+
+        let validationMessage = '';
+        if (trimmedName && !isValidLength) {
+          validationMessage = 'Session name must be between 2 and 100 characters';
+        } else if (trimmedName && hasInvalidChars) {
+          validationMessage = 'Session name cannot contain special characters: < > : " / \\ | ? *';
+        }
+
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                Save Session
+              </h3>
+              <div className="mb-4">
+                <input
+                  type="text"
+                  value={sessionName}
+                  onChange={(e) => setSessionName(e.target.value)}
+                  placeholder="Enter session name (2-100 characters)..."
+                  className={`w-full p-3 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
+                    validationMessage ? 'border-red-500 dark:border-red-600' : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                  autoFocus
+                  maxLength={101}
+                />
+                {validationMessage && (
+                  <p className="text-red-600 dark:text-red-400 text-sm mt-2">
+                    {validationMessage}
+                  </p>
+                )}
+                <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">
+                  {trimmedName.length}/100 characters
+                </p>
+              </div>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => {
                     setShowSaveDialog(false);
-                  }
-                }}
-                disabled={!sessionName.trim()}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-              >
-                Save
-              </button>
+                    setSessionName('');
+                  }}
+                  className="flex-1 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (isValid) {
+                      // This will be handled by the parent component
+                      setShowSaveDialog(false);
+                    }
+                  }}
+                  disabled={!isValid}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                  title={!isValid ? validationMessage : 'Save session'}
+                >
+                  Save
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };

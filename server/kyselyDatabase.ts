@@ -116,11 +116,10 @@ export class KyselyDatabaseService {
    */
   async addEmployee(employeeData: NewEmployeeRow): Promise<number> {
     const result = await this.db
-      .insertInto('employees')
+      .insertInto('employee_database')
       .values({
         ...employeeData,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
       })
       .returning('id')
       .executeTakeFirstOrThrow();
@@ -133,7 +132,7 @@ export class KyselyDatabaseService {
    */
   async getAllEmployees(): Promise<Employee[]> {
     const employees = await this.db
-      .selectFrom('employees')
+      .selectFrom('employee_database')
       .selectAll()
       .orderBy('name')
       .execute();
@@ -146,7 +145,7 @@ export class KyselyDatabaseService {
    */
   async getEmployeeById(id: number): Promise<Employee | null> {
     const employee = await this.db
-      .selectFrom('employees')
+      .selectFrom('employee_database')
       .selectAll()
       .where('id', '=', id)
       .executeTakeFirst();
@@ -160,7 +159,7 @@ export class KyselyDatabaseService {
    */
   async updateEmployee(id: number, employeeData: Omit<NewEmployeeRow, 'created_at'>): Promise<void> {
     await this.db
-      .updateTable('employees')
+      .updateTable('employee_database')
       .set({
         name: employeeData.name,
         nip: employeeData.nip,
@@ -180,7 +179,7 @@ export class KyselyDatabaseService {
    */
   async deleteEmployee(id: number): Promise<void> {
     await this.db
-      .deleteFrom('employees')
+      .deleteFrom('employee_database')
       .where('id', '=', id)
       .execute();
   }
@@ -190,9 +189,9 @@ export class KyselyDatabaseService {
    */
   async bulkDeleteEmployees(ids: number[]): Promise<void> {
     if (ids.length === 0) return;
-    
+
     await this.db
-      .deleteFrom('employees')
+      .deleteFrom('employee_database')
       .where('id', 'in', ids)
       .execute();
   }
@@ -202,7 +201,7 @@ export class KyselyDatabaseService {
    */
   async getEmployeeSuggestions(nameQuery: string, limit = 5): Promise<Array<{id: number; name: string; organizational_level: string | null}>> {
     return await this.db
-      .selectFrom('employees')
+      .selectFrom('employee_database')
       .select(['id', 'name', 'organizational_level'])
       .where('name', 'like', `%${nameQuery}%`)
       .orderBy('name')
@@ -215,7 +214,7 @@ export class KyselyDatabaseService {
    */
   async getEmployeeOrgLevelMapping(): Promise<Record<string, string>> {
     const result = await this.db
-      .selectFrom('employees')
+      .selectFrom('employee_database')
       .select(['name', 'organizational_level'])
       .where('organizational_level', 'is not', null)
       .execute();
@@ -231,7 +230,7 @@ export class KyselyDatabaseService {
 
   async getOrgLevelCounts(): Promise<Record<string, number>> {
     const result = await this.db
-      .selectFrom('employees')
+      .selectFrom('employee_database')
       .select(['organizational_level'])
       .select((eb) => eb.fn.count('id').as('count'))
       .where('organizational_level', 'is not', null)
@@ -250,37 +249,23 @@ export class KyselyDatabaseService {
   // Session Operations
 
   /**
-   * Save employee data with session
+   * Save employee data with period
    */
   async saveEmployeeData(employees: Employee[], sessionName?: string): Promise<string> {
-    const sessionId = this.generateSessionId();
-    const timestamp = new Date().toISOString();
-    
-    try {
-      // Create session
-      await this.db
-        .insertInto('upload_sessions')
-        .values({
-          session_id: sessionId,
-          session_name: sessionName || `Session_${timestamp}`,
-          upload_timestamp: timestamp,
-          employee_count: employees.length,
-          competency_count: 0,
-          status: 'completed'
-        })
-        .execute();
+    const period = sessionName || new Date().toISOString();
 
+    try {
       // Insert or get existing employees and their performance data
       for (const employee of employees) {
         // Try to find existing employee by name and NIP
         let employeeId: number;
         const existingEmployee = await this.db
-          .selectFrom('employees')
+          .selectFrom('employee_database')
           .select('id')
           .where('name', '=', employee.name)
           .where('nip', '=', employee.nip || null)
           .executeTakeFirst();
-        
+
         if (existingEmployee) {
           employeeId = existingEmployee.id;
         } else {
@@ -300,86 +285,134 @@ export class KyselyDatabaseService {
         if (employee.performance && employee.performance.length > 0) {
           for (const perf of employee.performance) {
             // Create competency first or use existing one
-            const competencyId = await this.getOrCreateCompetency(perf.name, sessionId);
-            await this.addPerformanceScore(employeeId, competencyId, perf.score, sessionId);
+            const competencyId = await this.getOrCreateCompetency(perf.name, period);
+            await this.addPerformanceScore(employeeId, competencyId, perf.score, period);
           }
         }
       }
 
-      return sessionId;
+      return period;
     } catch (error) {
-      logger.error('Error saving employee data', { error: error instanceof Error ? error.message : String(error), sessionId });
+      logger.error('Error saving employee data', { error: error instanceof Error ? error.message : String(error), period });
       throw error;
     }
   }
 
   /**
-   * Get all upload sessions
+   * Get all periods
    */
   async getAllUploadSessions(): Promise<Array<{
-    session_id: string;
-    session_name: string;
-    upload_timestamp: string;
+    period: string;
     employee_count: number;
     competency_count: number;
-    status: string;
+    latest_upload: string;
   }>> {
-    return await this.db
-      .selectFrom('upload_sessions')
-      .selectAll()
-      .orderBy('upload_timestamp', 'desc')
+    const periods = await this.db
+      .selectFrom('performance_scores')
+      .select('period')
+      .distinct()
       .execute();
+
+    const result = [];
+    for (const { period } of periods) {
+      const stats = await this.getPeriodStats(period);
+      result.push({
+        period,
+        employee_count: stats.employee_count,
+        competency_count: stats.competency_count,
+        latest_upload: stats.latest_upload
+      });
+    }
+
+    return result.sort((a, b) => b.latest_upload.localeCompare(a.latest_upload));
   }
 
   /**
-   * Get employee data by session ID
+   * Get statistics for a period
    */
-  async getEmployeeDataBySession(sessionId: string): Promise<Employee[]> {
-    // First check if there are any performance scores for this session
+  private async getPeriodStats(period: string): Promise<{
+    employee_count: number;
+    competency_count: number;
+    latest_upload: string;
+  }> {
+    const employeeCount = await this.db
+      .selectFrom('performance_scores')
+      .select((eb) => eb.fn.countAll().as('count'))
+      .where('period', '=', period)
+      .select('employee_id')
+      .distinct()
+      .execute();
+
+    const competencyCount = await this.db
+      .selectFrom('competencies')
+      .select((eb) => eb.fn.countAll().as('count'))
+      .where('period', '=', period)
+      .executeTakeFirst();
+
+    const latestUpload = await this.db
+      .selectFrom('performance_scores')
+      .select('created_at')
+      .where('period', '=', period)
+      .orderBy('created_at', 'desc')
+      .limit(1)
+      .executeTakeFirst();
+
+    return {
+      employee_count: employeeCount.length,
+      competency_count: Number(competencyCount?.count || 0),
+      latest_upload: latestUpload?.created_at || new Date().toISOString()
+    };
+  }
+
+  /**
+   * Get employee data by period
+   */
+  async getEmployeeDataBySession(period: string): Promise<Employee[]> {
+    // First check if there are any performance scores for this period
     const hasPerformanceData = await this.db
       .selectFrom('performance_scores')
       .select(['employee_id'])
-      .where('session_id', '=', sessionId)
+      .where('period', '=', period)
       .limit(1)
       .execute();
 
     if (hasPerformanceData.length === 0) {
-      // No performance data for this session, return empty array
+      // No performance data for this period, return empty array
       return [];
     }
 
-    // Get employees who have performance scores in this session
+    // Get employees who have performance scores in this period
     const employeesWithScores = await this.db
       .selectFrom('performance_scores')
       .select(['employee_id'])
-      .where('session_id', '=', sessionId)
+      .where('period', '=', period)
       .distinct()
       .execute();
 
     const employeeIds = employeesWithScores.map(score => score.employee_id);
-    
+
     if (employeeIds.length === 0) {
       return [];
     }
 
     // Get full employee data
     const employees = await this.db
-      .selectFrom('employees')
+      .selectFrom('employee_database')
       .selectAll()
       .where('id', 'in', employeeIds)
       .orderBy('name')
       .execute();
 
-    // Get performance data for each employee in this session
+    // Get performance data for each employee in this period
     const employeesWithPerformance: Employee[] = [];
-    
+
     for (const emp of employees) {
       const performance = await this.db
         .selectFrom('performance_scores')
         .leftJoin('competencies', 'performance_scores.competency_id', 'competencies.id')
         .select(['competencies.name', 'performance_scores.score'])
         .where('performance_scores.employee_id', '=', emp.id)
-        .where('performance_scores.session_id', '=', sessionId)
+        .where('performance_scores.period', '=', period)
         .execute();
 
       employeesWithPerformance.push({
@@ -395,14 +428,13 @@ export class KyselyDatabaseService {
   }
 
   /**
-   * Delete upload session - only delete session-based data, keep master employees
+   * Delete period data - only delete period-based data, keep master employees
    */
-  async deleteUploadSession(sessionId: string): Promise<void> {
+  async deleteUploadSession(period: string): Promise<void> {
     // Delete in correct order due to foreign key constraints
-    // Note: We keep master employees, only delete session-based performance data
-    await this.db.deleteFrom('performance_scores').where('session_id', '=', sessionId).execute();
-    await this.db.deleteFrom('competencies').where('session_id', '=', sessionId).execute();
-    await this.db.deleteFrom('upload_sessions').where('session_id', '=', sessionId).execute();
+    // Note: We keep master employees, only delete period-based performance data
+    await this.db.deleteFrom('performance_scores').where('period', '=', period).execute();
+    await this.db.deleteFrom('competencies').where('period', '=', period).execute();
   }
 
   // Dataset Operations
@@ -515,13 +547,13 @@ export class KyselyDatabaseService {
   /**
    * Get or create competency
    */
-  private async getOrCreateCompetency(competencyName: string, sessionId: string): Promise<number> {
+  private async getOrCreateCompetency(competencyName: string, period: string): Promise<number> {
     // Try to find existing competency
     const existing = await this.db
       .selectFrom('competencies')
       .select('id')
       .where('name', '=', competencyName)
-      .where('session_id', '=', sessionId)
+      .where('period', '=', period)
       .executeTakeFirst();
 
     if (existing) {
@@ -536,7 +568,7 @@ export class KyselyDatabaseService {
         category: null,
         weight: 1.0,
         applicable_to: 'all',
-        session_id: sessionId,
+        period: period,
         created_at: new Date().toISOString()
       })
       .returning('id')
@@ -548,14 +580,14 @@ export class KyselyDatabaseService {
   /**
    * Add performance score
    */
-  private async addPerformanceScore(employeeId: number, competencyId: number, score: number, sessionId: string): Promise<number> {
+  private async addPerformanceScore(employeeId: number, competencyId: number, score: number, period: string): Promise<number> {
     const result = await this.db
       .insertInto('performance_scores')
       .values({
         employee_id: employeeId,
         competency_id: competencyId,
         score,
-        session_id: sessionId,
+        period: period,
         created_at: new Date().toISOString()
       })
       .returning('id')
@@ -599,13 +631,6 @@ export class KyselyDatabaseService {
     }
 
     return defaultPath;
-  }
-
-  /**
-   * Generate session ID
-   */
-  private generateSessionId(): string {
-    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
   /**

@@ -1,28 +1,27 @@
 /**
  * Kysely Database Schema Definitions
- * 
+ *
  * Type-safe database schema definitions for SQLite database using Kysely
  */
 
-import type { ColumnType } from 'kysely';
+import type { ColumnType } from "kysely";
 
 /**
  * Database Schema Interface
  */
 export interface DatabaseSchema {
-  employees: EmployeesTable;
+  employee_database: EmployeesDatabaseTable;
   competencies: CompetenciesTable;
   performance_scores: PerformanceScoresTable;
-  upload_sessions: UploadSessionsTable;
   datasets: DatasetsTable;
   current_dataset: CurrentDatasetTable;
   manual_leadership_scores: ManualLeadershipScoresTable;
 }
 
 /**
- * Employees Table Schema - Master employee records without session dependency
+ * Employee Database Table Schema - Master employee records
  */
-export interface EmployeesTable {
+export interface EmployeesDatabaseTable {
   id: ColumnType<number, never, never>; // Generated
   name: string;
   nip: string | null;
@@ -44,7 +43,7 @@ export interface CompetenciesTable {
   category: string | null;
   weight: number | null;
   applicable_to: string;
-  session_id: string;
+  period: string;
   created_at: ColumnType<string, string | undefined, never>;
 }
 
@@ -56,22 +55,11 @@ export interface PerformanceScoresTable {
   employee_id: number;
   competency_id: number;
   score: number;
-  session_id: string;
+  period: string;
   created_at: ColumnType<string, string | undefined, never>;
 }
 
-/**
- * Upload Sessions Table Schema
- */
-export interface UploadSessionsTable {
-  session_id: string; // Primary key
-  session_name: string;
-  upload_timestamp: string;
-  employee_count: number;
-  competency_count: number;
-  status: string;
-  notes: string | null;
-}
+// Upload Sessions table removed - periods are now simple string filters
 
 /**
  * Datasets Table Schema
@@ -122,43 +110,53 @@ export type EmployeeRow = {
   created_at: string;
   updated_at: string;
 };
-export type NewEmployeeRow = Omit<EmployeesTable, 'id' | 'created_at' | 'updated_at'> & {
+export type NewEmployeeRow = Omit<
+  EmployeesDatabaseTable,
+  "id" | "created_at" | "updated_at"
+> & {
   created_at?: string;
   updated_at?: string;
 };
-export type EmployeeUpdate = Partial<Omit<EmployeesTable, 'id' | 'created_at'>> & {
+export type EmployeeUpdate = Partial<
+  Omit<EmployeesDatabaseTable, "id" | "created_at">
+> & {
   updated_at?: string;
 };
 
 export type CompetencyRow = CompetenciesTable;
-export type NewCompetencyRow = Omit<CompetenciesTable, 'id' | 'created_at'> & {
+export type NewCompetencyRow = Omit<CompetenciesTable, "id" | "created_at"> & {
   created_at?: string;
 };
 
 export type PerformanceScoreRow = PerformanceScoresTable;
-export type NewPerformanceScoreRow = Omit<PerformanceScoresTable, 'id' | 'created_at'> & {
+export type NewPerformanceScoreRow = Omit<
+  PerformanceScoresTable,
+  "id" | "created_at"
+> & {
   created_at?: string;
 };
 
-export type UploadSessionRow = UploadSessionsTable;
-export type NewUploadSessionRow = UploadSessionsTable;
-
 export type DatasetRow = DatasetsTable;
-export type NewDatasetRow = Omit<DatasetsTable, 'created_at'> & {
+export type NewDatasetRow = Omit<DatasetsTable, "created_at"> & {
   created_at?: string;
 };
 
 export type CurrentDatasetRow = CurrentDatasetTable;
-export type NewCurrentDatasetRow = Omit<CurrentDatasetTable, 'created_at'> & {
+export type NewCurrentDatasetRow = Omit<CurrentDatasetTable, "created_at"> & {
   created_at?: string;
 };
 
 export type ManualLeadershipScoreRow = ManualLeadershipScoresTable;
-export type NewManualLeadershipScoreRow = Omit<ManualLeadershipScoresTable, 'id' | 'created_at' | 'updated_at'> & {
+export type NewManualLeadershipScoreRow = Omit<
+  ManualLeadershipScoresTable,
+  "id" | "created_at" | "updated_at"
+> & {
   created_at?: string;
   updated_at?: string;
 };
-export type ManualLeadershipScoreUpdate = Partial<Omit<ManualLeadershipScoresTable, 'id' | 'created_at'>> & {
+export type ManualLeadershipScoreUpdate = Partial<
+  Omit<ManualLeadershipScoresTable, "id" | "created_at">
+> & {
   updated_at?: string;
 };
 
@@ -177,13 +175,11 @@ export interface CompetencyWithScores extends CompetencyRow {
   average_score?: number;
 }
 
-export interface SessionSummary {
-  session_id: string;
-  session_name: string;
-  upload_timestamp: string;
+export interface PeriodSummary {
+  period: string;
   employee_count: number;
   competency_count: number;
-  status: string;
+  latest_upload: string;
 }
 
 /**
@@ -191,27 +187,32 @@ export interface SessionSummary {
  */
 export type TableNames = keyof DatabaseSchema;
 export type SelectableFor<T extends TableNames> = DatabaseSchema[T];
-export type InsertableFor<T extends TableNames> = 
-  T extends 'employees' ? NewEmployeeRow :
-  T extends 'competencies' ? NewCompetencyRow :
-  T extends 'performance_scores' ? NewPerformanceScoreRow :
-  T extends 'upload_sessions' ? NewUploadSessionRow :
-  T extends 'datasets' ? NewDatasetRow :
-  T extends 'current_dataset' ? NewCurrentDatasetRow :
-  T extends 'manual_leadership_scores' ? NewManualLeadershipScoreRow :
-  never;
+export type InsertableFor<T extends TableNames> = T extends "employee_database"
+  ? NewEmployeeRow
+  : T extends "competencies"
+    ? NewCompetencyRow
+    : T extends "performance_scores"
+      ? NewPerformanceScoreRow
+      : T extends "datasets"
+        ? NewDatasetRow
+        : T extends "current_dataset"
+          ? NewCurrentDatasetRow
+          : T extends "manual_leadership_scores"
+            ? NewManualLeadershipScoreRow
+            : never;
 
-export type UpdatableFor<T extends TableNames> = 
-  T extends 'employees' ? EmployeeUpdate :
-  T extends 'manual_leadership_scores' ? ManualLeadershipScoreUpdate :
-  Partial<SelectableFor<T>>;
+export type UpdatableFor<T extends TableNames> = T extends "employee_database"
+  ? EmployeeUpdate
+  : T extends "manual_leadership_scores"
+    ? ManualLeadershipScoreUpdate
+    : Partial<SelectableFor<T>>;
 
 /**
  * SQL Migration Helpers
  */
 export const CREATE_TABLES_SQL = {
-  employees: `
-    CREATE TABLE IF NOT EXISTS employees (
+  employee_database: `
+    CREATE TABLE IF NOT EXISTS employee_database (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       nip TEXT,
@@ -220,10 +221,8 @@ export const CREATE_TABLES_SQL = {
       position TEXT,
       sub_position TEXT,
       organizational_level TEXT,
-      session_id TEXT NOT NULL,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (session_id) REFERENCES upload_sessions(session_id)
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
   `,
   competencies: `
@@ -233,9 +232,8 @@ export const CREATE_TABLES_SQL = {
       category TEXT,
       weight REAL DEFAULT 1.0,
       applicable_to TEXT DEFAULT 'all',
-      session_id TEXT NOT NULL,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (session_id) REFERENCES upload_sessions(session_id)
+      period TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
   `,
   performance_scores: `
@@ -244,22 +242,10 @@ export const CREATE_TABLES_SQL = {
       employee_id INTEGER NOT NULL,
       competency_id INTEGER NOT NULL,
       score REAL NOT NULL CHECK (score >= 0 AND score <= 100),
-      session_id TEXT NOT NULL,
+      period TEXT NOT NULL,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (employee_id) REFERENCES employees(id),
-      FOREIGN KEY (competency_id) REFERENCES competencies(id),
-      FOREIGN KEY (session_id) REFERENCES upload_sessions(session_id)
-    )
-  `,
-  upload_sessions: `
-    CREATE TABLE IF NOT EXISTS upload_sessions (
-      session_id TEXT PRIMARY KEY,
-      session_name TEXT NOT NULL,
-      upload_timestamp TEXT NOT NULL,
-      employee_count INTEGER NOT NULL DEFAULT 0,
-      competency_count INTEGER NOT NULL DEFAULT 0,
-      status TEXT NOT NULL DEFAULT 'pending',
-      notes TEXT
+      FOREIGN KEY (employee_id) REFERENCES employee_database(id) ON DELETE CASCADE,
+      FOREIGN KEY (competency_id) REFERENCES competencies(id)
     )
   `,
   datasets: `
@@ -290,22 +276,21 @@ export const CREATE_TABLES_SQL = {
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(dataset_id, employee_name)
     )
-  `
+  `,
 } as const;
 
 /**
  * Index Creation SQL
  */
 export const CREATE_INDEXES_SQL = [
-  'CREATE INDEX IF NOT EXISTS idx_employees_name ON employees(name)',
-  'CREATE INDEX IF NOT EXISTS idx_employees_organizational_level ON employees(organizational_level)',
-  'CREATE INDEX IF NOT EXISTS idx_competencies_session_id ON competencies(session_id)',
-  'CREATE INDEX IF NOT EXISTS idx_competencies_name ON competencies(name)',
-  'CREATE INDEX IF NOT EXISTS idx_performance_scores_employee_id ON performance_scores(employee_id)',
-  'CREATE INDEX IF NOT EXISTS idx_performance_scores_competency_id ON performance_scores(competency_id)',
-  'CREATE INDEX IF NOT EXISTS idx_performance_scores_session_id ON performance_scores(session_id)',
-  'CREATE INDEX IF NOT EXISTS idx_upload_sessions_timestamp ON upload_sessions(upload_timestamp)',
-  'CREATE INDEX IF NOT EXISTS idx_datasets_created_at ON datasets(created_at)',
-  'CREATE INDEX IF NOT EXISTS idx_manual_leadership_scores_dataset_id ON manual_leadership_scores(dataset_id)',
-  'CREATE INDEX IF NOT EXISTS idx_manual_leadership_scores_employee_name ON manual_leadership_scores(employee_name)'
+  "CREATE INDEX IF NOT EXISTS idx_employee_database_name ON employee_database(name)",
+  "CREATE INDEX IF NOT EXISTS idx_employee_database_organizational_level ON employee_database(organizational_level)",
+  "CREATE INDEX IF NOT EXISTS idx_competencies_period ON competencies(period)",
+  "CREATE INDEX IF NOT EXISTS idx_competencies_name ON competencies(name)",
+  "CREATE INDEX IF NOT EXISTS idx_performance_scores_employee_id ON performance_scores(employee_id)",
+  "CREATE INDEX IF NOT EXISTS idx_performance_scores_competency_id ON performance_scores(competency_id)",
+  "CREATE INDEX IF NOT EXISTS idx_performance_scores_period ON performance_scores(period)",
+  "CREATE INDEX IF NOT EXISTS idx_datasets_created_at ON datasets(created_at)",
+  "CREATE INDEX IF NOT EXISTS idx_manual_leadership_scores_dataset_id ON manual_leadership_scores(dataset_id)",
+  "CREATE INDEX IF NOT EXISTS idx_manual_leadership_scores_employee_name ON manual_leadership_scores(employee_name)",
 ] as const;

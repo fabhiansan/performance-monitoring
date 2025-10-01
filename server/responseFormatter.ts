@@ -165,27 +165,27 @@ export function responseFormatter(
     apiServerError: (_message?: string, _details?: unknown, _metadata?: Record<string, unknown>) => Response;
   };
 
-  extendedRes.apiSuccess = (data, message, metadata) => {
-    const response = ApiResponse.success(data, message, metadata);
+  extendedRes.apiSuccess = (data: unknown, message?: string | null, metadata?: Record<string, unknown>) => {
+    const response = ApiResponse.success(data, message ?? undefined, metadata);
     return res.json(response.toJSON());
   };
 
-  extendedRes.apiError = (statusCode, message, code, details, metadata) => {
+  extendedRes.apiError = (statusCode: number, message: string, code?: string, details?: unknown, metadata?: Record<string, unknown>) => {
     const response = ApiResponse.error(message, code, details, metadata);
     return res.status(statusCode).json(response.toJSON());
   };
 
-  extendedRes.apiValidationError = (message, validationErrors, metadata) => {
+  extendedRes.apiValidationError = (message: string, validationErrors?: unknown[], metadata?: Record<string, unknown>) => {
     const response = ApiResponse.validationError(message, validationErrors, metadata);
     return res.status(400).json(response.toJSON());
   };
 
-  extendedRes.apiNotFound = (resource, metadata) => {
+  extendedRes.apiNotFound = (resource?: string, metadata?: Record<string, unknown>) => {
     const response = ApiResponse.notFound(resource, metadata);
     return res.status(404).json(response.toJSON());
   };
 
-  extendedRes.apiServerError = (message, details, metadata) => {
+  extendedRes.apiServerError = (message?: string, details?: unknown, metadata?: Record<string, unknown>) => {
     const response = ApiResponse.serverError(message, details, metadata);
     return res.status(500).json(response.toJSON());
   };

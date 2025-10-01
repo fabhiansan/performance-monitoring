@@ -5,11 +5,25 @@ export class EmployeeValidator {
   private errors: ValidationError[] = [];
   private warnings: ValidationWarning[] = [];
 
-  validate(employees: Employee[]): { errors: ValidationError[]; warnings: ValidationWarning[] } {
+  validate(employees: Employee[] | unknown): { errors: ValidationError[]; warnings: ValidationWarning[] } {
     this.errors = [];
     this.warnings = [];
 
+    if (!Array.isArray(employees)) {
+      this.errors.push({
+        type: 'critical_data',
+        message: 'Employee data must be an array',
+        details: `Received: ${typeof employees}`
+      });
+      return { errors: [...this.errors], warnings: [...this.warnings] };
+    }
+
     this.validateBasicStructure(employees);
+
+    if (employees.length === 0) {
+      return { errors: [...this.errors], warnings: [...this.warnings] };
+    }
+
     this.validateDuplicateEmployees(employees);
     this.validateRequiredFields(employees);
 
@@ -17,19 +31,18 @@ export class EmployeeValidator {
   }
 
   private validateBasicStructure(employees: Employee[]): void {
-    if (!Array.isArray(employees)) {
+    if (employees.length === 0) {
+      const message = 'Employee dataset is empty';
+
       this.errors.push({
         type: 'critical_data',
-        message: 'Employee data must be an array',
-        details: `Received: ${typeof employees}`
+        message,
+        details: 'No employee records supplied for validation'
       });
-      return;
-    }
 
-    if (employees.length === 0) {
       this.warnings.push({
         type: 'partial_data',
-        message: 'No employee data provided',
+        message,
         details: 'Empty employee array'
       });
       return;
@@ -51,7 +64,16 @@ export class EmployeeValidator {
     const nameCount = new Map<string, number>();
     const duplicates: string[] = [];
 
-    employees.forEach(employee => {
+    employees.forEach((employee, index) => {
+      if (!employee || typeof employee !== 'object') {
+        this.errors.push({
+          type: 'critical_data',
+          message: 'Invalid employee record encountered',
+          details: `Employee at index ${index} is not a valid object`
+        });
+        return;
+      }
+
       if (!employee?.name) return;
       
       const normalizedName = employee.name.trim().toLowerCase();
@@ -66,7 +88,7 @@ export class EmployeeValidator {
     if (duplicates.length > 0) {
       this.errors.push({
         type: 'duplicate_employee',
-        message: 'Duplicate employee names found',
+        message: 'duplicate employee names found',
         details: `Employees: ${Array.from(new Set(duplicates)).join(', ')}`,
         affectedCount: duplicates.length
       });
@@ -75,8 +97,13 @@ export class EmployeeValidator {
 
   private validateRequiredFields(employees: Employee[]): void {
     const employeesWithMissingData: string[] = [];
+    const missingFieldSet = new Set<string>();
 
-    employees.forEach(employee => {
+    employees.forEach((employee, _index) => {
+      if (!employee || typeof employee !== 'object') {
+        return;
+      }
+
       const issues: string[] = [];
 
       // Check required fields
@@ -89,16 +116,25 @@ export class EmployeeValidator {
       }
 
       if (issues.length > 0) {
+        issues.forEach(issue => missingFieldSet.add(issue));
         employeesWithMissingData.push(
           `${employee.name || 'Unknown'} (missing: ${issues.join(', ')})`
         );
+
+        this.errors.push({
+          type: 'critical_data',
+          message: `Missing required employee fields: ${issues.join(', ')}`,
+          employeeName: employee.name,
+          details: `${employee.name || 'Unknown'} (missing: ${issues.join(', ')})`,
+          affectedCount: issues.length
+        });
       }
     });
 
     if (employeesWithMissingData.length > 0) {
       this.errors.push({
         type: 'missing_employee',
-        message: 'Employees with missing required fields',
+        message: `Employees missing required fields: ${Array.from(missingFieldSet).join(', ')}`,
         details: `Affected employees: ${employeesWithMissingData.join('; ')}`,
         affectedCount: employeesWithMissingData.length
       });

@@ -134,7 +134,7 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeAdded, onCa
       }
       onEmployeeAdded();
     } catch (error) {
-      console.error(`Error ${isEditMode ? 'updating' : 'adding'} employee:`, error);
+      console.error(`Kesalahan saat ${isEditMode ? 'memperbarui' : 'menambahkan'} pegawai:`, error);
       setErrors({ name: `Gagal ${isEditMode ? 'mengubah' : 'menambahkan'} pegawai. Silakan coba lagi.` });
     } finally {
       setIsSubmitting(false);
@@ -151,10 +151,10 @@ const AddEmployeeForm: React.FC<AddEmployeeFormProps> = ({ onEmployeeAdded, onCa
             </svg>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            {isEditMode ? 'Edit Pegawai' : 'Tambah Pegawai Baru'}
+            {isEditMode ? 'Ubah Pegawai' : 'Tambah Pegawai Baru'}
           </h2>
           <p className="text-gray-600 dark:text-gray-400">
-            {isEditMode ? 'Ubah data pegawai' : 'Masukkan data pegawai baru'}
+            {isEditMode ? 'Perbarui data pegawai' : 'Masukkan data pegawai baru'}
           </p>
         </div>
 

@@ -144,15 +144,15 @@ export class ErrorHandler {
     // Handle unknown error types
     return {
       code: 'UNKNOWN_ERROR',
-      message: 'An unknown error occurred',
-      userMessage: 'Something went wrong. Please try again.',
+      message: 'Terjadi kesalahan yang tidak diketahui',
+      userMessage: 'Terjadi kesalahan. Silakan coba lagi.',
       severity: 'medium',
       category: 'unknown',
       timestamp: new Date(),
       context: context || {},
       retryable: true,
       actionable: true,
-      suggestions: ['Please refresh the page and try again'],
+      suggestions: ['Silakan muat ulang halaman lalu coba lagi'],
     };
   }
 
@@ -190,7 +190,7 @@ export class ErrorHandler {
     return {
       code: 'GENERIC_ERROR',
       message: error.message,
-      userMessage: 'An error occurred. Please try again.',
+      userMessage: 'Terjadi kesalahan. Silakan coba lagi.',
       severity: 'medium',
       category: 'unknown',
       timestamp: new Date(),
@@ -245,7 +245,7 @@ export class ErrorHandler {
     return {
       code: 'NETWORK_ERROR',
       message: error.message,
-      userMessage: 'Unable to connect to the server. Please check your connection.',
+      userMessage: 'Tidak dapat terhubung ke server. Periksa koneksi Anda.',
       severity: 'high',
       category: 'network',
       timestamp: new Date(),
@@ -253,9 +253,9 @@ export class ErrorHandler {
       retryable: true,
       actionable: true,
       suggestions: [
-        'Check your internet connection',
-        'Verify the server is running',
-        'Try refreshing the page',
+        'Periksa koneksi internet Anda',
+        'Pastikan server sedang berjalan',
+        'Coba muat ulang halaman',
       ],
     };
   }
@@ -279,7 +279,7 @@ export class ErrorHandler {
     return {
       code: 'PARSING_ERROR',
       message: error.message,
-      userMessage: 'There was an issue processing your data.',
+      userMessage: 'Terjadi masalah saat memproses data Anda.',
       severity: 'medium',
       category: 'parsing',
       timestamp: new Date(),
@@ -294,7 +294,7 @@ export class ErrorHandler {
     return {
       code: 'SERVER_ERROR',
       message: error.message,
-      userMessage: 'Server is experiencing issues. Please try again later.',
+      userMessage: 'Server sedang mengalami gangguan. Silakan coba lagi nanti.',
       severity: 'high',
       category: 'server',
       timestamp: new Date(),
@@ -302,8 +302,8 @@ export class ErrorHandler {
       retryable: true,
       actionable: true,
       suggestions: [
-        'Try again in a few moments',
-        'Contact support if the issue persists',
+        'Coba lagi beberapa saat lagi',
+        'Hubungi tim dukungan jika masalah berlanjut',
       ],
     };
   }
@@ -312,7 +312,7 @@ export class ErrorHandler {
     return {
       code: 'PERMISSION_ERROR',
       message: error.message,
-      userMessage: 'You do not have permission to perform this action.',
+      userMessage: 'Anda tidak memiliki izin untuk melakukan aksi ini.',
       severity: 'medium',
       category: 'permission',
       timestamp: new Date(),
@@ -320,8 +320,8 @@ export class ErrorHandler {
       retryable: false,
       actionable: true,
       suggestions: [
-        'Check your permissions',
-        'Contact an administrator',
+        'Periksa hak akses Anda',
+        'Hubungi administrator',
       ],
     };
   }
@@ -329,13 +329,13 @@ export class ErrorHandler {
   // Message formatting helpers
   private formatValidationMessage(message: string): string {
     if (message.includes('required')) {
-      return 'Please fill in all required fields.';
+      return 'Silakan isi seluruh kolom yang wajib diisi.';
     }
     if (message.includes('invalid')) {
-      return 'Please check your input and try again.';
+      return 'Periksa kembali masukan Anda lalu coba lagi.';
     }
     if (message.includes('format')) {
-      return 'Please check the format of your data.';
+      return 'Periksa format data Anda.';
     }
     return message;
   }
@@ -344,39 +344,39 @@ export class ErrorHandler {
     const suggestions: string[] = [];
     
     if (message.includes('csv') || message.includes('format')) {
-      suggestions.push('Ensure your CSV file has proper headers');
-      suggestions.push('Check for missing or extra commas');
-      suggestions.push('Verify employee names are in brackets [Name]');
+      suggestions.push('Pastikan file CSV memiliki header yang benar');
+      suggestions.push('Periksa jika ada koma yang hilang atau berlebih');
+      suggestions.push('Pastikan nama pegawai berada dalam tanda kurung siku [Nama]');
     }
     
     if (message.includes('employee') || message.includes('name')) {
-      suggestions.push('Check employee names for typos');
-      suggestions.push('Ensure names match the employee database');
+      suggestions.push('Periksa kembali ejaan nama pegawai');
+      suggestions.push('Pastikan nama sesuai dengan data pegawai di sistem');
     }
     
-    return suggestions.length > 0 ? suggestions : ['Please check your input and try again'];
+    return suggestions.length > 0 ? suggestions : ['Periksa kembali masukan Anda lalu coba lagi'];
   }
 
   private getParsingSuggestions(message: string): string[] {
     const suggestions: string[] = [];
     
     if (message.includes('header')) {
-      suggestions.push('Ensure the first row contains column headers');
-      suggestions.push('Headers should include employee names in brackets like: "Competency [Employee Name]"');
+      suggestions.push('Pastikan baris pertama berisi header kolom');
+      suggestions.push('Header harus memuat nama pegawai dalam kurung siku, misalnya: "Kompetensi [Nama Pegawai]"');
     }
     
     if (message.includes('score') || message.includes('numeric')) {
-      suggestions.push('Ensure data rows contain numeric scores (10, 65, 75, etc.)');
-      suggestions.push('Supported string ratings: "Baik" (75), "Sangat Baik" (85), "Kurang Baik" (65)');
-      suggestions.push('Check for missing or invalid values in score columns');
+      suggestions.push('Pastikan setiap baris berisi skor numerik (10, 65, 75, dst.)');
+      suggestions.push('Penilaian teks yang didukung: "Baik" (75), "Sangat Baik" (85), "Kurang Baik" (65)');
+      suggestions.push('Periksa apakah ada nilai yang hilang atau tidak valid pada kolom skor');
     }
     
     if (message.includes('format')) {
-      suggestions.push('Supported formats: Standard CSV with quoted fields');
-      suggestions.push('Multiple assessment rows per employee are supported');
+      suggestions.push('Format yang didukung: CSV standar dengan nilai bertanda kutip');
+      suggestions.push('Beberapa baris penilaian per pegawai didukung');
     }
     
-    return suggestions.length > 0 ? suggestions : ['Please check your data format'];
+    return suggestions.length > 0 ? suggestions : ['Periksa kembali format data Anda'];
   }
 
   // Logging
@@ -433,14 +433,14 @@ export class ErrorHandler {
 export const createNetworkError = (message: string, context?: ErrorContext): AppError => {
   return new AppError(message, {
     code: 'NETWORK_ERROR',
-    userMessage: 'Unable to connect to the server. Please check your connection.',
+    userMessage: 'Tidak dapat terhubung ke server. Periksa koneksi Anda.',
     severity: 'high',
     category: 'network',
     retryable: true,
     suggestions: [
-      'Check your internet connection',
-      'Verify the server is running',
-      'Try refreshing the page',
+      'Periksa koneksi internet Anda',
+      'Pastikan server sedang berjalan',
+      'Coba muat ulang halaman',
     ],
     context,
   });
@@ -449,7 +449,7 @@ export const createNetworkError = (message: string, context?: ErrorContext): App
 export const createValidationError = (message: string, context?: ErrorContext): AppError => {
   return new AppError(message, {
     code: 'VALIDATION_ERROR',
-    userMessage: 'Please check your input and try again.',
+    userMessage: 'Periksa kembali masukan Anda lalu coba lagi.',
     severity: 'low',
     category: 'validation',
     retryable: false,
@@ -460,7 +460,7 @@ export const createValidationError = (message: string, context?: ErrorContext): 
 export const createParsingError = (message: string, context?: ErrorContext): AppError => {
   return new AppError(message, {
     code: 'PARSING_ERROR',
-    userMessage: 'There was an issue processing your data.',
+    userMessage: 'Terjadi masalah saat memproses data Anda.',
     severity: 'medium',
     category: 'parsing',
     retryable: false,
@@ -471,13 +471,13 @@ export const createParsingError = (message: string, context?: ErrorContext): App
 export const createServerError = (message: string, context?: ErrorContext): AppError => {
   return new AppError(message, {
     code: 'SERVER_ERROR',
-    userMessage: 'Server is experiencing issues. Please try again later.',
+    userMessage: 'Server sedang mengalami gangguan. Silakan coba lagi nanti.',
     severity: 'high',
     category: 'server',
     retryable: true,
     suggestions: [
-      'Try again in a few moments',
-      'Contact support if the issue persists',
+      'Coba lagi beberapa saat lagi',
+      'Hubungi tim dukungan jika masalah berlanjut',
     ],
     context,
   });

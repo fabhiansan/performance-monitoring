@@ -7,7 +7,7 @@ import { Employee } from '../types';
 
 // Constants for repeated strings
 const LEADERSHIP_COMPETENCY = 'Leadership';
-const TECHNICAL_SKILLS = TECHNICAL_SKILLS;
+const TECHNICAL_SKILLS = 'Technical Skills';
 
 describe('Validator Services', () => {
   let sampleEmployees: Employee[];

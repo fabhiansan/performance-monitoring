@@ -156,7 +156,7 @@ export const useDataManagement = ({
 
   const saveCurrentSession = useCallback(async (): Promise<void> => {
     if (!sessionName.trim()) {
-      setError('Please enter a session name');
+      setError('Silakan isi nama sesi');
       return;
     }
 

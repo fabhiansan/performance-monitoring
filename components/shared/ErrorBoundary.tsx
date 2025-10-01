@@ -55,16 +55,16 @@ export class ErrorBoundary extends Component<Props, State> {
           <div className="text-center max-w-md">
             <div className="text-red-500 text-4xl mb-4">⚠️</div>
             <h2 className="text-xl font-semibold text-red-800 mb-2">
-              Oops! Something went wrong
+              Waduh! Terjadi kesalahan
             </h2>
             <p className="text-red-600 mb-4">
-              An unexpected error occurred in this section of the application.
+              Terjadi kesalahan tak terduga pada bagian aplikasi ini.
             </p>
             
             {import.meta.env.DEV && this.state.error && (
               <details className="text-left bg-red-100 border border-red-300 rounded p-3 mb-4">
                 <summary className="cursor-pointer font-medium text-red-800 mb-2">
-                  Error Details (Development)
+                  Detail Kesalahan (Pengembangan)
                 </summary>
                 <pre className="text-xs text-red-700 whitespace-pre-wrap overflow-auto max-h-32">
                   {this.state.error.message}
@@ -78,13 +78,13 @@ export class ErrorBoundary extends Component<Props, State> {
                 onClick={this.handleRetry}
                 className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
               >
-                Try Again
+                Coba Lagi
               </button>
               <button
                 onClick={() => window.location.reload()}
                 className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
               >
-                Reload Page
+                Muat Ulang Halaman
               </button>
             </div>
           </div>
@@ -162,10 +162,10 @@ export class AsyncErrorBoundary extends Component<Props, AsyncErrorBoundaryState
           <div className="text-center">
             <div className="text-yellow-600 text-2xl mb-2">🔄</div>
             <h3 className="text-lg font-medium text-yellow-800 mb-2">
-              Operation Failed
+              Operasi Gagal
             </h3>
             <p className="text-yellow-700 text-sm mb-3">
-              There was an error processing your request.
+              Terjadi kesalahan saat memproses permintaan Anda.
             </p>
             
             <button
@@ -177,7 +177,7 @@ export class AsyncErrorBoundary extends Component<Props, AsyncErrorBoundaryState
                   : 'bg-yellow-600 text-white hover:bg-yellow-700'
               }`}
             >
-              {this.state.isRetrying ? 'Retrying...' : 'Retry'}
+              {this.state.isRetrying ? 'Sedang mencoba...' : 'Coba Lagi'}
             </button>
           </div>
         </div>

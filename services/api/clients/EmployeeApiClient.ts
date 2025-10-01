@@ -16,9 +16,10 @@ export class EmployeeApiClient extends BaseApiClient {
     super(config);
   }
 
-  async getAllEmployees(): Promise<Employee[]> {
+  async getAllEmployees(signal?: AbortSignal): Promise<Employee[]> {
     const employees = await this.get<ApiEmployee[]>('/employees', {
-      operation: 'getAllEmployees'
+      operation: 'getAllEmployees',
+      signal
     });
     return employees.map(this.mapEmployeeFromApi);
   }
@@ -212,9 +213,10 @@ export class EmployeeApiClient extends BaseApiClient {
     return result.count;
   }
 
-  async getEmployeeOrgLevelMapping(): Promise<Record<string, string>> {
+  async getEmployeeOrgLevelMapping(signal?: AbortSignal): Promise<Record<string, string>> {
     return this.get<Record<string, string>>('/employees/org-level-mapping', {
-      operation: 'getEmployeeOrgLevelMapping'
+      operation: 'getEmployeeOrgLevelMapping',
+      signal
     });
   }
 
@@ -293,19 +295,23 @@ export class EmployeeApiClient extends BaseApiClient {
 
   private mapEmployeeToApi(
     employee: Pick<Employee, 'name' | 'nip' | 'gol' | 'pangkat' | 'position'> &
-      Partial<Pick<Employee, 'subPosition' | 'organizationalLevel'>>
+      Partial<Pick<Employee, 'subPosition' | 'organizationalLevel'>> &
+      Partial<{ sub_position: string; organizational_level: string }>
   ): Pick<ApiEmployee, 'name' | 'nip' | 'gol' | 'pangkat' | 'position'> & {
     sub_position?: string;
     organizational_level?: string;
   } {
+    const subPosition = employee.subPosition ?? employee.sub_position;
+    const organizationalLevel = employee.organizationalLevel ?? employee.organizational_level;
+
     return {
       name: employee.name,
       nip: employee.nip ?? '',
       gol: employee.gol ?? '',
       pangkat: employee.pangkat ?? '',
       position: employee.position ?? '',
-      ...(employee.subPosition ? { sub_position: employee.subPosition } : {}),
-      ...(employee.organizationalLevel ? { organizational_level: employee.organizationalLevel } : {})
+      ...(subPosition ? { sub_position: subPosition } : {}),
+      ...(organizationalLevel ? { organizational_level: organizationalLevel } : {})
     };
   }
 }

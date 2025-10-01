@@ -12,8 +12,9 @@ import type { Employee } from '../types';
 
 // Constants for repeated strings
 const STAFF_OTHER = 'Staff/Other';
-const TEST_SESSION = TEST_SESSION;
-const LEADERSHIP_EMPLOYEE = LEADERSHIP_EMPLOYEE;
+const TEST_SESSION = 'Test Session';
+const LEADERSHIP_EMPLOYEE = 'Leadership Focus Employee';
+const TEST_EMPLOYEE_NAME = 'Test Employee';
 
 describe('KyselyDatabaseService', () => {
   let db: KyselyDatabaseService;
@@ -67,7 +68,7 @@ describe('KyselyDatabaseService', () => {
       const testEmployees: Employee[] = [
         {
           id: 1,
-          name: 'Test Employee',
+          name: TEST_EMPLOYEE_NAME,
           nip: '12345678901234567',
           gol: 'IV/c',
           pangkat: 'Pembina',
@@ -143,7 +144,7 @@ describe('KyselyDatabaseService', () => {
       expect(typeof mapping).toBe('object');
       
       // Should have at least the test employee's org level
-      expect(mapping[STAFF_OTHER]).toBeGreaterThan(0);
+      expect(mapping[TEST_EMPLOYEE_NAME]).toBe(STAFF_OTHER);
     });
   });
 

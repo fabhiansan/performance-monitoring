@@ -62,62 +62,50 @@ export const VALIDATION_LIMITS = {
 
 // Define required competencies for performance calculations
 export const REQUIRED_COMPETENCIES: CompetencyRequirement[] = [
-  // Perilaku Kinerja (5 competencies)
   {
-    name: 'inisiatif dan fleksibilitas',
-    aliases: ['inisiatif', 'fleksibilitas', 'initiative', 'flexibility'],
-    required: true,
-    scoringCategory: 'perilaku_kinerja',
-    weight: 5
-  },
-  {
-    name: 'kehadiran dan ketepatan waktu',
-    aliases: ['kehadiran', 'ketepatan', 'waktu', 'attendance', 'punctuality'],
-    required: true,
-    scoringCategory: 'perilaku_kinerja',
-    weight: 5
-  },
-  {
-    name: 'kerjasama dan team work',
-    aliases: ['kerjasama', 'team', 'teamwork', 'cooperation', 'collaboration'],
-    required: true,
-    scoringCategory: 'perilaku_kinerja',
-    weight: 5
-  },
-  {
-    name: 'manajemen waktu kerja',
-    aliases: ['manajemen', 'waktu', 'kerja', 'time management', 'work management'],
-    required: true,
-    scoringCategory: 'perilaku_kinerja',
-    weight: 5
-  },
-  {
-    name: 'kepemimpinan',
+    name: 'Leadership',
     aliases: ['kepemimpinan', 'leadership', 'pemimpin'],
     required: true,
-    scoringCategory: 'perilaku_kinerja',
+    scoringCategory: 'penilaian_pimpinan',
     weight: 10
   },
-  
-  // Kualitas Kerja (3 competencies)
   {
-    name: 'kualitas kinerja',
-    aliases: ['kualitas', 'kinerja', 'quality', 'performance', 'work quality'],
+    name: 'Communication',
+    aliases: ['komunikasi', 'communication', 'berkomunikasi', 'komunikatif'],
     required: true,
-    scoringCategory: 'kualitas_kerja',
-    weight: 25.5 // Eselon weight, Staff gets different weight
-  },
-  {
-    name: 'kemampuan berkomunikasi',
-    aliases: ['komunikasi', 'berkomunikasi', 'communication', 'komunikatif'],
-    required: true,
-    scoringCategory: 'kualitas_kerja',
+    scoringCategory: 'perilaku_kinerja',
     weight: 8.5
   },
   {
-    name: 'pemahaman tentang permasalahan sosial',
-    aliases: ['permasalahan', 'sosial', 'social', 'pemahaman sosial', 'social understanding'],
+    name: 'Technical Skills',
+    aliases: [
+      'keterampilan teknis',
+      'technical skills',
+      'kualitas kinerja',
+      'quality',
+      'performance',
+      'work quality'
+    ],
     required: true,
+    scoringCategory: 'kualitas_kerja',
+    weight: 25.5
+  },
+  {
+    name: 'Teamwork',
+    aliases: ['kerjasama', 'teamwork', 'cooperation', 'collaboration', 'kerjasama dan team work'],
+    required: false,
+    scoringCategory: 'perilaku_kinerja',
+    weight: 5
+  },
+  {
+    name: 'Problem Solving',
+    aliases: [
+      'pemahaman tentang permasalahan sosial',
+      'permasalahan sosial',
+      'problem solving',
+      'social understanding'
+    ],
+    required: false,
     scoringCategory: 'kualitas_kerja',
     weight: 8.5
   }

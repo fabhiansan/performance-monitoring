@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { Modal, Button, Select } from '../../design-system';
+import { simplifyOrganizationalLevel } from '../../utils/organizationalLevels';
+
+const NEW_EMPLOYEE_PREFIX = '__NEW__';
 
 interface Suggestion {
   id: number;
@@ -35,7 +38,7 @@ const ResolveEmployeesDialog: React.FC<ResolveEmployeesDialogProps> = ({ unknown
           const suggestions = await api.getEmployeeSuggestions(name);
           resMap[name] = suggestions;
         } catch (error) {
-          console.error(`Failed to get suggestions for ${name}:`, error);
+          console.error(`Gagal mendapatkan saran untuk ${name}:`, error);
           resMap[name] = [];
         }
       }
@@ -82,12 +85,21 @@ const ResolveEmployeesDialog: React.FC<ResolveEmployeesDialogProps> = ({ unknown
   const handleSubmit = () => {
     const mapping: Record<string, { chosenName: string; orgLevel: string; isNew: boolean }> = {};
     unknownEmployees.forEach(name => {
-      const chosen = selection[name] || '__NEW__';
-      const isNew = chosen === '__NEW__';
-      const orgLevel = isNew ? 'Staff/Other' : (suggestionsMap[name]?.find(s => s.name === chosen)?.organizational_level || 'Staff/Other');
+      const chosen = selection[name] || `${NEW_EMPLOYEE_PREFIX}:Staff`;
+      const isNew = chosen.startsWith(NEW_EMPLOYEE_PREFIX);
+
+      let orgLevel: string;
+      if (isNew) {
+        // Extract org level from prefix format like "__NEW__:Eselon II" -> "Eselon II"
+        orgLevel = chosen.split(':')[1] || 'Staff';
+      } else {
+        const rawOrgLevel = suggestionsMap[name]?.find(s => s.name === chosen)?.organizational_level;
+        orgLevel = simplifyOrganizationalLevel(rawOrgLevel, undefined);
+      }
+
       mapping[name] = { chosenName: isNew ? name : chosen, orgLevel, isNew };
     });
-    
+
     // Proceed with default behavior – parent will handle any new employee logic
     onSubmit(mapping);
   };
@@ -97,7 +109,7 @@ const ResolveEmployeesDialog: React.FC<ResolveEmployeesDialogProps> = ({ unknown
       <Modal open={true} onClose={() => {}} size="sm" closeOnBackdropClick={false} closeOnEscape={false}>
         <Modal.Body>
           <div className="text-center text-gray-800 dark:text-gray-100">
-            Loading suggestions...
+            Memuat saran...
           </div>
         </Modal.Body>
       </Modal>
@@ -109,21 +121,27 @@ const ResolveEmployeesDialog: React.FC<ResolveEmployeesDialogProps> = ({ unknown
       open={true} 
       onClose={onCancel} 
       size="2xl"
-      title="Resolve Unknown Employees"
+      title="Selesaikan Pegawai Tidak Dikenal"
       closeOnBackdropClick={false}
     >
       <Modal.Body>
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Please match each name to an existing employee or choose &quot;New Employee&quot;.
+          Silakan cocokan setiap nama dengan pegawai yang sudah ada atau pilih &quot;Pegawai Baru&quot;.
         </p>
         <div className="max-h-96 overflow-y-auto">
           {unknownEmployees.map(name => {
             const options = [
-              { value: '__NEW__', label: 'Pegawai Baru' },
-              ...(suggestionsMap[name] || []).map(s => ({
-                value: s.name,
-                label: `${s.name}${s.organizational_level ? ` (${s.organizational_level})` : ''}`
-              }))
+              { value: `${NEW_EMPLOYEE_PREFIX}:Eselon II`, label: 'Pegawai Baru (Eselon II)' },
+              { value: `${NEW_EMPLOYEE_PREFIX}:Eselon III`, label: 'Pegawai Baru (Eselon III)' },
+              { value: `${NEW_EMPLOYEE_PREFIX}:Eselon IV`, label: 'Pegawai Baru (Eselon IV)' },
+              { value: `${NEW_EMPLOYEE_PREFIX}:Staff`, label: 'Pegawai Baru (Staf)' },
+              ...(suggestionsMap[name] || []).map(s => {
+                const displayLevel = simplifyOrganizationalLevel(s.organizational_level, undefined);
+                return {
+                  value: s.name,
+                  label: `${s.name}${s.organizational_level ? ` (${displayLevel})` : ''}`
+                };
+              })
             ];
 
             return (
@@ -132,7 +150,7 @@ const ResolveEmployeesDialog: React.FC<ResolveEmployeesDialogProps> = ({ unknown
                 <div className="min-w-0 flex-shrink-0 w-64">
                   <Select
                     options={options}
-                    value={selection[name] || '__NEW__'}
+                    value={selection[name] || `${NEW_EMPLOYEE_PREFIX}:Staff`}
                     onChange={(value) => handleSelect(name, value as string)}
                     size="sm"
                     placeholder="Pilih pegawai..."

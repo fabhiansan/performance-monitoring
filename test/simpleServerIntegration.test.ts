@@ -11,16 +11,11 @@ import type { Employee } from '../types';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// Mock server to bypass schema validation issues
-import express from 'express';
-import cors from 'cors';
-import type { Server } from 'http';
-
 describe('Simple Server Integration Test', () => {
-  let server: Server | null;
   let db: KyselyDatabaseService;
   const testDbPath = path.join(__dirname, 'simple-integration.db');
-  let serverPort: number;
+  let restoreFetch: (() => void) | undefined;
+  const baseOrigin = 'http://integration.test';
 
   beforeAll(async () => {
     // Clean up any existing test database
@@ -32,120 +27,127 @@ describe('Simple Server Integration Test', () => {
     db = new KyselyDatabaseService(testDbPath);
     await db.initialize();
 
-    // Create simple Express server for testing
-    const app = express();
-    app.use(cors());
-    app.use(express.json());
+    const { apiClientFactory } = await import('../services/api/interfaces');
+    const baseUrl = 'http://integration.test/api';
+    (apiClientFactory as { config: { baseUrl: string } }).config.baseUrl = baseUrl;
+    (employeeApi as { baseUrl: string }).baseUrl = baseUrl;
 
-    // Health endpoints
-    app.get('/health', (req, res) => {
-      res.json({
-        status: 'ok',
-        database: db.isReady(),
-        timestamp: new Date().toISOString()
-      });
-    });
-
-    app.get('/api/health', (req, res) => {
-      res.json({
-        status: 'ok',
-        database: db.isReady(),
-        uptime: process.uptime(),
-        timestamp: new Date().toISOString()
-      });
-    });
-
-    // Employee endpoints
-    app.get('/api/employees', async (req, res) => {
-      try {
-        const employees = await db.getAllEmployees();
-        res.json({
-          success: true,
-          data: employees,
-          timestamp: new Date().toISOString()
-        });
-      } catch (_error) {
-        res.status(500).json({
-          success: false,
-          error: 'Failed to get employees',
-          timestamp: new Date().toISOString()
-        });
-      }
-    });
-
-    app.get('/api/employees/suggestions', async (req, res) => {
-      try {
-        const { name } = req.query;
-        if (!name || typeof name !== 'string') {
-          return res.status(400).json({
-            success: false,
-            error: 'Name parameter is required',
-            timestamp: new Date().toISOString()
-          });
+    restoreFetch = (() => {
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]): Promise<Response> => {
+        const request = new Request(input, init);
+        const url = new URL(request.url);
+        const method = request.method.toUpperCase();
+        const path = `${url.pathname}${url.search}`;
+        if (url.origin !== baseOrigin) {
+          return originalFetch(input, init);
         }
-        const suggestions = await db.getEmployeeSuggestions(name, 5);
-        res.json(suggestions);
-      } catch (_error) {
-        res.status(500).json({
-          success: false,
-          error: 'Failed to get suggestions',
-          timestamp: new Date().toISOString()
-        });
-      }
-    });
 
-    app.get('/api/employees/org-level-mapping', async (req, res) => {
-      try {
-        const mapping = await db.getEmployeeOrgLevelMapping();
-        res.json(mapping);
-      } catch (_error) {
-        res.status(500).json({
-          success: false,
-          error: 'Failed to get mapping',
-          timestamp: new Date().toISOString()
-        });
-      }
-    });
-
-    app.post('/api/employee-data', async (req, res) => {
-      try {
-        const { employees } = req.body;
-        if (!employees || !Array.isArray(employees)) {
-          return res.status(400).json({
-            success: false,
-            error: 'Employees array is required',
-            timestamp: new Date().toISOString()
+        const jsonResponse = (data: unknown, status = 200): Response =>
+          new Response(JSON.stringify(data), {
+            status,
+            headers: { 'Content-Type': 'application/json' }
           });
-        }
-        const sessionId = await db.saveEmployeeData(employees);
-        res.status(201).json({
-          success: true,
-          data: { sessionId },
-          message: 'Employee data saved successfully',
-          timestamp: new Date().toISOString()
-        });
-      } catch (_error) {
-        res.status(500).json({
-          success: false,
-          error: 'Failed to save employee data',
-          timestamp: new Date().toISOString()
-        });
-      }
-    });
 
-    // Start server
-    server = app.listen(0, () => {
-      serverPort = (server.address() as { port: number }).port;
-      
-      // Override API client base URL
-      const { apiClientFactory } = await import('../services/api/interfaces');
-      (apiClientFactory as { config: { baseUrl: string } }).config.baseUrl = `http://127.0.0.1:${serverPort}/api`;
-    });
+        try {
+          if (method === 'GET' && path === '/health') {
+            return jsonResponse({
+              status: 'ok',
+              database: db.isReady(),
+              timestamp: new Date().toISOString()
+            });
+          }
+
+          if (method === 'GET' && path === '/api/health') {
+            return jsonResponse({
+              status: 'ok',
+              database: db.isReady(),
+              uptime: process.uptime(),
+              timestamp: new Date().toISOString()
+            });
+          }
+
+          if (method === 'GET' && path === '/api/employees') {
+            const employees = await db.getAllEmployees();
+            return jsonResponse({
+              success: true,
+              data: employees,
+              timestamp: new Date().toISOString()
+            });
+          }
+
+          if (method === 'GET' && url.pathname === '/api/employees/suggestions') {
+            const name = url.searchParams.get('name');
+            if (!name || name.trim().length === 0) {
+              return jsonResponse({
+                success: false,
+                error: 'Name parameter is required',
+                timestamp: new Date().toISOString()
+              }, 400);
+            }
+            const suggestions = await db.getEmployeeSuggestions(name, 5);
+            return jsonResponse(suggestions);
+          }
+
+          if (method === 'GET' && url.pathname === '/api/employees/org-level-mapping') {
+            const mapping = await db.getEmployeeOrgLevelMapping();
+            return jsonResponse(mapping);
+          }
+
+          if (method === 'POST' && url.pathname === '/api/employee-data') {
+            let payload: unknown;
+            try {
+              payload = await request.json();
+            } catch {
+              return jsonResponse({
+                success: false,
+                error: 'Invalid JSON payload',
+                timestamp: new Date().toISOString()
+              }, 400);
+            }
+
+            const employees = (payload as { employees?: Employee[] }).employees;
+            if (!Array.isArray(employees) || employees.length === 0) {
+              return jsonResponse({
+                success: false,
+                error: 'Employees array is required',
+                timestamp: new Date().toISOString()
+              }, 400);
+            }
+
+            const sessionId = await db.saveEmployeeData(employees);
+            return jsonResponse({
+              success: true,
+              data: { sessionId },
+              message: 'Employee data saved successfully',
+              timestamp: new Date().toISOString()
+            }, 201);
+          }
+
+          return jsonResponse({
+            success: false,
+            error: 'Not Found',
+            timestamp: new Date().toISOString()
+          }, 404);
+        } catch (error) {
+          return jsonResponse({
+            success: false,
+            error: error instanceof Error ? error.message : String(error),
+            timestamp: new Date().toISOString()
+          }, 500);
+        }
+      };
+      return () => {
+        globalThis.fetch = originalFetch;
+      };
+    })();
+
+    // No network listener required for these tests
   });
 
   afterAll(async () => {
-    server?.close();
     db?.close();
+    restoreFetch?.();
     
     // Clean up test database
     if (fs.existsSync(testDbPath)) {
@@ -155,7 +157,7 @@ describe('Simple Server Integration Test', () => {
 
   describe('Integration Verification', () => {
     it('should verify server health', async () => {
-      const response = await fetch(`http://127.0.0.1:${serverPort}/health`);
+      const response = await fetch(`${baseOrigin}/health`);
       expect(response.ok).toBe(true);
       
       const data = await response.json();

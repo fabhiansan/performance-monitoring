@@ -3,7 +3,7 @@ import { api } from '../../services/api';
 import { IconUsers, IconUpload, IconPlus, IconClipboardData, IconEdit, IconTrash } from '../shared/Icons';
 import EmployeeImport from './EmployeeImport';
 import AddEmployeeForm from './AddEmployeeForm';
-import { ORGANIZATIONAL_LEVELS, isValidOrganizationalLevel } from '../../utils/organizationalLevels';
+import { ORGANIZATIONAL_LEVELS, isValidOrganizationalLevel, simplifyOrganizationalLevel } from '../../utils/organizationalLevels';
 import { Employee } from '../../types';
 
 interface EmployeeManagementProps {
@@ -200,14 +200,19 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employees: prop
   );
 
   const sortedEmployees = [...filteredEmployees].sort((a, b) => {
-    const aVal = a[sortField];
-    const bVal = b[sortField];
+    const getValue = (employee: Employee) => {
+      if (sortField === 'organizational_level') {
+        return simplifyOrganizationalLevel(employee.organizational_level, employee.gol);
+      }
+      const value = employee[sortField];
+      return typeof value === 'string' ? value : '';
+    };
+
+    const aVal = getValue(a);
+    const bVal = getValue(b);
     const direction = sortDirection === 'asc' ? 1 : -1;
-    
-    if (typeof aVal === 'string' && typeof bVal === 'string') {
-      return aVal.localeCompare(bVal) * direction;
-    }
-    return 0;
+
+    return aVal.localeCompare(bVal) * direction;
   });
 
 
@@ -252,7 +257,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employees: prop
             className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <IconUpload className="w-5 h-5 mr-2"/>
-            Import CSV
+            Impor CSV
           </button>
           <button
             onClick={() => setShowAddForm(true)}
@@ -291,7 +296,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employees: prop
 
         {error && (
           <div className="bg-red-100 dark:bg-red-900/50 border-l-4 border-red-500 text-red-700 dark:text-red-300 p-4 rounded-lg mb-6">
-            <p className="font-bold">Error</p>
+            <p className="font-bold">Kesalahan</p>
             <p>{error}</p>
           </div>
         )}
@@ -299,7 +304,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employees: prop
         {selectedEmployees.size > 0 && (
           <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-lg p-4 mb-6">
             <h3 className="text-lg font-semibold text-purple-900 dark:text-purple-100 mb-4">
-              Bulk Actions ({selectedEmployees.size} pegawai terpilih)
+              Aksi Massal ({selectedEmployees.size} pegawai terpilih)
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -393,7 +398,7 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employees: prop
                 className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <IconUpload className="w-5 h-5 mr-2"/>
-                Import CSV
+                Impor CSV
               </button>
               <button
                 onClick={() => setShowAddForm(true)}
@@ -453,8 +458,12 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employees: prop
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                {sortedEmployees.map((emp) => (
-                  <tr key={emp.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                {sortedEmployees.map((emp) => {
+                  const simplifiedLevel = simplifyOrganizationalLevel(emp.organizational_level, emp.gol);
+                  const isEselon = simplifiedLevel === 'Eselon';
+
+                  return (
+                    <tr key={emp.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <input
                         type="checkbox"
@@ -482,14 +491,15 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employees: prop
                       <div className="truncate">{emp.sub_position}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        emp.organizational_level === 'Eselon II' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-300' :
-                        emp.organizational_level === 'Eselon III' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300' :
-                        emp.organizational_level === 'Eselon IV' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300' :
-                        emp.organizational_level?.toLowerCase().includes('eselon') ? 'bg-violet-100 text-violet-800 dark:bg-violet-900/20 dark:text-violet-300' :
-                        'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'
-                      }`}>
-                        {emp.organizational_level}
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          isEselon
+                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-200'
+                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700/40 dark:text-gray-200'
+                        }`}
+                        title={emp.organizational_level || ''}
+                      >
+                        {simplifiedLevel}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -497,10 +507,10 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employees: prop
                         <button
                           onClick={() => handleEditEmployee(emp)}
                           className="inline-flex items-center px-3 py-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                          title="Edit pegawai"
+                          title="Ubah pegawai"
                         >
                           <IconEdit className="w-4 h-4 mr-1"/>
-                          Edit
+                          Ubah
                         </button>
                         <button
                           onClick={() => handleDeleteEmployee(emp.id, emp.name)}
@@ -512,8 +522,9 @@ const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employees: prop
                         </button>
                       </div>
                     </td>
-                  </tr>
-                ))}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

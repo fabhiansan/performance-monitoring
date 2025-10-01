@@ -25,24 +25,27 @@ export interface FastifyServerOptions {
   enableSwagger?: boolean;
   enableCors?: boolean;
   logLevel?: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace';
+  disableListen?: boolean;
 }
 
 export class FastifyServer {
   private app: FastifyInstance;
   private db: KyselyDatabaseService;
   private options: Required<FastifyServerOptions>;
+  private pluginsReady: Promise<void>;
   
   // Constants to avoid duplicate strings
   private static readonly FAILED_TO_GET_MESSAGE = 'Failed to get';
 
   constructor(options: FastifyServerOptions = {}) {
     this.options = {
-      port: options.port || 3002,
-      host: options.host || 'localhost',
-      dbPath: options.dbPath || null,
+      port: options.port ?? 3002,
+      host: options.host ?? '127.0.0.1',
+      dbPath: options.dbPath ?? null,
       enableSwagger: options.enableSwagger ?? true,
       enableCors: options.enableCors ?? true,
-      logLevel: options.logLevel || 'info'
+      logLevel: options.logLevel || 'info',
+      disableListen: options.disableListen ?? process.env.DISABLE_SERVER_LISTEN === '1'
     };
 
     this.app = Fastify({
@@ -66,7 +69,7 @@ export class FastifyServer {
     });
 
     this.db = new KyselyDatabaseService(this.options.dbPath);
-    this.setupPlugins();
+    this.pluginsReady = this.setupPlugins();
     this.setupRoutes();
     this.setupErrorHandling();
   }
@@ -395,6 +398,25 @@ export class FastifyServer {
 
   async addEmployee(request: FastifyRequest<{ Body: CreateEmployee }>, reply: FastifyReply) {
     try {
+      const payload = request.body ?? {};
+
+      const requiredFields: Array<[keyof CreateEmployee, unknown]> = [
+        ['name', payload.name],
+        ['position', payload.position]
+      ];
+
+      const missingField = requiredFields.find(([, value]) => {
+        return typeof value !== 'string' || value.trim().length === 0;
+      });
+
+      if (missingField) {
+        return reply.code(400).send({
+          success: false,
+          error: `${missingField[0]} is required`,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
       const employeePayload = {
         name: request.body.name,
         nip: request.body.nip ?? null,
@@ -538,6 +560,13 @@ export class FastifyServer {
   async getEmployeeSuggestions(request: FastifyRequest<{ Querystring: { name: string; limit?: number } }>, reply: FastifyReply) {
     try {
       const { name, limit = 5 } = request.query;
+      if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        return reply.code(400).send({
+          success: false,
+          error: 'name query parameter is required',
+          timestamp: new Date().toISOString(),
+        });
+      }
       const suggestions = await this.db.getEmployeeSuggestions(name, limit);
       reply.send(suggestions);
     } catch (error) {
@@ -585,6 +614,13 @@ export class FastifyServer {
   async uploadEmployeeData(request: FastifyRequest<{ Body: { employees: Employee[]; sessionName?: string } }>, reply: FastifyReply) {
     try {
       const { employees, sessionName } = request.body;
+      if (!Array.isArray(employees) || employees.length === 0) {
+        return reply.code(400).send({
+          success: false,
+          error: 'Employees array is required',
+          timestamp: new Date().toISOString(),
+        });
+      }
       const sessionId = await this.db.saveEmployeeData(employees, sessionName);
       
       reply.code(201).send({
@@ -620,6 +656,13 @@ export class FastifyServer {
   async getEmployeeDataBySession(request: FastifyRequest<{ Params: { sessionId: string } }>, reply: FastifyReply) {
     try {
       const { sessionId } = request.params;
+      if (!sessionId) {
+        return reply.code(404).send({
+          success: false,
+          error: 'Session ID is required',
+          timestamp: new Date().toISOString(),
+        });
+      }
       const employees = await this.db.getEmployeeDataBySession(sessionId);
       
       const employeesWithoutPerformance = employees.filter(emp => !emp.performance || emp.performance.length === 0);
@@ -758,6 +801,22 @@ export class FastifyServer {
       const { employeeName } = request.params;
       const { score } = request.body;
 
+      if (typeof score !== 'number' || Number.isNaN(score)) {
+        return reply.code(400).send({
+          success: false,
+          error: 'Score must be a number',
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      if (score < 0 || score > 100) {
+        return reply.code(400).send({
+          success: false,
+          error: 'Score must be between 0 and 100',
+          timestamp: new Date().toISOString(),
+        });
+      }
+
       const currentDatasetId = await this.db.getCurrentDatasetId();
       if (!currentDatasetId) {
         return reply.code(404).send({
@@ -852,17 +911,17 @@ export class FastifyServer {
       let filteredSessions = sessions;
       if (startTime || endTime) {
         filteredSessions = sessions.filter(session => {
-          const sessionTime = new Date(session.upload_timestamp);
+          const sessionTime = new Date(session.latest_upload);
           if (startTime && sessionTime < new Date(startTime)) return false;
           if (endTime && sessionTime > new Date(endTime)) return false;
           return true;
         });
       }
-      
-      // Get employee data for filtered sessions
+
+      // Get employee data for filtered periods
       const allEmployees: Employee[] = [];
       for (const session of filteredSessions) {
-        const employees = await this.db.getEmployeeDataBySession(session.session_id);
+        const employees = await this.db.getEmployeeDataBySession(session.period);
         allEmployees.push(...employees);
       }
       
@@ -900,22 +959,21 @@ export class FastifyServer {
         });
       }
       
-      // Get latest session by upload timestamp
-      const latestSession = sessions.reduce((latest, current) => 
-        new Date(current.upload_timestamp) > new Date(latest.upload_timestamp) ? current : latest
+      // Get latest period by upload timestamp
+      const latestSession = sessions.reduce((latest, current) =>
+        new Date(current.latest_upload) > new Date(latest.latest_upload) ? current : latest
       );
-      
-      const employees = await this.db.getEmployeeDataBySession(latestSession.session_id);
-      
+
+      const employees = await this.db.getEmployeeDataBySession(latestSession.period);
+
       reply.send({
         success: true,
         data: {
           employees,
           metadata: {
             totalEmployees: employees.length,
-            sessionId: latestSession.session_id,
-            sessionName: latestSession.session_name,
-            uploadTimestamp: latestSession.upload_timestamp
+            period: latestSession.period,
+            uploadTimestamp: latestSession.latest_upload
           }
         },
         timestamp: new Date().toISOString(),
@@ -1147,28 +1205,33 @@ export class FastifyServer {
    */
   async start(): Promise<void> {
     try {
+      await this.pluginsReady;
       // Initialize database
       await this.db.initialize();
       
-      // Start server
-      const address = await this.app.listen({
-        port: this.options.port,
-        host: this.options.host,
-      });
-
-      logger.info('Fastify server started', { 
-        address, 
-        port: this.options.port,
-        swagger: this.options.enableSwagger ? `http://${this.options.host}:${this.options.port}/docs` : false
-      });
-
-      // Signal to Electron that server is ready
-      if (process.stdout) {
-        process.stdout.write(JSON.stringify({
-          type: 'server-ready',
+      if (this.options.disableListen) {
+        await this.app.ready();
+        logger.info('Fastify server initialized without network listener');
+      } else {
+        const address = await this.app.listen({
           port: this.options.port,
-          timestamp: new Date().toISOString()
-        }) + '\n');
+          host: this.options.host,
+        });
+
+        logger.info('Fastify server started', { 
+          address, 
+          port: this.options.port,
+          swagger: this.options.enableSwagger ? `http://${this.options.host}:${this.options.port}/docs` : false
+        });
+
+        // Signal to Electron that server is ready
+        if (process.stdout) {
+          process.stdout.write(JSON.stringify({
+            type: 'server-ready',
+            port: this.options.port,
+            timestamp: new Date().toISOString()
+          }) + '\n');
+        }
       }
     } catch (error) {
       logger.error('Failed to start Fastify server', { error: error instanceof Error ? error.message : String(error) });

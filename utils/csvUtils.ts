@@ -3,6 +3,12 @@
  * These utilities handle CSV/TSV/Google Sheets copy-paste formats
  */
 
+import {
+  STRING_RATING_MAP,
+  StringRating,
+  NUMERIC_RATING_THRESHOLDS
+} from '../constants/performanceRatings.js';
+
 export interface ParsedCsvLine {
   fields: string[];
   delimiter: string;
@@ -95,22 +101,35 @@ export const extractEmployeeName = (rawHeader: string): string | null => {
  * Check if a string represents a valid performance rating
  */
 export const isStringRating = (value: string): boolean => {
-  const trimmed = value.trim().toLowerCase();
-  return trimmed === 'baik' || trimmed === 'sangat baik' || trimmed === 'kurang baik';
+  const trimmed = value.trim();
+  // Check both with and without case-sensitivity
+  return trimmed in STRING_RATING_MAP ||
+         trimmed.toLowerCase() === 'baik' ||
+         trimmed.toLowerCase() === 'sangat baik' ||
+         trimmed.toLowerCase() === 'kurang baik';
 };
 
 /**
  * Convert string rating to numeric score
+ * @deprecated Use stringRatingToNumeric from constants/performanceRatings instead
  */
 export const convertStringRatingToScore = (rating: string): number => {
-  const trimmed = rating.trim().toLowerCase();
-  switch (trimmed) {
+  const trimmed = rating.trim();
+
+  // Try exact match first (case-sensitive)
+  if (trimmed in STRING_RATING_MAP) {
+    return STRING_RATING_MAP[trimmed as StringRating];
+  }
+
+  // Fall back to case-insensitive match
+  const lowerTrimmed = trimmed.toLowerCase();
+  switch (lowerTrimmed) {
     case 'sangat baik':
-      return 85;
+      return STRING_RATING_MAP['Sangat Baik'];
     case 'baik':
-      return 75;
+      return STRING_RATING_MAP['Baik'];
     case 'kurang baik':
-      return 65;
+      return STRING_RATING_MAP['Kurang Baik'];
     default:
       throw new Error(`Invalid rating: ${rating}`);
   }
@@ -121,13 +140,13 @@ export const convertStringRatingToScore = (rating: string): number => {
  */
 export const normalizeNumericScore = (score: number): number => {
   if (score === 10) {
-    return 65; // Kurang Baik
+    return NUMERIC_RATING_THRESHOLDS.FAIR; // Kurang Baik
   } else if (score === 65) {
-    return 65; // Kurang Baik (already correct)
+    return NUMERIC_RATING_THRESHOLDS.FAIR; // Kurang Baik (already correct)
   } else if (score === 75) {
-    return 75; // Baik
+    return NUMERIC_RATING_THRESHOLDS.GOOD; // Baik
   } else if (score >= 75) {
-    return 85; // Sangat Baik
+    return NUMERIC_RATING_THRESHOLDS.EXCELLENT; // Sangat Baik
   }
   // Keep original score for other values
   return score;

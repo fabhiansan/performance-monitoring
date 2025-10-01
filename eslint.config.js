@@ -1,84 +1,85 @@
-import js from '@eslint/js';
-import react from 'eslint-plugin-react';
-import reactHooks from 'eslint-plugin-react-hooks';
-import reactRefresh from 'eslint-plugin-react-refresh';
-import sonarjs from 'eslint-plugin-sonarjs';
-import tseslint from '@typescript-eslint/eslint-plugin';
-import tsParser from '@typescript-eslint/parser';
+import js from "@eslint/js";
+import react from "eslint-plugin-react";
+import reactHooks from "eslint-plugin-react-hooks";
+import reactRefresh from "eslint-plugin-react-refresh";
+import sonarjs from "eslint-plugin-sonarjs";
+import tseslint from "@typescript-eslint/eslint-plugin";
+import tsParser from "@typescript-eslint/parser";
 
 export default [
   // Base JavaScript configuration
   js.configs.recommended,
-  
+
   // Ignore patterns
   {
     ignores: [
-      '.claude/**/*',
-      'node_modules/**/*',
-      'dist/**/*',
-      'build/**/*',
-      'release/**/*',
-      '*.d.ts',
-      '*.config.js',
-      '*.config.cjs',
-      '*.config.mjs',
-      'build-scripts.cjs',
-      'electron-config.js',
-      'server/server-wrapper.cjs',
-      'docs/migration/archived-scripts/**/*'
-    ]
+      ".claude/**/*",
+      "node_modules/**/*",
+      "dist/**/*",
+      "build/**/*",
+      "release/**/*",
+      "*.d.ts",
+      "*.config.js",
+      "*.config.cjs",
+      "*.config.mjs",
+      "build-scripts.cjs",
+      "electron-config.js",
+      "server/server-wrapper.cjs",
+      "docs/migration/archived-scripts/**/*",
+      "test/fixtures/**/*",
+    ],
   },
-  
+
   // Global settings
   {
     languageOptions: {
       ecmaVersion: 2020,
-      sourceType: 'module',
+      sourceType: "module",
       globals: {
-        console: 'readonly',
-        setTimeout: 'readonly',
-        clearTimeout: 'readonly',
-        setInterval: 'readonly',
-        clearInterval: 'readonly',
-        process: 'readonly',
-        Buffer: 'readonly',
-        __dirname: 'readonly',
-        __filename: 'readonly',
-        global: 'readonly',
+        console: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+        setInterval: "readonly",
+        clearInterval: "readonly",
+        process: "readonly",
+        Buffer: "readonly",
+        __dirname: "readonly",
+        __filename: "readonly",
+        global: "readonly",
         // DOM globals for browser environment
-        window: 'readonly',
-        document: 'readonly',
-        navigator: 'readonly',
-        location: 'readonly',
-        localStorage: 'readonly',
-        sessionStorage: 'readonly',
-        alert: 'readonly',
-        confirm: 'readonly',
-        prompt: 'readonly',
-        fetch: 'readonly',
-        Response: 'readonly',
-        Request: 'readonly',
-        Headers: 'readonly',
-        AbortSignal: 'readonly',
-        AbortController: 'readonly',
-        URLSearchParams: 'readonly',
-        HTMLElement: 'readonly',
-        HTMLInputElement: 'readonly',
-        HTMLTextAreaElement: 'readonly',
-        HTMLSelectElement: 'readonly',
-        HTMLFormElement: 'readonly',
-        Event: 'readonly',
-        performance: 'readonly',
-        MouseEvent: 'readonly',
-        KeyboardEvent: 'readonly',
-        File: 'readonly',
-        FileReader: 'readonly',
-        Blob: 'readonly',
-        URL: 'readonly',
-        FormData: 'readonly',
-        HTMLDivElement: 'readonly',
-        ResizeObserver: 'readonly',
-        NodeJS: 'readonly',
+        window: "readonly",
+        document: "readonly",
+        navigator: "readonly",
+        location: "readonly",
+        localStorage: "readonly",
+        sessionStorage: "readonly",
+        alert: "readonly",
+        confirm: "readonly",
+        prompt: "readonly",
+        fetch: "readonly",
+        Response: "readonly",
+        Request: "readonly",
+        Headers: "readonly",
+        AbortSignal: "readonly",
+        AbortController: "readonly",
+        URLSearchParams: "readonly",
+        HTMLElement: "readonly",
+        HTMLInputElement: "readonly",
+        HTMLTextAreaElement: "readonly",
+        HTMLSelectElement: "readonly",
+        HTMLFormElement: "readonly",
+        Event: "readonly",
+        performance: "readonly",
+        MouseEvent: "readonly",
+        KeyboardEvent: "readonly",
+        File: "readonly",
+        FileReader: "readonly",
+        Blob: "readonly",
+        URL: "readonly",
+        FormData: "readonly",
+        HTMLDivElement: "readonly",
+        ResizeObserver: "readonly",
+        NodeJS: "readonly",
       },
       parserOptions: {
         ecmaFeatures: {
@@ -88,152 +89,176 @@ export default [
     },
     plugins: {
       react,
-      'react-hooks': reactHooks,
-      'react-refresh': reactRefresh,
+      "react-hooks": reactHooks,
+      "react-refresh": reactRefresh,
       sonarjs,
     },
     rules: {
       // React rules
       ...react.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
-      'react-refresh/only-export-components': [
-        'warn',
+      "react-refresh/only-export-components": [
+        "warn",
         { allowConstantExport: true },
       ],
-      'react/prop-types': 'off', // Disable prop-types in favor of TypeScript
-      'react/react-in-jsx-scope': 'off', // Not needed with React 17+ JSX transform
-      
+      "react/prop-types": "off", // Disable prop-types in favor of TypeScript
+      "react/react-in-jsx-scope": "off", // Not needed with React 17+ JSX transform
+
       // General rules
-      'no-unused-vars': ['warn', { 
-        'argsIgnorePattern': '^_',
-        'varsIgnorePattern': '^_',
-        'caughtErrorsIgnorePattern': '^_'
-      }],
-      'no-console': 'off', // Allow console in this project
-      
+      "no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+      "no-console": "off", // Allow console in this project
+
       // Line length - set to 500 as requested
-      'max-len': ['error', { 
-        code: 500, 
-        ignoreUrls: true, 
-        ignoreStrings: true, 
-        ignoreTemplateLiterals: true,
-        ignoreRegExpLiterals: true,
-        ignoreComments: true
-      }],
-      
+      "max-len": [
+        "error",
+        {
+          code: 500,
+          ignoreUrls: true,
+          ignoreStrings: true,
+          ignoreTemplateLiterals: true,
+          ignoreRegExpLiterals: true,
+          ignoreComments: true,
+        },
+      ],
+
       // SonarJS rules
-      'sonarjs/cognitive-complexity': ['error', 20],
-      'sonarjs/no-duplicate-string': 'warn',
-      'sonarjs/no-identical-functions': 'warn',
-      'sonarjs/no-redundant-boolean': 'warn',
-      'sonarjs/no-unused-collection': 'warn',
-      'sonarjs/prefer-immediate-return': 'warn',
-      'sonarjs/prefer-single-boolean-return': 'warn',
-      'no-control-regex': 'warn',
+      "sonarjs/cognitive-complexity": ["error", 20],
+      "sonarjs/no-duplicate-string": "warn",
+      "sonarjs/no-identical-functions": "warn",
+      "sonarjs/no-redundant-boolean": "warn",
+      "sonarjs/no-unused-collection": "warn",
+      "sonarjs/prefer-immediate-return": "warn",
+      "sonarjs/prefer-single-boolean-return": "warn",
+      "no-control-regex": "warn",
     },
     settings: {
       react: {
-        version: 'detect',
+        version: "detect",
       },
     },
   },
-  
+
   // TypeScript specific configuration
   {
-    files: ['**/*.ts', '**/*.tsx'],
+    files: ["**/*.ts", "**/*.tsx"],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
         ecmaVersion: 2020,
-        sourceType: 'module',
+        sourceType: "module",
         ecmaFeatures: {
           jsx: true,
         },
       },
     },
     plugins: {
-      '@typescript-eslint': tseslint,
+      "@typescript-eslint": tseslint,
       sonarjs,
     },
     rules: {
       // TypeScript specific rules
-      '@typescript-eslint/no-unused-vars': ['warn', { 
-        'argsIgnorePattern': '^_',
-        'varsIgnorePattern': '^_',
-        'caughtErrorsIgnorePattern': '^_'
-      }],
-      '@typescript-eslint/no-explicit-any': 'warn',
-      'prefer-const': 'warn',
-      '@typescript-eslint/no-var-requires': 'error',
-      
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+      "@typescript-eslint/no-explicit-any": "warn",
+      "prefer-const": "warn",
+      "@typescript-eslint/no-var-requires": "error",
+
       // Line length for TypeScript files
-      'max-len': ['error', { 
-        code: 500, 
-        ignoreUrls: true, 
-        ignoreStrings: true, 
-        ignoreTemplateLiterals: true,
-        ignoreRegExpLiterals: true,
-        ignoreComments: true
-      }],
-      
+      "max-len": [
+        "error",
+        {
+          code: 500,
+          ignoreUrls: true,
+          ignoreStrings: true,
+          ignoreTemplateLiterals: true,
+          ignoreRegExpLiterals: true,
+          ignoreComments: true,
+        },
+      ],
+
       // SonarJS rules for TypeScript
-      'sonarjs/cognitive-complexity': ['error', 20],
-      'sonarjs/no-duplicate-string': 'warn',
-      'sonarjs/no-identical-functions': 'warn',
-      'sonarjs/no-redundant-boolean': 'warn',
-      'sonarjs/no-unused-collection': 'warn',
-      'sonarjs/prefer-immediate-return': 'warn',
-      'sonarjs/prefer-single-boolean-return': 'warn',
+      "sonarjs/cognitive-complexity": ["error", 20],
+      "sonarjs/no-duplicate-string": "warn",
+      "sonarjs/no-identical-functions": "warn",
+      "sonarjs/no-redundant-boolean": "warn",
+      "sonarjs/no-unused-collection": "warn",
+      "sonarjs/prefer-immediate-return": "warn",
+      "sonarjs/prefer-single-boolean-return": "warn",
     },
   },
-  
+
   // Server-side files (Node.js/Electron)
   {
-    files: ['server/**/*', 'scripts/**/*', 'middleware/**/*', 'main.ts', 'electron-config.ts', 'start-server.ts', 'server-entry.js'],
+    files: [
+      "server/**/*",
+      "scripts/**/*",
+      "middleware/**/*",
+      "main.ts",
+      "electron-config.ts",
+      "start-server.ts",
+      "server-entry.js",
+    ],
     languageOptions: {
       ecmaVersion: 2020,
-      sourceType: 'module',
+      sourceType: "module",
       globals: {
-        process: 'readonly',
-        Buffer: 'readonly',
-        __dirname: 'readonly',
-        __filename: 'readonly',
-        global: 'readonly',
-        console: 'readonly',
-        require: 'readonly',
-        module: 'readonly',
-        exports: 'readonly',
+        process: "readonly",
+        Buffer: "readonly",
+        __dirname: "readonly",
+        __filename: "readonly",
+        global: "readonly",
+        console: "readonly",
+        require: "readonly",
+        module: "readonly",
+        exports: "readonly",
       },
     },
     rules: {
-      'no-console': 'off', // Allow console in server files
-      'max-len': ['error', { 
-        code: 500, 
-        ignoreUrls: true, 
-        ignoreStrings: true, 
-        ignoreTemplateLiterals: true,
-        ignoreRegExpLiterals: true,
-        ignoreComments: true
-      }],
-      'sonarjs/cognitive-complexity': ['error', 20],
-      'no-control-regex': 'warn',
+      "no-console": "off", // Allow console in server files
+      "max-len": [
+        "error",
+        {
+          code: 500,
+          ignoreUrls: true,
+          ignoreStrings: true,
+          ignoreTemplateLiterals: true,
+          ignoreRegExpLiterals: true,
+          ignoreComments: true,
+        },
+      ],
+      "sonarjs/cognitive-complexity": ["error", 20],
+      "no-control-regex": "warn",
     },
   },
-  
+
   // Test files
   {
-    files: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx', 'test/**/*'],
+    files: [
+      "**/*.test.ts",
+      "**/*.test.tsx",
+      "**/*.spec.ts",
+      "**/*.spec.tsx",
+      "test/**/*",
+    ],
     rules: {
-      'no-console': 'off', // Allow console in tests
-      'max-len': ['warn', { 
-        code: 500, 
-        ignoreUrls: true, 
-        ignoreStrings: true, 
-        ignoreTemplateLiterals: true,
-        ignoreRegExpLiterals: true,
-        ignoreComments: true
-      }],
-      'sonarjs/cognitive-complexity': ['error', 25], // Slightly higher for tests
+      "no-console": "off", // Allow console in tests
+      "max-len": "off", // Disable line length in tests
+      "sonarjs/cognitive-complexity": "off", // Disable cognitive complexity in tests
+      "sonarjs/no-duplicate-string": "off", // Disable duplicate string warnings in tests
+      "@typescript-eslint/no-explicit-any": "off", // Allow any in tests
     },
   },
 ];

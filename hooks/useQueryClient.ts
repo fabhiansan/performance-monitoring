@@ -30,22 +30,32 @@ export const queryKeys = {
   // Employee data
   employees: {
     all: ['employees'] as const,
-    session: (sessionId: string) => ['employees', 'session', sessionId] as const,
+    // Handle null/undefined sessionId gracefully
+    session: (sessionId: string | null | undefined) =>
+      sessionId ? ['employees', 'session', sessionId] as const
+                : ['employees', 'session', 'null'] as const,
     suggestions: ['employees', 'suggestions'] as const,
   },
-  
+
   // Session data
   sessions: {
     all: ['sessions'] as const,
-    detail: (sessionId: string) => ['sessions', sessionId] as const,
+    // Handle null/undefined sessionId gracefully
+    detail: (sessionId: string | null | undefined) =>
+      sessionId ? ['sessions', sessionId] as const
+                : ['sessions', 'null'] as const,
     current: ['sessions', 'current'] as const,
   },
-  
+
   // Data operations
   data: {
-    timeRange: (sessionId: string, startDate: string, endDate: string) => 
-      ['data', 'time-range', sessionId, startDate, endDate] as const,
-    integrity: (sessionId: string) => ['data', 'integrity', sessionId] as const,
+    // Handle null/undefined sessionId gracefully
+    timeRange: (sessionId: string | null | undefined, startDate: string, endDate: string) =>
+      sessionId ? ['data', 'time-range', sessionId, startDate, endDate] as const
+                : ['data', 'time-range', 'null', startDate, endDate] as const,
+    integrity: (sessionId: string | null | undefined) =>
+      sessionId ? ['data', 'integrity', sessionId] as const
+                : ['data', 'integrity', 'null'] as const,
   },
   
   // Organizational data

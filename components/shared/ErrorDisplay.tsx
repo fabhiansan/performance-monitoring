@@ -63,12 +63,12 @@ const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
 
   const getCategoryLabel = (category: ErrorDetails['category']) => {
     switch (category) {
-      case 'network': return 'Connection Error';
-      case 'validation': return 'Validation Error';
-      case 'parsing': return 'Data Processing Error';
-      case 'server': return 'Server Error';
-      case 'permission': return 'Permission Error';
-      default: return 'Error';
+      case 'network': return 'Kesalahan Koneksi';
+      case 'validation': return 'Kesalahan Validasi';
+      case 'parsing': return 'Kesalahan Pemrosesan Data';
+      case 'server': return 'Kesalahan Server';
+      case 'permission': return 'Kesalahan Izin';
+      default: return 'Kesalahan';
     }
   };
 
@@ -86,7 +86,7 @@ const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
                 onClick={retryLastAction}
                 className="text-sm underline hover:no-underline"
               >
-                Retry
+                Coba Lagi
               </button>
             )}
             {showDismiss && (
@@ -94,7 +94,7 @@ const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
                 onClick={dismissError}
                 className="text-sm underline hover:no-underline"
               >
-                Dismiss
+                Tutup
               </button>
             )}
           </div>
@@ -119,7 +119,7 @@ const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
               
               {currentError.suggestions && currentError.suggestions.length > 0 && (
                 <div className="mt-3">
-                  <p className="font-medium text-sm">Suggestions:</p>
+                  <p className="font-medium text-sm">Saran:</p>
                   <ul className="mt-1 text-sm list-disc list-inside space-y-1">
                     {currentError.suggestions.map((suggestion, index) => (
                       <li key={index}>{suggestion}</li>
@@ -131,22 +131,22 @@ const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
               {currentError.context && Object.keys(currentError.context).length > 0 && (
                 <details className="mt-3">
                   <summary className="cursor-pointer text-sm font-medium">
-                    Technical Details
+                    Detail Teknis
                   </summary>
                   <div className="mt-2 text-xs bg-black bg-opacity-10 p-2 rounded">
-                    <p><strong>Code:</strong> {currentError.code}</p>
-                    <p><strong>Time:</strong> {currentError.timestamp.toLocaleString()}</p>
+                    <p><strong>Kode:</strong> {currentError.code}</p>
+                    <p><strong>Waktu:</strong> {currentError.timestamp.toLocaleString()}</p>
                     {(() => {
                       const component = currentError.context.component;
                       if (component && typeof component === 'string') {
-                        return <p><strong>Component:</strong> {component}</p>;
+                        return <p><strong>Komponen:</strong> {component}</p>;
                       }
                       return null;
                     })()}
                     {(() => {
                       const operation = currentError.context.operation;
                       if (operation && typeof operation === 'string') {
-                        return <p><strong>Operation:</strong> {operation}</p>;
+                        return <p><strong>Operasi:</strong> {operation}</p>;
                       }
                       return null;
                     })()}
@@ -161,7 +161,7 @@ const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
                   onClick={retryLastAction}
                   className="px-3 py-1 text-sm border border-current rounded hover:bg-current hover:bg-opacity-10 transition-colors"
                 >
-                  Retry
+                  Coba Lagi
                 </button>
               )}
               {showDismiss && (
@@ -169,7 +169,7 @@ const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
                   onClick={dismissError}
                   className="px-3 py-1 text-sm border border-current rounded hover:bg-current hover:bg-opacity-10 transition-colors"
                 >
-                  Dismiss
+                  Tutup
                 </button>
               )}
             </div>
@@ -178,12 +178,12 @@ const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
           {errors.length > 1 && (
             <div className="mt-3 text-sm">
               <p>
-                {errors.length - 1} more error{errors.length > 2 ? 's' : ''} occurred.{' '}
+                Terdapat {errors.length - 1} galat lainnya.{' '}
                 <button
                   onClick={() => {/* Show error history */}}
                   className="underline hover:no-underline"
                 >
-                  View all
+                  Lihat semua
                 </button>
               </p>
             </div>

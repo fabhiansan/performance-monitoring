@@ -32,10 +32,10 @@ interface ErrorStateProps {
 }
 
 const ErrorState: React.FC<ErrorStateProps> = ({
-  title = 'Something went wrong',
+  title = 'Terjadi kesalahan',
   message,
   onRetry,
-  retryLabel = 'Try Again',
+  retryLabel = 'Coba Lagi',
   additionalAction,
   dismissible = false,
   onDismiss,

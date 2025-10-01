@@ -1,143 +1,143 @@
 /**
  * Card Component
- * 
+ *
  * A flexible card component with header, body, and footer sections.
  * Supports different variants, sizes, and interactive states.
  */
 
-import React, { forwardRef } from 'react';
-import { createVariantUtil } from '../../utils/cn';
-import { type AriaAttributes } from '../../utils/a11y';
+import React, { forwardRef } from "react";
+import { createVariantUtil } from "../../utils/cn";
+import { type AriaAttributes } from "../../utils/a11y";
 
 // Constants for repeated string literals
-const BORDER_GRAY_200_CLASS = 'border-gray-200';
-const DARK_BORDER_GRAY_700_CLASS = 'dark:border-gray-700';
+const BORDER_GRAY_200_CLASS = "border-gray-200";
+const DARK_BORDER_GRAY_700_CLASS = "dark:border-gray-700";
 
 // Base card styles
 const cardBase = [
   // Layout
-  'relative',
-  'flex',
-  'flex-col',
-  'w-full',
-  
+  "relative",
+  "flex",
+  "flex-col",
+  "w-full",
+
   // Appearance
-  'bg-white',
-  'border',
+  "bg-white",
+  "border",
   BORDER_GRAY_200_CLASS,
-  'rounded-lg',
-  'shadow-sm',
-  
+  "rounded-lg",
+  "shadow-sm",
+
   // Dark mode
-  'dark:bg-gray-800',
+  "dark:bg-gray-800",
   DARK_BORDER_GRAY_700_CLASS,
-  
+
   // Transitions
-  'transition-all',
-  'duration-200',
-  'ease-out',
-].join(' ');
+  "transition-all",
+  "duration-200",
+  "ease-out",
+].join(" ");
 
 // Card variant styles
 const cardVariants = createVariantUtil(cardBase, {
   variant: {
-    default: '',
-    elevated: [
-      'shadow-md',
-      'hover:shadow-lg',
-    ].join(' '),
+    default: "",
+    elevated: ["shadow-md", "hover:shadow-xl", "hover:-translate-y-0.5"].join(
+      " ",
+    ),
     outlined: [
-      'border-2',
-      'shadow-none',
-    ].join(' '),
+      "border-2",
+      "shadow-none",
+      "hover:border-gray-300",
+      "dark:hover:border-gray-600",
+    ].join(" "),
     filled: [
-      'bg-gray-50',
-      'border-gray-300',
-      'dark:bg-gray-700',
-      'dark:border-gray-600',
-    ].join(' '),
+      "bg-gray-50",
+      "border-gray-300",
+      "dark:bg-gray-700",
+      "dark:border-gray-600",
+      "hover:bg-gray-100",
+      "dark:hover:bg-gray-650",
+    ].join(" "),
   },
-  
+
   size: {
-    sm: 'p-4',
-    md: 'p-6',
-    lg: 'p-8',
+    sm: "p-4",
+    md: "p-6",
+    lg: "p-8",
   },
-  
+
   interactive: {
     true: [
-      'cursor-pointer',
-      'hover:shadow-md',
-      'hover:border-gray-300',
-      'focus:outline-none',
-      'focus:ring-2',
-      'focus:ring-offset-2',
-      'focus:ring-blue-500',
-      'dark:hover:border-gray-600',
-    ].join(' '),
-    false: '',
+      "cursor-pointer",
+      "hover:shadow-md",
+      "hover:border-gray-300",
+      "focus:outline-none",
+      "focus:ring-2",
+      "focus:ring-offset-2",
+      "focus:ring-blue-500",
+      "dark:hover:border-gray-600",
+    ].join(" "),
+    false: "",
   },
-  
+
   fullHeight: {
-    true: 'h-full',
-    false: '',
+    true: "h-full",
+    false: "",
   },
 });
 
 // Header styles
 const headerBase = [
-  'flex',
-  'items-center',
-  'justify-between',
-  'pb-4',
-  'border-b',
+  "flex",
+  "items-center",
+  "justify-between",
+  "pb-4",
+  "border-b",
   BORDER_GRAY_200_CLASS,
   DARK_BORDER_GRAY_700_CLASS,
-  'mb-4',
-].join(' ');
+  "mb-4",
+].join(" ");
 
 // Body styles
-const bodyBase = [
-  'flex-1',
-  'text-gray-700',
-  'dark:text-gray-300',
-].join(' ');
+const bodyBase = ["flex-1", "text-gray-700", "dark:text-gray-300"].join(" ");
 
 // Footer styles
 const footerBase = [
-  'flex',
-  'items-center',
-  'justify-between',
-  'pt-4',
-  'border-t',
+  "flex",
+  "items-center",
+  "justify-between",
+  "pt-4",
+  "border-t",
   BORDER_GRAY_200_CLASS,
   DARK_BORDER_GRAY_700_CLASS,
-  'mt-4',
-].join(' ');
+  "mt-4",
+].join(" ");
 
 // Title styles
 const titleBase = [
-  'text-lg',
-  'font-semibold',
-  'text-gray-900',
-  'dark:text-gray-100',
-].join(' ');
+  "text-lg",
+  "font-semibold",
+  "text-gray-900",
+  "dark:text-gray-100",
+].join(" ");
 
 // Subtitle styles
 const subtitleBase = [
-  'text-sm',
-  'font-normal',
-  'text-gray-600',
-  'dark:text-gray-400',
-  'mt-1',
-].join(' ');
+  "text-sm",
+  "font-normal",
+  "text-gray-600",
+  "dark:text-gray-400",
+  "mt-1",
+].join(" ");
 
 // Card props interface
-export interface CardProps extends Omit<React.ComponentPropsWithoutRef<'div'>, 'title'> {
+export interface CardProps
+  extends Omit<React.ComponentPropsWithoutRef<"div">, "title"> {
   /** Card variant */
-  variant?: 'default' | 'elevated' | 'outlined' | 'filled';
+  variant?: "default" | "elevated" | "outlined" | "filled";
   /** Card size (affects padding) */
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
   /** Whether card is interactive (clickable) */
   interactive?: boolean;
   /** Whether card should take full height */
@@ -172,25 +172,15 @@ export const CardHeader: React.FC<{
   className?: string;
 }> = ({ title, subtitle, actions, className }) => {
   if (!title && !subtitle && !actions) return null;
-  
+
   return (
-    <div className={`${headerBase} ${className || ''}`}>
+    <div className={`${headerBase} ${className || ""}`}>
       <div className="min-w-0 flex-1">
-        {title && (
-          <h3 className={titleBase}>
-            {title}
-          </h3>
-        )}
-        {subtitle && (
-          <p className={subtitleBase}>
-            {subtitle}
-          </p>
-        )}
+        {title && <h3 className={titleBase}>{title}</h3>}
+        {subtitle && <p className={subtitleBase}>{subtitle}</p>}
       </div>
       {actions && (
-        <div className="flex items-center space-x-2 ml-4">
-          {actions}
-        </div>
+        <div className="flex items-center space-x-2 ml-4">{actions}</div>
       )}
     </div>
   );
@@ -203,11 +193,7 @@ export const CardBody: React.FC<{
   children?: React.ReactNode;
   className?: string;
 }> = ({ children, className }) => {
-  return (
-    <div className={`${bodyBase} ${className || ''}`}>
-      {children}
-    </div>
-  );
+  return <div className={`${bodyBase} ${className || ""}`}>{children}</div>;
 };
 
 /**
@@ -218,18 +204,17 @@ export const CardFooter: React.FC<{
   className?: string;
 }> = ({ children, className }) => {
   if (!children) return null;
-  
-  return (
-    <div className={`${footerBase} ${className || ''}`}>
-      {children}
-    </div>
-  );
+
+  return <div className={`${footerBase} ${className || ""}`}>{children}</div>;
 };
 
 /**
  * Compound Card Interface with proper TypeScript support
  */
-interface CardComponent extends React.ForwardRefExoticComponent<CardProps & React.RefAttributes<HTMLDivElement>> {
+interface CardComponent
+  extends React.ForwardRefExoticComponent<
+    CardProps & React.RefAttributes<HTMLDivElement>
+  > {
   Header: typeof CardHeader;
   Body: typeof CardBody;
   Footer: typeof CardFooter;
@@ -238,11 +223,11 @@ interface CardComponent extends React.ForwardRefExoticComponent<CardProps & Reac
 /**
  * Main Card Component
  */
-const CardBase = forwardRef<React.ElementRef<'div'>, CardProps>(
+const CardBase = forwardRef<React.ElementRef<"div">, CardProps>(
   (
     {
-      variant = 'default',
-      size = 'md',
+      variant = "default",
+      size = "md",
       interactive = false,
       fullHeight = false,
       title,
@@ -261,33 +246,37 @@ const CardBase = forwardRef<React.ElementRef<'div'>, CardProps>(
       ariaAttributes,
       ...props
     },
-    ref
+    ref,
   ) => {
     // Generate card class names
     const cardClasses = cardVariants({
       variant,
       size,
-      interactive: interactive ? 'true' : 'false',
-      fullHeight: fullHeight ? 'true' : 'false',
+      interactive: interactive ? "true" : "false",
+      fullHeight: fullHeight ? "true" : "false",
       className,
     });
-    
+
     // Handle keyboard navigation for interactive cards
     const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (onKeyDown) {
         onKeyDown(event);
       }
-      
-      if (interactive && onClick && (event.key === 'Enter' || event.key === ' ')) {
+
+      if (
+        interactive &&
+        onClick &&
+        (event.key === "Enter" || event.key === " ")
+      ) {
         event.preventDefault();
         onClick(event as unknown as React.MouseEvent<HTMLDivElement>);
       }
     };
-    
+
     // Determine ARIA attributes
-    const cardRole = role || (interactive ? 'button' : undefined);
+    const cardRole = role || (interactive ? "button" : undefined);
     const cardTabIndex = interactive ? (tabIndex ?? 0) : tabIndex;
-    
+
     return (
       <div
         ref={ref}
@@ -306,22 +295,18 @@ const CardBase = forwardRef<React.ElementRef<'div'>, CardProps>(
           actions={headerActions}
           className={headerClassName}
         />
-        
+
         {/* Body */}
-        <CardBody className={bodyClassName}>
-          {children}
-        </CardBody>
-        
+        <CardBody className={bodyClassName}>{children}</CardBody>
+
         {/* Footer */}
-        <CardFooter className={footerClassName}>
-          {footer}
-        </CardFooter>
+        <CardFooter className={footerClassName}>{footer}</CardFooter>
       </div>
     );
-  }
+  },
 );
 
-CardBase.displayName = 'Card';
+CardBase.displayName = "Card";
 
 // Create compound component with proper TypeScript support
 export const Card = CardBase as CardComponent;
@@ -330,3 +315,6 @@ Card.Body = CardBody;
 Card.Footer = CardFooter;
 
 export default Card;
+
+// Re-export card variants
+export * from "./CardVariants";

@@ -6,15 +6,73 @@
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { FastifyServer } from '../server/fastifyServer';
+import type { FastifyInstance } from 'fastify';
 import { employeeApi, sessionApi } from '../services/api';
 import type { Employee } from '../types';
 import * as fs from 'fs';
 import * as path from 'path';
 
+const FASTIFY_TEST_ORIGIN = 'http://fastify.test';
+
+const setupFastifyFetchInterceptor = (fastify: FastifyInstance, baseOrigin: string) => {
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]): Promise<Response> => {
+    const request = new Request(input, init);
+    const url = new URL(request.url, baseOrigin);
+
+    if (url.origin !== baseOrigin) {
+      return originalFetch(input, init);
+    }
+
+    const method = request.method.toUpperCase();
+    const headers: Record<string, string> = {};
+    request.headers.forEach((value, key) => {
+      headers[key] = value;
+    });
+
+    let payload: string | undefined;
+    if (!['GET', 'HEAD'].includes(method)) {
+      const body = await request.text();
+      payload = body.length > 0 ? body : undefined;
+    }
+
+    const response = await fastify.inject({
+      method,
+      url: `${url.pathname}${url.search}`,
+      headers,
+      payload
+    });
+
+    const responseHeaders = new Headers();
+    Object.entries(response.headers).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        value.forEach(v => responseHeaders.append(key, v));
+      } else if (value !== undefined) {
+        responseHeaders.set(key, value);
+      }
+    });
+
+    const body = response.rawPayload ?? response.payload ?? '';
+
+    return new Response(body, {
+      status: response.statusCode,
+      statusText: response.statusMessage,
+      headers: responseHeaders
+    });
+  };
+
+  return () => {
+    globalThis.fetch = originalFetch;
+  };
+};
+
 describe('Team A & Team B Integration Validation', () => {
   let server: FastifyServer;
+  let fastify: FastifyInstance;
   let serverAddress: string;
   const testDbPath = path.join(__dirname, 'integration-validation.db');
+  let restoreFetch: (() => void) | undefined;
 
   beforeAll(async () => {
     // Clean up any existing test database
@@ -29,21 +87,26 @@ describe('Team A & Team B Integration Validation', () => {
       dbPath: testDbPath,
       enableSwagger: false, // Disable swagger for tests
       enableCors: true,
-      logLevel: 'error' // Reduce noise
+      logLevel: 'error', // Reduce noise
+      disableListen: true
     });
 
     await server.start();
-    const fastifyInstance = server.getInstance();
-    const address = fastifyInstance.server.address();
-    const port = typeof address === 'object' && address ? address.port : 3000;
-    serverAddress = `http://127.0.0.1:${port}`;
+    fastify = server.getInstance();
+    serverAddress = FASTIFY_TEST_ORIGIN;
     
     // Override API client base URL for testing
     const apiFactory = (await import('../services/api/interfaces')).apiClientFactory;
-    (apiFactory as { config: { baseUrl: string } }).config.baseUrl = `${serverAddress}/api`;
+    const baseUrl = `${serverAddress}/api`;
+    (apiFactory as { config: { baseUrl: string } }).config.baseUrl = baseUrl;
+    (employeeApi as { baseUrl: string }).baseUrl = baseUrl;
+    (sessionApi as { baseUrl: string }).baseUrl = baseUrl;
+
+    restoreFetch = setupFastifyFetchInterceptor(fastify, serverAddress);
   });
 
   afterAll(async () => {
+    restoreFetch?.();
     await server?.stop();
     
     // Clean up test database
@@ -157,7 +220,8 @@ describe('Team A & Team B Integration Validation', () => {
 
       // 5. Test organizational level mapping
       const orgMapping = await employeeApi.getEmployeeOrgLevelMapping();
-      expect(orgMapping['Pranata Komputer']).toBeGreaterThan(0);
+      const levelCount = Object.values(orgMapping).filter(level => level === 'Pranata Komputer').length;
+      expect(levelCount).toBeGreaterThan(0);
 
       // 6. Verify session management
       const sessions = await sessionApi.getAllUploadSessions();

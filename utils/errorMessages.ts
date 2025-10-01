@@ -17,7 +17,7 @@ export class ErrorMessageFormatter {
     const { context = '', action = 'connect to server', userFriendly = true } = options;
     
     if (userFriendly) {
-      return `Unable to ${action}. Please check your connection and try again.${context ? ` (${context})` : ''}`;
+      return `Tidak dapat ${action}. Periksa koneksi Anda lalu coba lagi.${context ? ` (${context})` : ''}`;
     }
     
     return `Network error while attempting to ${action}${context ? ` in ${context}` : ''}: ${error instanceof Error ? error.message : 'Unknown network error'}`;
@@ -29,7 +29,7 @@ export class ErrorMessageFormatter {
   static formatValidationError(error: unknown, options: ErrorMessageOptions = {}): string {
     const { context = '', userFriendly = true, suggestions = [] } = options;
     
-    let message = error instanceof Error ? error.message : 'Validation failed';
+    let message = error instanceof Error ? error.message : 'Validasi gagal';
     
     if (userFriendly) {
       // Make validation messages more user-friendly
@@ -44,7 +44,7 @@ export class ErrorMessageFormatter {
     }
     
     if (suggestions.length > 0) {
-      message += '\n\nSuggestions:\n' + suggestions.map(s => `• ${s}`).join('\n');
+      message += '\n\nSaran:\n' + suggestions.map(s => `• ${s}`).join('\n');
     }
     
     return message;
@@ -56,15 +56,15 @@ export class ErrorMessageFormatter {
   static formatParsingError(error: unknown, options: ErrorMessageOptions = {}): string {
     const { context = '', userFriendly = true } = options;
     
-    let message = error instanceof Error ? error.message : 'Failed to process data';
+    let message = error instanceof Error ? error.message : 'Gagal memproses data';
     
     if (userFriendly) {
       if (message.includes('CSV') || message.includes('csv')) {
-        message = 'There was an issue processing your CSV data. Please check the format and try again.';
+        message = 'Terjadi masalah saat memproses data CSV Anda. Periksa formatnya lalu coba lagi.';
       } else if (message.includes('JSON') || message.includes('json')) {
-        message = 'The data format appears to be invalid. Please check your file and try again.';
+        message = 'Format data tampaknya tidak valid. Periksa berkas Anda lalu coba lagi.';
       } else if (message.includes('header')) {
-        message = 'Missing or invalid headers in your data. Please ensure the first row contains proper column headers.';
+        message = 'Header data hilang atau tidak valid. Pastikan baris pertama berisi header kolom yang benar.';
       }
     }
     
@@ -82,7 +82,7 @@ export class ErrorMessageFormatter {
     const { context = '', action = 'process your request', userFriendly = true } = options;
     
     if (userFriendly) {
-      return `The server is temporarily unable to ${action}. Please try again in a moment.${context ? ` (${context})` : ''}`;
+      return `Server sementara tidak dapat ${action}. Silakan coba lagi sebentar lagi.${context ? ` (${context})` : ''}`;
     }
     
     return `Server error while attempting to ${action}${context ? ` in ${context}` : ''}: ${error instanceof Error ? error.message : 'Unknown server error'}`;
@@ -95,7 +95,7 @@ export class ErrorMessageFormatter {
     const { context = '', action = 'perform this action', userFriendly = true } = options;
     
     if (userFriendly) {
-      return `You don't have permission to ${action}.${context ? ` (${context})` : ''} Please contact an administrator if you need access.`;
+      return `Anda tidak memiliki izin untuk ${action}.${context ? ` (${context})` : ''} Hubungi administrator jika memerlukan akses.`;
     }
     
     return `Permission denied while attempting to ${action}${context ? ` in ${context}` : ''}: ${error instanceof Error ? error.message : 'Access denied'}`;
@@ -107,18 +107,18 @@ export class ErrorMessageFormatter {
   static formatGenericError(error: unknown, options: ErrorMessageOptions = {}): string {
     const { context = '', action = '', userFriendly = true } = options;
     
-    let message = error instanceof Error ? error.message : 'An unexpected error occurred';
+    let message = error instanceof Error ? error.message : 'Terjadi kesalahan tak terduga';
     
     if (userFriendly) {
       // Make technical messages more user-friendly
       message = message
-        .replace(/fetch/gi, 'retrieve data')
-        .replace(/undefined/gi, 'missing information')
-        .replace(/null/gi, 'missing data');
+        .replace(/fetch/gi, 'mengambil data')
+        .replace(/undefined/gi, 'informasi tidak tersedia')
+        .replace(/null/gi, 'data tidak tersedia');
     }
     
     if (action) {
-      message = `Failed to ${action}: ${message}`;
+      message = `Gagal ${action}: ${message}`;
     }
     
     if (context) {
@@ -137,24 +137,24 @@ export class ErrorMessageFormatter {
     switch (errorType.toLowerCase()) {
       case 'network':
         suggestions.push(
-          'Check your internet connection',
-          'Verify the server is running',
-          'Try refreshing the page'
+          'Periksa koneksi internet Anda',
+          'Pastikan server sedang berjalan',
+          'Coba muat ulang halaman'
         );
         break;
         
       case 'validation':
         if (context?.includes('csv') || context?.includes('data')) {
           suggestions.push(
-            'Check your CSV file format',
-            'Ensure all required fields are filled',
-            'Verify employee names are in brackets [Name]'
+            'Periksa format file CSV Anda',
+            'Pastikan semua kolom wajib terisi',
+            'Pastikan nama pegawai berada dalam tanda kurung siku [Nama]'
           );
         } else {
           suggestions.push(
-            'Check all required fields are filled',
-            'Verify the data format is correct',
-            'Try again with valid information'
+            'Pastikan seluruh kolom wajib terisi',
+            'Pastikan format data sudah benar',
+            'Coba lagi dengan informasi yang valid'
           );
         }
         break;

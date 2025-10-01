@@ -5,9 +5,22 @@ export class ScoreValidator {
   private errors: ValidationError[] = [];
   private warnings: ValidationWarning[] = [];
 
-  validate(employees: Employee[]): { errors: ValidationError[]; warnings: ValidationWarning[] } {
+  validate(employees: Employee[] | unknown): { errors: ValidationError[]; warnings: ValidationWarning[] } {
     this.errors = [];
     this.warnings = [];
+
+    if (!Array.isArray(employees)) {
+      this.errors.push({
+        type: 'critical_data',
+        message: 'Employee data must be an array for score validation',
+        details: `Received: ${typeof employees}`
+      });
+      return { errors: [...this.errors], warnings: [...this.warnings] };
+    }
+
+    if (employees.length === 0) {
+      return { errors: [...this.errors], warnings: [...this.warnings] };
+    }
 
     this.validateScoreStructure(employees);
     this.validateScoreValues(employees);
@@ -17,13 +30,32 @@ export class ScoreValidator {
   }
 
   private validateScoreStructure(employees: Employee[]): void {
-    employees.forEach(employee => {
-      if (!employee.performance || !Array.isArray(employee.performance)) {
+    employees.forEach((employee, index) => {
+      if (!employee || typeof employee !== 'object') {
+        this.errors.push({
+          type: 'critical_data',
+          message: 'Invalid employee record encountered during score validation',
+          details: `Employee at index ${index} is not a valid object`
+        });
+        return;
+      }
+
+      if (!Array.isArray(employee.performance)) {
         this.warnings.push({
           type: 'partial_data',
           message: 'Employee has no performance data',
           employeeName: employee.name,
           details: 'Performance array is missing or invalid'
+        });
+        return;
+      }
+
+      if (employee.performance.length === 0) {
+        this.errors.push({
+          type: 'invalid_score',
+          message: 'Employee performance data is empty',
+          employeeName: employee.name,
+          details: 'Performance array cannot be empty'
         });
         return;
       }
@@ -63,19 +95,22 @@ export class ScoreValidator {
 
   private validateScoreValues(employees: Employee[]): void {
     employees.forEach(employee => {
-      if (!employee.performance) return;
+      if (!Array.isArray(employee?.performance)) return;
 
       employee.performance.forEach(perf => {
         if (!perf || perf.score === undefined || perf.score === null) return;
 
         const validation = this.validateSingleScore(perf.score);
         if (!validation.isValid) {
+          const issueSummary = validation.issues.length > 0
+            ? validation.issues.join('; ')
+            : 'Invalid score value';
           this.errors.push({
             type: 'invalid_score',
-            message: 'Invalid score value',
+            message: issueSummary,
             employeeName: employee.name,
             competencyName: perf.name,
-            details: validation.issues.join('; ')
+            details: issueSummary
           });
         }
 
@@ -98,7 +133,7 @@ export class ScoreValidator {
 
     // Collect all scores for each competency
     employees.forEach(employee => {
-      if (!employee.performance) return;
+      if (!Array.isArray(employee?.performance)) return;
 
       employee.performance.forEach(perf => {
         if (!perf || !perf.name || perf.score === undefined) return;
@@ -176,21 +211,14 @@ export class ScoreValidator {
     }
 
     // Normalize score to 0-100 range if needed
-    if (score < 0) {
-      normalizedValue = 0;
-      wasNormalized = true;
-    } else if (score > 100) {
+    if (score > 100) {
       normalizedValue = 100;
       wasNormalized = true;
-    }
-
-    // Check for questionable values
-    if (score > 100) {
-      issues.push('Score above 100 (will be capped)');
-    }
-
-    if (score < 0) {
-      issues.push('Negative score (will be set to 0)');
+      issues.push('Score must be within the 0-100 range (will be capped)');
+    } else if (score < 0) {
+      normalizedValue = 0;
+      wasNormalized = true;
+      issues.push('Score must be within the 0-100 range (negative value detected)');
     }
 
     return { 

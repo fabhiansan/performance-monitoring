@@ -67,7 +67,7 @@ export function useFileOperations(options: UseFileOperationsOptions = {}) {
       // Process the first file
       const file = files[0];
       if (!isValidFileType(file)) {
-        throw new Error('Unsupported file type. Please use CSV or TXT files.');
+        throw new Error('Tipe file tidak didukung. Gunakan file CSV atau TXT.');
       }
 
       const content = await readFileAsText(file);
@@ -89,8 +89,8 @@ export function useFileOperations(options: UseFileOperationsOptions = {}) {
 
     try {
       const file = files[0];
-      if (!isValidFileType(file)) {
-        throw new Error('Unsupported file type. Please use CSV or TXT files.');
+    if (!isValidFileType(file)) {
+        throw new Error('Tipe file tidak didukung. Gunakan file CSV atau TXT.');
       }
 
       const content = await readFileAsText(file);
@@ -128,7 +128,7 @@ export function useFileOperations(options: UseFileOperationsOptions = {}) {
       if (files.length > 0) {
         const file = files[0];
         if (!isValidFileType(file)) {
-          throw new Error('Unsupported file type from clipboard.');
+          throw new Error('Tipe file dari papan klip tidak didukung.');
         }
 
         const content = await readFileAsText(file);

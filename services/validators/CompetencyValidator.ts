@@ -5,9 +5,22 @@ export class CompetencyValidator {
   private errors: ValidationError[] = [];
   private warnings: ValidationWarning[] = [];
 
-  validate(employees: Employee[]): { errors: ValidationError[]; warnings: ValidationWarning[] } {
+  validate(employees: Employee[] | unknown): { errors: ValidationError[]; warnings: ValidationWarning[] } {
     this.errors = [];
     this.warnings = [];
+
+    if (!Array.isArray(employees)) {
+      this.errors.push({
+        type: 'critical_data',
+        message: 'Employee data must be an array for competency validation',
+        details: `Received: ${typeof employees}`
+      });
+      return { errors: [...this.errors], warnings: [...this.warnings] };
+    }
+
+    if (employees.length === 0) {
+      return { errors: [...this.errors], warnings: [...this.warnings] };
+    }
 
     this.validateCompetencyNames(employees);
     this.validateRequiredCompetencies(employees);
@@ -18,20 +31,40 @@ export class CompetencyValidator {
   }
 
   private validateCompetencyNames(employees: Employee[]): void {
-    employees.forEach(employee => {
-      if (!employee.performance) return;
+    employees.forEach((employee, employeeIndex) => {
+      if (!employee || typeof employee !== 'object') {
+        this.errors.push({
+          type: 'critical_data',
+          message: 'Invalid employee record encountered during competency validation',
+          details: `Employee at index ${employeeIndex} is not a valid object`
+        });
+        return;
+      }
+
+      if (!Array.isArray(employee.performance)) {
+        this.errors.push({
+          type: 'missing_competency',
+          message: 'Employee performance data must be an array',
+          employeeName: employee.name,
+          details: 'Performance records should be provided as an array'
+        });
+        return;
+      }
 
       employee.performance.forEach(perf => {
         if (!perf) return;
 
         const validation = this.validateCompetencyName(perf.name);
         if (!validation.isValid) {
+          const issueSummary = validation.issues.length > 0
+            ? validation.issues.join('; ')
+            : 'Invalid competency name';
           this.errors.push({
             type: 'invalid_competency_name',
-            message: 'Invalid competency name',
+            message: issueSummary,
             employeeName: employee.name,
             competencyName: perf.name,
-            details: validation.issues.join('; ')
+            details: issueSummary
           });
         }
 
@@ -52,7 +85,7 @@ export class CompetencyValidator {
     // Collect all competencies across all employees
     const allCompetencies = new Set<string>();
     employees.forEach(employee => {
-      if (!employee.performance) return;
+      if (!Array.isArray(employee?.performance)) return;
       employee.performance.forEach(perf => {
         if (perf?.name) {
           allCompetencies.add(this.normalizeCompetencyName(perf.name));
@@ -80,7 +113,7 @@ export class CompetencyValidator {
 
     // Check for missing required competencies per employee
     employees.forEach(employee => {
-      if (!employee.performance || employee.performance.length === 0) {
+      if (!Array.isArray(employee?.performance) || employee.performance.length === 0) {
         this.warnings.push({
           type: 'partial_data',
           message: 'Employee has no competency data',
@@ -115,7 +148,7 @@ export class CompetencyValidator {
 
   private validateCompetencyDuplicates(employees: Employee[]): void {
     employees.forEach(employee => {
-      if (!employee.performance) return;
+      if (!Array.isArray(employee?.performance)) return;
 
       const competencyNames = new Map<string, number>();
       const duplicates: string[] = [];
@@ -135,7 +168,7 @@ export class CompetencyValidator {
       if (duplicates.length > 0) {
         this.warnings.push({
           type: 'competency_merged',
-          message: 'Duplicate competencies found and will be merged',
+          message: 'duplicate competency entries found and will be merged',
           employeeName: employee.name,
           details: `Duplicates: ${duplicates.join(', ')}`,
           affectedCount: duplicates.length
@@ -146,7 +179,7 @@ export class CompetencyValidator {
 
   private sanitizeAndMergeCompetencies(employees: Employee[]): void {
     employees.forEach(employee => {
-      if (!employee.performance) return;
+      if (!Array.isArray(employee?.performance)) return;
 
       const merged = new Map<string, number[]>();
       const sanitizedCompetencies: typeof employee.performance = [];
@@ -191,23 +224,23 @@ export class CompetencyValidator {
     let wasSanitized = false;
     let sanitizedName = name;
 
-    if (!name || typeof name !== 'string') {
-      issues.push('Competency name is required');
+    if (typeof name !== 'string') {
+      issues.push('competency name is required');
       return { isValid: false, issues, wasSanitized };
     }
 
     const trimmed = name.trim();
     if (trimmed.length === 0) {
-      issues.push('Competency name cannot be empty');
+      issues.push('competency name cannot be empty');
       return { isValid: false, issues, wasSanitized };
     }
 
     if (trimmed.length < 2) {
-      issues.push('Competency name too short (minimum 2 characters)');
+      issues.push('competency name too short (minimum 2 characters)');
     }
 
     if (trimmed.length > 100) {
-      issues.push('Competency name too long (maximum 100 characters)');
+      issues.push('competency name too long (maximum 100 characters)');
     }
 
     // Check for sanitization needs

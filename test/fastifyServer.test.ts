@@ -6,7 +6,7 @@
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { FastifyServer } from '../server/fastifyServer';
-import supertest from 'supertest';
+import type { FastifyInstance } from 'fastify';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -15,11 +15,11 @@ const STAFF_OTHER_LEVEL = 'Staff/Other';
 const API_CURRENT_DATASET = '/api/current-dataset';
 const API_EMPLOYEE_DATA = '/api/employee-data';
 const API_LEADERSHIP_SCORES = '/api/current-dataset/leadership-scores';
-const TEST_EMPLOYEE_NAME = TEST_EMPLOYEE_NAME;
+const TEST_EMPLOYEE_NAME = 'John Doe';
 
 describe('FastifyServer', () => {
   let server: FastifyServer;
-  let request: supertest.SuperTest<supertest.Test>;
+  let fastify: FastifyInstance;
   const testDbPath = path.join(__dirname, 'test-fastify.db');
 
   beforeAll(async () => {
@@ -34,11 +34,12 @@ describe('FastifyServer', () => {
       dbPath: testDbPath,
       enableSwagger: false, // Disable swagger for tests
       enableCors: true,
-      logLevel: 'error' // Reduce noise in tests
+      logLevel: 'error', // Reduce noise in tests
+      disableListen: true
     });
 
     await server.start();
-    request = supertest(server.getInstance().server);
+    fastify = server.getInstance();
   });
 
   afterAll(async () => {
@@ -50,10 +51,36 @@ describe('FastifyServer', () => {
     }
   });
 
+  const injectJson = async ({
+    method,
+    url,
+    payload
+  }: {
+    method: string;
+    url: string;
+    payload?: unknown;
+  }) => {
+    const response = await fastify.inject({
+      method,
+      url,
+      payload
+    });
+
+    const contentType = response.headers['content-type'] ?? '';
+    const body = contentType.includes('application/json') ? response.json() : response.body;
+
+    return {
+      status: response.statusCode,
+      body,
+      headers: response.headers
+    };
+  };
+
   describe('Health Check Endpoints', () => {
     it('should return health status at /health', async () => {
-      const response = await request.get('/health').expect(200);
-      
+      const response = await injectJson({ method: 'GET', url: '/health' });
+
+      expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
         status: 'ok',
         database: true,
@@ -62,8 +89,9 @@ describe('FastifyServer', () => {
     });
 
     it('should return API health status at /api/health', async () => {
-      const response = await request.get('/api/health').expect(200);
-      
+      const response = await injectJson({ method: 'GET', url: '/api/health' });
+
+      expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
         status: 'ok',
         database: true,
@@ -75,8 +103,9 @@ describe('FastifyServer', () => {
 
   describe('Employee Endpoints', () => {
     it('should get all employees (initially empty)', async () => {
-      const response = await request.get('/api/employees').expect(200);
-      
+      const response = await injectJson({ method: 'GET', url: '/api/employees' });
+
+      expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
         success: true,
         data: [],
@@ -85,8 +114,9 @@ describe('FastifyServer', () => {
     });
 
     it('should handle invalid employee ID', async () => {
-      const response = await request.get('/api/employees/invalid').expect(400);
-      
+      const response = await injectJson({ method: 'GET', url: '/api/employees/invalid' });
+
+      expect(response.status).toBe(400);
       expect(response.body).toMatchObject({
         success: false,
         error: 'Invalid employee ID',
@@ -95,8 +125,9 @@ describe('FastifyServer', () => {
     });
 
     it('should return 404 for non-existent employee', async () => {
-      const response = await request.get('/api/employees/999').expect(404);
-      
+      const response = await injectJson({ method: 'GET', url: '/api/employees/999' });
+
+      expect(response.status).toBe(404);
       expect(response.body).toMatchObject({
         success: false,
         error: 'Employee not found',
@@ -105,8 +136,9 @@ describe('FastifyServer', () => {
     });
 
     it('should validate employee suggestions query parameter', async () => {
-      const response = await request.get('/api/employees/suggestions').expect(400);
-      
+      const response = await injectJson({ method: 'GET', url: '/api/employees/suggestions' });
+
+      expect(response.status).toBe(400);
       expect(response.body).toMatchObject({
         success: false,
         error: expect.stringContaining('name'),
@@ -115,16 +147,16 @@ describe('FastifyServer', () => {
     });
 
     it('should get employee suggestions with valid query', async () => {
-      const response = await request
-        .get('/api/employees/suggestions?name=john')
-        .expect(200);
-      
+      const response = await injectJson({ method: 'GET', url: '/api/employees/suggestions?name=john' });
+
+      expect(response.status).toBe(200);
       expect(Array.isArray(response.body)).toBe(true);
     });
 
     it('should get organizational level mapping', async () => {
-      const response = await request.get('/api/employees/org-level-mapping').expect(200);
-      
+      const response = await injectJson({ method: 'GET', url: '/api/employees/org-level-mapping' });
+
+      expect(response.status).toBe(200);
       expect(typeof response.body).toBe('object');
     });
   });
@@ -152,11 +184,13 @@ describe('FastifyServer', () => {
         sessionName: 'Test Session'
       };
 
-      const response = await request
-        .post(API_EMPLOYEE_DATA)
-        .send(employeeData)
-        .expect(201);
+      const response = await injectJson({
+        method: 'POST',
+        url: API_EMPLOYEE_DATA,
+        payload: employeeData
+      });
 
+      expect(response.status).toBe(201);
       expect(response.body).toMatchObject({
         success: true,
         data: {
@@ -170,17 +204,20 @@ describe('FastifyServer', () => {
     });
 
     it('should get all upload sessions', async () => {
-      const response = await request.get('/api/upload-sessions').expect(200);
-      
+      const response = await injectJson({ method: 'GET', url: '/api/upload-sessions' });
+
+      expect(response.status).toBe(200);
       expect(Array.isArray(response.body)).toBe(true);
       expect(response.body.length).toBeGreaterThan(0);
     });
 
     it('should get employee data by session ID', async () => {
-      const response = await request
-        .get(`/api/employee-data/session/${sessionId}`)
-        .expect(200);
+      const response = await injectJson({
+        method: 'GET',
+        url: `/api/employee-data/session/${sessionId}`
+      });
 
+      expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
         success: true,
         data: {
@@ -201,11 +238,13 @@ describe('FastifyServer', () => {
         employees: []
       };
 
-      const response = await request
-        .post(API_EMPLOYEE_DATA)
-        .send(invalidData)
-        .expect(400);
+      const response = await injectJson({
+        method: 'POST',
+        url: API_EMPLOYEE_DATA,
+        payload: invalidData
+      });
 
+      expect(response.status).toBe(400);
       expect(response.body).toMatchObject({
         success: false,
         error: expect.any(String),
@@ -214,16 +253,17 @@ describe('FastifyServer', () => {
     });
 
     it('should handle missing session ID for employee data retrieval', async () => {
-      await request
-        .get('/api/employee-data/session/')
-        .expect(404);
+      const response = await injectJson({ method: 'GET', url: '/api/employee-data/session/' });
+      expect(response.status).toBe(404);
     });
 
     it('should delete upload session', async () => {
-      const response = await request
-        .delete(`/api/upload-sessions/${sessionId}`)
-        .expect(200);
+      const response = await injectJson({
+        method: 'DELETE',
+        url: `/api/upload-sessions/${sessionId}`
+      });
 
+      expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
         success: true,
         data: {
@@ -237,12 +277,13 @@ describe('FastifyServer', () => {
   describe('Dataset Endpoints', () => {
     beforeEach(async () => {
       // Clear any existing dataset before each test
-      await request.delete(API_CURRENT_DATASET);
+      await injectJson({ method: 'DELETE', url: API_CURRENT_DATASET });
     });
 
     it('should return 404 when no current dataset exists', async () => {
-      const response = await request.get(API_CURRENT_DATASET).expect(404);
-      
+      const response = await injectJson({ method: 'GET', url: API_CURRENT_DATASET });
+
+      expect(response.status).toBe(404);
       expect(response.body).toMatchObject({
         success: false,
         error: 'No current dataset found',
@@ -269,11 +310,13 @@ describe('FastifyServer', () => {
         name: 'Test Dataset'
       };
 
-      const response = await request
-        .post(API_CURRENT_DATASET)
-        .send(datasetData)
-        .expect(201);
+      const response = await injectJson({
+        method: 'POST',
+        url: API_CURRENT_DATASET,
+        payload: datasetData
+      });
 
+      expect(response.status).toBe(201);
       expect(response.body).toMatchObject({
         success: true,
         data: {
@@ -301,11 +344,12 @@ describe('FastifyServer', () => {
         ]
       };
 
-      await request.post(API_CURRENT_DATASET).send(datasetData).expect(201);
+      await injectJson({ method: 'POST', url: API_CURRENT_DATASET, payload: datasetData });
 
       // Then retrieve it
-      const response = await request.get(API_CURRENT_DATASET).expect(200);
+      const response = await injectJson({ method: 'GET', url: API_CURRENT_DATASET });
 
+      expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
         success: true,
         data: expect.any(Array),
@@ -324,11 +368,12 @@ describe('FastifyServer', () => {
       const datasetData = {
         employees: [{ name: 'Test', gol: 'I/a', organizational_level: STAFF_OTHER_LEVEL, performance: [] }]
       };
-      await request.post(API_CURRENT_DATASET).send(datasetData).expect(201);
+      await injectJson({ method: 'POST', url: API_CURRENT_DATASET, payload: datasetData });
 
       // Then clear it
-      const response = await request.delete(API_CURRENT_DATASET).expect(200);
+      const response = await injectJson({ method: 'DELETE', url: API_CURRENT_DATASET });
 
+      expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
         success: true,
         data: {
@@ -338,7 +383,8 @@ describe('FastifyServer', () => {
       });
 
       // Verify it's cleared
-      await request.get(API_CURRENT_DATASET).expect(404);
+      const verifyResponse = await injectJson({ method: 'GET', url: API_CURRENT_DATASET });
+      expect(verifyResponse.status).toBe(404);
     });
   });
 
@@ -359,17 +405,19 @@ describe('FastifyServer', () => {
           }
         ]
       };
-      await request.post(API_CURRENT_DATASET).send(datasetData).expect(201);
+      await injectJson({ method: 'POST', url: API_CURRENT_DATASET, payload: datasetData });
     });
 
     it('should set leadership score for employee', async () => {
       const scoreData = { score: 95 };
 
-      const response = await request
-        .put('/api/current-dataset/leadership-scores/Leadership Test Employee')
-        .send(scoreData)
-        .expect(200);
+      const response = await injectJson({
+        method: 'PUT',
+        url: '/api/current-dataset/leadership-scores/Leadership Test Employee',
+        payload: scoreData
+      });
 
+      expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
         success: true,
         data: {
@@ -382,11 +430,13 @@ describe('FastifyServer', () => {
     it('should validate leadership score range', async () => {
       const invalidScoreData = { score: 150 }; // Invalid score > 100
 
-      const response = await request
-        .put('/api/current-dataset/leadership-scores/Leadership Test Employee')
-        .send(invalidScoreData)
-        .expect(400);
+      const response = await injectJson({
+        method: 'PUT',
+        url: '/api/current-dataset/leadership-scores/Leadership Test Employee',
+        payload: invalidScoreData
+      });
 
+      expect(response.status).toBe(400);
       expect(response.body).toMatchObject({
         success: false,
         error: expect.any(String),
@@ -396,16 +446,16 @@ describe('FastifyServer', () => {
 
     it('should get leadership scores for current dataset', async () => {
       // First set a score
-      await request
-        .put('/api/current-dataset/leadership-scores/Leadership Test Employee')
-        .send({ score: 88 })
-        .expect(200);
+      await injectJson({
+        method: 'PUT',
+        url: '/api/current-dataset/leadership-scores/Leadership Test Employee',
+        payload: { score: 88 }
+      });
 
       // Then retrieve scores
-      const response = await request
-        .get(API_LEADERSHIP_SCORES)
-        .expect(200);
+      const response = await injectJson({ method: 'GET', url: API_LEADERSHIP_SCORES });
 
+      expect(response.status).toBe(200);
       expect(Array.isArray(response.body)).toBe(true);
       if (response.body.length > 0) {
         expect(response.body[0]).toMatchObject({
@@ -419,12 +469,11 @@ describe('FastifyServer', () => {
 
     it('should return 404 for leadership scores when no current dataset', async () => {
       // Clear current dataset first
-      await request.delete(API_CURRENT_DATASET).expect(200);
+      await injectJson({ method: 'DELETE', url: API_CURRENT_DATASET });
 
-      const response = await request
-        .get(API_LEADERSHIP_SCORES)
-        .expect(404);
+      const response = await injectJson({ method: 'GET', url: API_LEADERSHIP_SCORES });
 
+      expect(response.status).toBe(404);
       expect(response.body).toMatchObject({
         success: false,
         error: 'No current dataset found',
@@ -435,8 +484,9 @@ describe('FastifyServer', () => {
 
   describe('Error Handling', () => {
     it('should handle 404 for unknown routes', async () => {
-      const response = await request.get('/api/nonexistent').expect(404);
-      
+      const response = await injectJson({ method: 'GET', url: '/api/nonexistent' });
+
+      expect(response.status).toBe(404);
       expect(response.body).toMatchObject({
         success: false,
         error: 'Not Found',
@@ -446,13 +496,16 @@ describe('FastifyServer', () => {
     });
 
     it('should handle invalid JSON in request body', async () => {
-      const response = await request
-        .post(API_EMPLOYEE_DATA)
-        .send('invalid json')
-        .set('Content-Type', 'application/json')
-        .expect(400);
+      const response = await fastify.inject({
+        method: 'POST',
+        url: API_EMPLOYEE_DATA,
+        payload: 'invalid json',
+        headers: { 'content-type': 'application/json' }
+      });
 
-      expect(response.body).toMatchObject({
+      expect(response.statusCode).toBe(400);
+      const body = response.json();
+      expect(body).toMatchObject({
         success: false,
         error: expect.any(String),
         timestamp: expect.any(String)
@@ -462,10 +515,16 @@ describe('FastifyServer', () => {
 
   describe('CORS Support', () => {
     it('should include CORS headers', async () => {
-      const response = await request
-        .options('/api/health')
-        .expect(204);
+      const response = await fastify.inject({
+        method: 'OPTIONS',
+        url: '/api/health',
+        headers: {
+          origin: 'http://localhost',
+          'access-control-request-method': 'GET'
+        }
+      });
 
+      expect(response.statusCode).toBe(204);
       expect(response.headers['access-control-allow-origin']).toBeDefined();
       expect(response.headers['access-control-allow-methods']).toBeDefined();
     });

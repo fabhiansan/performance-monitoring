@@ -4,6 +4,7 @@ import { api } from '../../services/api';
 import { Employee } from '../../types';
 import { IconClipboardData, IconUsers, IconUpload } from '../shared/Icons';
 import { Button, Input, Alert } from '../../design-system';
+import { simplifyOrganizationalLevel } from '../../utils/organizationalLevels';
 
 interface EmployeeImportProps {
   onImportComplete: () => void;
@@ -37,8 +38,8 @@ const EmployeeImport: React.FC<EmployeeImportProps> = ({ onImportComplete }) => 
       setParsedEmployees(employees);
       setShowPreview(true);
     } catch (err) {
-      console.error('Parse error:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Kesalahan parsing:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Kesalahan tidak diketahui';
       setError(`Gagal memproses data CSV: ${errorMessage}. Pastikan format data sudah benar.`);
     }
   };
@@ -121,25 +122,32 @@ H. ACHMADI, S.Sos	19680714 199202 1 002	III/d	Penata Tk.I	Kepala Bidang	Penangan
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                {parsedEmployees.slice(0, 10).map((emp, index) => (
-                  <tr key={index}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{emp.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{emp.nip}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{emp.gol}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{emp.pangkat}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{emp.position}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{emp.subPosition}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        emp.organizationalLevel.startsWith('Eselon') 
-                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-                      }`}>
-                        {emp.organizationalLevel}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {parsedEmployees.slice(0, 10).map((emp, index) => {
+                  const displayLevel = simplifyOrganizationalLevel(emp.organizationalLevel, emp.gol);
+                  const isEselon = displayLevel === 'Eselon';
+                  return (
+                    <tr key={index}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{emp.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{emp.nip}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{emp.gol}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{emp.pangkat}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{emp.position}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{emp.subPosition}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <span
+                          className={`px-2 py-1 text-xs rounded-full ${
+                            isEselon
+                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                              : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                          }`}
+                          title={emp.organizationalLevel}
+                        >
+                          {displayLevel}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -199,7 +207,7 @@ H. ACHMADI, S.Sos	19680714 199202 1 002	III/d	Penata Tk.I	Kepala Bidang	Penangan
           <div className="text-center">
             <IconClipboardData className="w-16 h-16 mx-auto text-gray-400 mb-4" />
             <p className="text-lg text-gray-600 dark:text-gray-400 mb-2">
-              Drag & drop file CSV di sini atau{' '}
+              Seret & letakkan file CSV di sini atau{' '}
               <Button 
                 onClick={() => fileInputRef.current?.click()}
                 variant="tertiary"
@@ -259,7 +267,7 @@ H. ACHMADI, S.Sos	19680714 199202 1 002	III/d	Penata Tk.I	Kepala Bidang	Penangan
             fullWidth
             leftIcon={<IconUsers className="w-5 h-5"/>}
           >
-            Parse Data CSV
+            Proses Data CSV
           </Button>
           
           <Button
@@ -272,14 +280,14 @@ H. ACHMADI, S.Sos	19680714 199202 1 002	III/d	Penata Tk.I	Kepala Bidang	Penangan
             variant="outline"
             size="lg"
           >
-            Clear
+            Bersihkan
           </Button>
         </div>
 
         {error && (
           <Alert
             variant="error"
-            title="Error"
+            title="Kesalahan"
             className="mt-4"
             dismissible
             onDismiss={() => setError(null)}

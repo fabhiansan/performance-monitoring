@@ -27,7 +27,7 @@ export const generateKpiCards = (
 ): KpiCard[] => {
   return [
     {
-      title: 'Total Employees',
+      title: 'Total Pegawai',
       value: kpiData.totalEmployees.toString(),
       icon: IconUsers,
       color: 'text-blue-800 dark:text-blue-200',
@@ -56,15 +56,15 @@ export const generateKpiCards = (
       bgColor: 'bg-orange-50 dark:bg-orange-900/30'
     },
     {
-      title: 'Average Score',
+      title: 'Skor Rata-rata',
       value: `${kpiData.averageScore.toFixed(1)}`,
       icon: IconChartBar,
       color: 'text-indigo-800 dark:text-indigo-200',
       bgColor: 'bg-indigo-50 dark:bg-indigo-900/30'
     },
     {
-      title: 'Top Performer',
-      value: kpiData.topPerformer ? kpiData.topPerformer.name : 'N/A',
+      title: 'Performa Terbaik',
+      value: kpiData.topPerformer ? kpiData.topPerformer.name : 'Tidak Ada',
       score: kpiData.topPerformerScore ? kpiData.topPerformerScore.toFixed(1) : undefined,
       icon: IconSparkles,
       color: 'text-yellow-800 dark:text-yellow-200',
@@ -77,7 +77,7 @@ export const generateKpiCards = (
  * Check if a KPI card is the top performer card
  */
 export const isTopPerformerCard = (card: KpiCard): boolean => {
-  return card.title === 'Top Performer';
+  return card.title === 'Performa Terbaik';
 };
 
 /**

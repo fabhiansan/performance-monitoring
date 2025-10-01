@@ -8,6 +8,7 @@ import { Employee } from '../types';
 import { parsePerformanceData } from '../services/parser';
 import { parseEmployeeCSV, validateEmployeeData } from '../services/csvParser';
 import { ValidationResult } from '../services/validationService';
+import { simplifyOrganizationalLevel } from '../utils/organizationalLevels';
 
 interface DataDetectionResult {
   type: 'employee_roster' | 'performance_data';
@@ -131,7 +132,7 @@ export function useDataProcessing() {
           pangkat: emp.pangkat || '',
           position: emp.position || '',
           sub_position: emp.subPosition || '',
-          organizational_level: emp.organizationalLevel,
+          organizational_level: simplifyOrganizationalLevel(emp.organizationalLevel, emp.gol),
           performance: []
         }));
         

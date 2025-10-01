@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Employee, CompetencyScore } from '../../types';
+import { simplifyOrganizationalLevel } from '../../utils/organizationalLevels';
 import { generateAllEmployeeRecaps, RecapEmployee } from '../../services/scoringService';
 import { api } from '../../services/api';
 
@@ -68,8 +69,8 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
         const scores = await api.getManualLeadershipScores();
         setManualScores(scores);
       } catch (error) {
-        console.error('Failed to load manual leadership scores:', error);
-        setError('Failed to load leadership scores from server');
+        console.error('Gagal memuat skor penilaian pimpinan:', error);
+        setError('Gagal memuat skor penilaian pimpinan dari server');
       } finally {
         setIsLoading(false);
       }
@@ -90,8 +91,8 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
         await api.bulkUpdateManualLeadershipScores(scores);
         setError(null);
       } catch (error) {
-        console.error('Failed to save manual leadership scores:', error);
-        setError('Failed to save leadership scores to server');
+        console.error('Gagal menyimpan skor penilaian pimpinan:', error);
+        setError('Gagal menyimpan skor penilaian pimpinan ke server');
       } finally {
         setIsSaving(false);
       }
@@ -121,13 +122,13 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
 
   // Export final report as CSV
   const handleExportReport = useCallback(() => {
-    const headers = ['NO.', 'NAMA', 'POSITION', 'PERILAKU KINERJA (MAX 25.5)', 'KUALITAS KERJA', 'PENILAIAN PIMPINAN', 'TOTAL NILAI'];
+    const headers = ['NO.', 'NAMA', 'JABATAN', 'PERILAKU KERJA (MAKS 25,5)', 'KUALITAS KERJA', 'PENILAIAN PIMPINAN', 'TOTAL NILAI'];
     const csvData = [
       headers.join(','),
       ...filteredData.map((employee, index) => [
         index + 1,
         `"${employee.name}"`,
-        employee.performanceRecap.positionType === 'eselon' ? 'ESELON' : 'STAFF',
+        employee.performanceRecap.positionType === 'eselon' ? 'ESELON' : 'STAF',
         employee.performanceRecap.perilakuKinerja.toFixed(2),
         employee.performanceRecap.kualitasKerja.toFixed(2),
         employee.performanceRecap.positionType === 'eselon' 
@@ -170,7 +171,7 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
     return (
       <div className="text-center py-12">
         <p className="text-gray-500 dark:text-gray-400 text-lg">
-          No employee data available. Please import data first.
+          Tidak ada data pegawai. Silakan impor data terlebih dahulu.
         </p>
       </div>
     );
@@ -181,7 +182,7 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
       <div className="text-center py-12">
         <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         <p className="text-gray-500 dark:text-gray-400 text-lg mt-4">
-          Loading performance data...
+          Memuat data kinerja...
         </p>
       </div>
     );
@@ -196,12 +197,12 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
             Rekap Kinerja
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Performance recap with weighted scoring system
+            Rekap kinerja dengan sistem bobot
           </p>
           {/* Tab Navigation */}
           <div className="mt-4 flex space-x-2">
             {(['all', 'eselon', 'staff'] as const).map(tab => {
-              const label = tab === 'all' ? 'All Employees' : tab === 'eselon' ? 'Eselon' : 'Staff';
+              const label = tab === 'all' ? 'Semua Pegawai' : tab === 'eselon' ? 'Eselon' : 'Staf';
               const active = activeTab === tab;
               return (
                 <button
@@ -221,7 +222,7 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
           {isSaving && (
             <div className="flex items-center mt-2 text-blue-600 dark:text-blue-400">
               <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-              <span className="text-sm">Saving changes...</span>
+              <span className="text-sm">Menyimpan perubahan...</span>
             </div>
           )}
           {error && (
@@ -231,7 +232,7 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
           )}
         </div>
         <div className="text-right">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Total Employees</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Total Pegawai</p>
           <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{employees.length}</p>
         </div>
       </div>
@@ -239,29 +240,29 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
-          <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Avg Perilaku Kinerja</h3>
+          <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Rata-rata Perilaku Kerja</h3>
           <p className="text-2xl font-bold text-green-600 dark:text-green-400">{averageScores.perilaku.toFixed(2)}</p>
-          <p className="text-xs text-gray-500">Max: 25.5 pts (of 85)</p>
+          <p className="text-xs text-gray-500">Maks: 25,5 poin (dari 85)</p>
         </div>
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
-          <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Avg Kualitas Kerja</h3>
+          <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Rata-rata Kualitas Kerja</h3>
           <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{averageScores.kualitas.toFixed(2)}</p>
-          <p className="text-xs text-gray-500">Eselon: 50%, Staff: 70%</p>
+          <p className="text-xs text-gray-500">Eselon: 50%, Staf: 70%</p>
         </div>
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
-          <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Avg Penilaian Pimpinan</h3>
+          <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Rata-rata Penilaian Pimpinan</h3>
           <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{averageScores.pimpinan.toFixed(2)}</p>
-          <p className="text-xs text-gray-500">Eselon only: 20%</p>
+          <p className="text-xs text-gray-500">Hanya Eselon: 20%</p>
         </div>
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
-          <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Avg Total Score</h3>
+          <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Rata-rata Nilai Total</h3>
           <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{averageScores.total.toFixed(2)}</p>
-          <p className="text-xs text-gray-500">Final Score</p>
+          <p className="text-xs text-gray-500">Nilai Akhir</p>
         </div>
         <div className="bg-white dark:bg-gray-900 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
-          <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Position Types</h3>
+          <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Jenis Jabatan</h3>
           <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400">{eselonEmployees.length} Eselon</p>
-          <p className="text-lg font-bold text-teal-600 dark:text-teal-400">{staffEmployees.length} Staff</p>
+          <p className="text-lg font-bold text-teal-600 dark:text-teal-400">{staffEmployees.length} Staf</p>
         </div>
       </div>
 
@@ -270,19 +271,19 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
         <div className="flex items-center justify-between space-x-4">
           <div className="flex-1">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Search Employee
+              Cari Pegawai
             </label>
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by employee name..."
+              placeholder="Cari berdasarkan nama pegawai..."
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             />
           </div>
           <div className="flex flex-col">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Save & Export
+              Simpan & Ekspor
             </label>
             <div className="flex space-x-2">
               <button
@@ -294,13 +295,13 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
                     : 'bg-blue-600 hover:bg-blue-700'
                 }`}
               >
-                {isSaving ? 'Saving...' : 'Save Ratings'}
+                {isSaving ? 'Menyimpan...' : 'Simpan Penilaian'}
               </button>
               <button
                 onClick={handleExportReport}
                 className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm font-medium transition-colors duration-200"
               >
-                Export CSV
+                Ekspor CSV
               </button>
             </div>
           </div>
@@ -320,16 +321,16 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
                   Nama
                 </th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Position<br/><span className="text-gray-500 text-xs">Type</span>
+                  Jabatan<br/><span className="text-gray-500 text-xs">Jenis</span>
                 </th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Perilaku Kinerja<br/><span className="text-green-600">(Max 25.5)</span>
+                  Perilaku Kinerja<br/><span className="text-green-600">(Maks 25,5)</span>
                 </th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Kualitas Kerja<br/><span className="text-blue-600">(Eselon:50% | Staff:70%)</span>
+                  Kualitas Kerja<br/><span className="text-blue-600">(Eselon:50% | Staf:70%)</span>
                 </th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Penilaian Pimpinan<br/><span className="text-purple-600">(Eselon only: max 17 pts)</span>
+                  Penilaian Pimpinan<br/><span className="text-purple-600">(Hanya Eselon: maks 17 poin)</span>
                 </th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Total Nilai
@@ -337,15 +338,18 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredData.map((employee, index) => (
-                <tr key={employee.name} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+              {filteredData.map((employee, index) => {
+                const displayLevel = simplifyOrganizationalLevel(employee.organizational_level, employee.gol);
+
+                return (
+                  <tr key={employee.name} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                   <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                     {index + 1}
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">
                     <div>
                       <div className="font-medium">{employee.name}</div>
-                      <div className="text-gray-500 dark:text-gray-400 text-xs">{employee.organizational_level}</div>
+                      <div className="text-gray-500 dark:text-gray-400 text-xs" title={employee.organizational_level || undefined}>{displayLevel}</div>
                     </div>
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-center">
@@ -354,7 +358,7 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
                         ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
                         : 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200'
                     }`}>
-                      {employee.performanceRecap.positionType === 'eselon' ? 'Eselon' : 'Staff'}
+                      {employee.performanceRecap.positionType === 'eselon' ? 'Eselon' : 'Staf'}
                     </span>
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-center">
@@ -384,7 +388,7 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
                       </div>
                     ) : (
                       <span className="text-gray-400 text-xs italic">
-                        N/A (Staff)
+                        Tidak Ada (Staf)
                       </span>
                     )}
                   </td>
@@ -397,12 +401,13 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
                         onClick={() => openCalculationModal(employee)}
                         className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
                       >
-                        Show Calculation
+                        Tampilkan Perhitungan
                       </button>
                     </div>
                   </td>
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
         </div>
@@ -410,17 +415,17 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
 
       {/* Scoring Information */}
       <div className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Scoring System Information</h3>
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Informasi Sistem Penilaian</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Eselon Scoring */}
           <div className="border border-indigo-200 dark:border-indigo-800 p-4 rounded-lg">
             <h4 className="font-bold text-indigo-700 dark:text-indigo-300 mb-3 text-center">
-              ESELON III & IV EVALUATION
+              EVALUASI ESELON III & IV
             </h4>
             <div className="space-y-3">
               <div>
                 <h5 className="font-medium text-green-700 dark:text-green-300 mb-1">
-                  1. Perilaku Kerja (Max 25.5)
+                  1. Perilaku Kerja (Maks 25,5)
                 </h5>
                 <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
                   <li>• Kehadiran dan Tepat Waktu: <span className="font-bold">5%</span></li>
@@ -429,7 +434,7 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
                   <li>• Inisiatif dan Flexibilitas: <span className="font-bold">5%</span></li>
                   <li>• Kepemimpinan (loyalitas): <span className="font-bold">10%</span></li>
                 </ul>
-                <p className="text-xs text-gray-500 mt-1"><span className="font-bold">Max: 25.5</span></p>
+                <p className="text-xs text-gray-500 mt-1"><span className="font-bold">Maks: 25,5</span></p>
               </div>
               <div>
                 <h5 className="font-medium text-blue-700 dark:text-blue-300 mb-1">
@@ -440,13 +445,13 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
                   <li>• Kemampuan berkomunikasi: <span className="font-bold">10%</span></li>
                   <li>• Pemahaman urusan sosial: <span className="font-bold">10%</span></li>
                 </ul>
-                <p className="text-xs text-gray-500 mt-1"><span className="font-bold">Max: 42.5</span></p>
+                <p className="text-xs text-gray-500 mt-1"><span className="font-bold">Maks: 42,5</span></p>
               </div>
               <div>
                 <h5 className="font-medium text-purple-700 dark:text-purple-300 mb-1">
                   3. Penilaian Pimpinan (20%)
                 </h5>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Manual input (Max: 17)</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Input manual (Maks: 17)</p>
               </div>
             </div>
           </div>
@@ -454,12 +459,12 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
           {/* Staff Scoring */}
           <div className="border border-teal-200 dark:border-teal-800 p-4 rounded-lg">
             <h4 className="font-bold text-teal-700 dark:text-teal-300 mb-3 text-center">
-              STAFF EVALUATION
+              EVALUASI STAF
             </h4>
             <div className="space-y-3">
               <div>
                 <h5 className="font-medium text-green-700 dark:text-green-300 mb-1">
-                  1. Perilaku Kerja (Max 25.5)
+                  1. Perilaku Kerja (Maks 25,5)
                 </h5>
                 <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
                   <li>• Kehadiran dan Tepat Waktu: <span className="font-bold">5%</span></li>
@@ -468,7 +473,7 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
                   <li>• Inisiatif dan Flexibilitas: <span className="font-bold">5%</span></li>
                   <li>• Kepemimpinan (loyalitas): <span className="font-bold">10%</span></li>
                 </ul>
-                <p className="text-xs text-gray-500 mt-1"><span className="font-bold">Max: 25.5</span></p>
+                <p className="text-xs text-gray-500 mt-1"><span className="font-bold">Maks: 25,5</span></p>
               </div>
               <div>
                 <h5 className="font-medium text-blue-700 dark:text-blue-300 mb-1">
@@ -479,13 +484,13 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
                   <li>• Kemampuan berkomunikasi: <span className="font-bold">10%</span></li>
                   <li>• Pemahaman urusan sosial: <span className="font-bold">10%</span></li>
                 </ul>
-                <p className="text-xs text-gray-500 mt-1"><span className="font-bold">Max: 59.5</span></p>
+                <p className="text-xs text-gray-500 mt-1"><span className="font-bold">Maks: 59,5</span></p>
               </div>
               <div>
                 <h5 className="font-medium text-gray-500 dark:text-gray-400 mb-1">
                   3. Penilaian Pimpinan (0%)
                 </h5>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Not applicable for staff</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Tidak berlaku untuk staf</p>
               </div>
             </div>
           </div>
@@ -493,7 +498,7 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
 
         {/* Performance Categories */}
         <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-          <h5 className="font-medium text-gray-700 dark:text-gray-300 mb-2">Performance Categories</h5>
+          <h5 className="font-medium text-gray-700 dark:text-gray-300 mb-2">Kategori Kinerja</h5>
           <div className="grid grid-cols-3 gap-4 text-sm">
             <div className="text-center">
               <span className="font-bold text-red-600">Kurang Baik</span>
@@ -596,7 +601,7 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
               {/* Final Calculation */}
               <div className="border border-orange-200 dark:border-orange-800 p-4 rounded-lg">
                 <h4 className="font-medium text-orange-700 dark:text-orange-300 mb-3">
-                  Final Score Calculation
+                  Perhitungan Nilai Akhir
                 </h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
@@ -616,10 +621,10 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
                     </div>
                   )}
                   <div className="border-t pt-2 mt-2 font-bold text-orange-700 dark:text-orange-300">
-                    Total Score: {selectedEmployee.performanceRecap.totalNilai.toFixed(2)} / 85
+                    Total Nilai: {selectedEmployee.performanceRecap.totalNilai.toFixed(2)} / 85
                   </div>
                   <div className="text-sm text-gray-500 mt-2">
-                    Performance Level: {
+                    Level Kinerja: {
                       selectedEmployee.performanceRecap.totalNilai >= 80 ? 
                         <span className="text-green-600 font-bold">Sangat Baik</span> :
                       selectedEmployee.performanceRecap.totalNilai >= 70 ? 
@@ -636,7 +641,7 @@ const RekapKinerja: React.FC<RekapKinerjaProps> = ({ employees }) => {
                 onClick={closeCalculationModal}
                 className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md text-sm font-medium transition-colors duration-200"
               >
-                Close
+                Tutup
               </button>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import React from "react";
 import { Employee } from "../../types";
+import { simplifyOrganizationalLevel } from "../../utils/organizationalLevels";
 import {
   RadarChart,
   PolarGrid,
@@ -12,7 +13,7 @@ import {
 } from "recharts";
 import { IconUser, IconBriefcase } from "../shared/Icons";
 // import { Card } from '../design-system';
-import { getLegacyPerformanceLevel, CHART_COLORS } from '../../constants/ui';
+import { getLegacyPerformanceLevel, CHART_COLORS } from "../../constants/ui";
 
 interface EmployeeCardProps {
   employee: Employee;
@@ -24,18 +25,24 @@ interface CustomTooltipProps {
   label?: string;
 }
 
-const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label }) => {
+const CustomTooltip: React.FC<CustomTooltipProps> = ({
+  active,
+  payload,
+  label,
+}) => {
   if (active && payload && payload.length) {
     return (
-      <div 
-        className="p-3 border-2 rounded-lg shadow-xl"
+      <div
+        className="p-3 border-2 rounded-lg shadow-xl backdrop-blur-sm bg-white/95 dark:bg-gray-900/95 transition-all duration-200"
         style={{
-          backgroundColor: CHART_COLORS.BACKGROUND,
           borderColor: CHART_COLORS.GRID_COLOR,
         }}
       >
-        <p className="label font-bold text-gray-900 dark:text-gray-100 mb-1">{`${label}`}</p>
-        <p className="intro font-medium" style={{ color: CHART_COLORS.PRIMARY_SERIES }}>{`Score : ${payload[0].value}`}</p>
+        <p className="label font-bold text-gray-900 dark:text-gray-100 mb-1.5">{`${label}`}</p>
+        <p
+          className="intro font-semibold text-sm"
+          style={{ color: CHART_COLORS.PRIMARY_SERIES }}
+        >{`Skor: ${payload[0].value}`}</p>
       </div>
     );
   }
@@ -56,6 +63,9 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee }) => {
         employee.performance.length
       : 0;
   const primaryColor = getScoreColor(averageScore);
+  const orgLevelLabel = employee.organizational_level
+    ? simplifyOrganizationalLevel(employee.organizational_level, employee.gol)
+    : "Tidak Ada";
 
   const chartData =
     employee.performance && employee.performance.length > 0
@@ -67,22 +77,30 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee }) => {
       : [];
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg hover:shadow-2xl transition-shadow duration-300 overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 ease-out hover:-translate-y-1 overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col group">
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-4">
           <div
-            className="flex-shrink-0 p-3 rounded-full"
+            className="flex-shrink-0 p-3 rounded-full transition-transform duration-200 group-hover:scale-110"
             style={{ backgroundColor: `${primaryColor}20` }}
           >
-            <IconUser className="w-6 h-6" color={primaryColor} />
+            <IconUser
+              className="w-6 h-6 transition-all duration-200"
+              color={primaryColor}
+            />
           </div>
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white truncate">
               {employee.name}
             </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center">
-              <IconBriefcase className="w-4 h-4 mr-1.5" />
-              {employee.organizational_level}
+            <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center mt-1">
+              <IconBriefcase className="w-4 h-4 mr-1.5 flex-shrink-0" />
+              <span
+                title={employee.organizational_level || undefined}
+                className="truncate"
+              >
+                {orgLevelLabel}
+              </span>
             </p>
           </div>
         </div>
@@ -91,21 +109,33 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({ employee }) => {
       <div className="flex-grow h-80 w-full p-4">
         <ResponsiveContainer width="100%" height="100%">
           <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
-            <PolarGrid stroke={CHART_COLORS.GRID_COLOR} />
+            <PolarGrid stroke={CHART_COLORS.GRID_COLOR} strokeDasharray="3 3" />
             <PolarAngleAxis
               dataKey="subject"
-              tick={{ fill: CHART_COLORS.AXIS_COLOR, fontSize: 12 }}
+              tick={{
+                fill: CHART_COLORS.AXIS_COLOR,
+                fontSize: 12,
+                fontWeight: 500,
+              }}
             />
-            <PolarRadiusAxis angle={30} domain={[0, 100]} stroke={CHART_COLORS.AXIS_COLOR} />
+            <PolarRadiusAxis
+              angle={30}
+              domain={[0, 100]}
+              stroke={CHART_COLORS.AXIS_COLOR}
+            />
             <Radar
               name={employee.name}
               dataKey="A"
               stroke={primaryColor}
               fill={primaryColor}
               fillOpacity={0.6}
+              strokeWidth={2}
+              animationDuration={800}
+              animationBegin={0}
+              animationEasing="ease-out"
             />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend />
+            <Tooltip content={<CustomTooltip />} animationDuration={200} />
+            <Legend wrapperStyle={{ paddingTop: "10px" }} />
           </RadarChart>
         </ResponsiveContainer>
       </div>

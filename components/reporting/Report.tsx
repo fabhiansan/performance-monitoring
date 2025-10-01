@@ -2,17 +2,24 @@ import React, { useState, useRef } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { Employee } from '../../types';
+import { simplifyOrganizationalLevel } from '../../utils/organizationalLevels';
+import { useError } from '../../contexts/ErrorContext';
 
 interface ReportProps {
   employees: Employee[];
 }
 
 const Report: React.FC<ReportProps> = ({ employees }) => {
+  const { showError } = useError();
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [semester, setSemester] = useState<number>(1);
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const reportRef = useRef<HTMLDivElement>(null);
+
+  const selectedOrgLevelHeading = selectedEmployee?.organizational_level
+    ? simplifyOrganizationalLevel(selectedEmployee.organizational_level, selectedEmployee.gol).toUpperCase()
+    : 'ESELON';
 
   const generatePDF = async () => {
     if (!selectedEmployee || !reportRef.current) return;
@@ -48,8 +55,11 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
 
       pdf.save(`Laporan_Kinerja_${selectedEmployee.name.replace(/\s+/g, '_')}_Semester_${semester === 1 ? 'I' : 'II'}_${year}.pdf`);
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      alert('Terjadi kesalahan saat menghasilkan PDF');
+      showError(error, {
+        component: 'Report',
+        operation: 'generate PDF',
+        employeeName: selectedEmployee.name
+      });
     } finally {
       setIsGenerating(false);
     }
@@ -343,7 +353,7 @@ const Report: React.FC<ReportProps> = ({ employees }) => {
             <div className="flex-1">
               <div className="mb-4">
                 <h4 className="font-bold text-xs mb-2 text-center">
-                  KERTAS KERJA EVALUASI PENGUKURAN KINERJA {selectedEmployee.organizational_level?.toUpperCase() || 'ESELON III'}<br />
+                  KERTAS KERJA EVALUASI PENGUKURAN KINERJA {selectedOrgLevelHeading}<br />
                   DINAS SOSIAL PROVINSI KALIMANTAN SELATAN SEMESTER {semester === 1 ? 'I' : 'II'}<br />
                   TAHUN {year}
                 </h4>

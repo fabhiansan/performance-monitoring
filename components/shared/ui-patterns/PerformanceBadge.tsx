@@ -40,7 +40,9 @@ const PerformanceBadge: React.FC<PerformanceBadgeProps> = ({
   };
 
   const variant = getVariant(level.color);
-  const displayText = showScore ? `${level.label} (${score})` : level.label;
+  const levelWithLabel = level as { label: string; labelId?: string };
+  const labelText = levelWithLabel.labelId ?? levelWithLabel.label;
+  const displayText = showScore ? `${labelText} (${score})` : labelText;
 
   return (
     <Badge
