@@ -403,6 +403,34 @@ export class KyselyDatabaseService {
   }
 
   /**
+   * Check if a session exists for the given period
+   */
+  async sessionExists(period: string): Promise<boolean> {
+    const existing = await this.db
+      .selectFrom("performance_scores")
+      .select("id")
+      .where("period", "=", period)
+      .limit(1)
+      .executeTakeFirst();
+
+    return Boolean(existing);
+  }
+
+  /**
+   * Get the most recently uploaded session period
+   */
+  async getLatestSessionPeriod(): Promise<string | null> {
+    const latest = await this.db
+      .selectFrom("performance_scores")
+      .select(["period", "created_at"])
+      .orderBy("created_at", "desc")
+      .limit(1)
+      .executeTakeFirst();
+
+    return latest?.period ?? null;
+  }
+
+  /**
    * Get statistics for a period
    */
   private async getPeriodStats(period: string): Promise<{

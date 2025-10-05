@@ -346,9 +346,10 @@ export const DataManagementRefactored: React.FC<
       setShowSaveDialog(false);
       setSessionName("");
       setSessionNameError(null);
+      setPendingEmployees(null);
       if (formattedSessionName) {
         showSuccessToast(
-          `Dataset ${formattedSessionName} berhasil disimpan.`,
+          `Dataset ${formattedSessionName} berhasil disimpan dan ditampilkan di dashboard.`,
           4000,
         );
       }

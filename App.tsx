@@ -6,6 +6,7 @@
 
 import React, { useState } from "react";
 import { Toaster } from "react-hot-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { ErrorProvider, useError } from "./contexts/ErrorContext";
 import ErrorDisplay from "./components/shared/ErrorDisplay";
 import { ErrorBoundary } from "./components/shared/ErrorBoundary";
@@ -24,6 +25,7 @@ import { useEmployeesWithSessionData } from "./hooks/useEmployeeData";
 import { useSessionManager } from "./hooks/useSessionData";
 import { useOrganizationalMappings } from "./hooks/useEmployeeData";
 import { useSaveEmployeeData } from "./hooks/useEmployeeData";
+import { queryKeys } from "./hooks/useQueryClient";
 import { Employee } from "./types";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { KeyboardShortcutsDialog } from "./components/shared/KeyboardShortcutsDialog";
@@ -35,9 +37,10 @@ const VIEW_NAMES = {
 } as const;
 
 const AppContent: React.FC = () => {
-  const [activeView, setActiveView] = useState("overview");
+  const [activeView, setActiveView] = useState<string>(VIEW_NAMES.OVERVIEW);
   const [showShortcutsDialog, setShowShortcutsDialog] = useState(false);
   const { showError } = useError();
+  const queryClient = useQueryClient();
 
   // Use React Query hooks for data management
   const {
@@ -96,10 +99,28 @@ const AppContent: React.FC = () => {
     sessionName?: string,
   ) => {
     try {
-      await saveEmployeeData.mutateAsync({
+      const newSessionId = await saveEmployeeData.mutateAsync({
         employees: newEmployeeData,
         sessionName,
       });
+
+      // Set the newly created session as active and wait for data to be loaded
+      if (newSessionId) {
+        await changeSession(newSessionId);
+        
+        // Wait for the new session data to be available in React Query cache
+        // We'll wait up to 2 seconds for the data to be loaded
+        let retries = 0;
+        const maxRetries = 10;
+        while (retries < maxRetries) {
+          const cachedData = queryClient.getQueryData(queryKeys.employees.session(newSessionId));
+          if (cachedData && Array.isArray(cachedData) && cachedData.length > 0) {
+            break; // Data is loaded, exit the loop
+          }
+          await new Promise(resolve => setTimeout(resolve, 200));
+          retries++;
+        }
+      }
 
       // Redirect to overview after saving session data
       if (
@@ -107,7 +128,7 @@ const AppContent: React.FC = () => {
         sessionName.trim().length > 0 &&
         activeView === "data"
       ) {
-        setActiveView("overview");
+        setActiveView(VIEW_NAMES.OVERVIEW);
       }
     } catch (error) {
       showError(error, {
@@ -137,7 +158,7 @@ const AppContent: React.FC = () => {
     {
       key: "o",
       description: "Buka Ringkasan",
-      action: () => setActiveView("overview"),
+      action: () => setActiveView(VIEW_NAMES.OVERVIEW),
     },
     {
       key: "a",

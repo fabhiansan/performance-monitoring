@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { employeeApi } from "../services/api";
+import { employeeApi, sessionApi } from "../services/api";
 import { queryKeys } from "./useQueryClient";
 import { Employee, toEmployeeUpdateParams } from "../types";
 import { EmployeeSuggestion } from "../services/api/interfaces/ApiInterfaces";
@@ -12,12 +12,12 @@ export const useEmployees = (sessionId?: string) => {
       : queryKeys.employees.all,
     queryFn: async (): Promise<Employee[]> => {
       if (sessionId) {
-        // Note: getEmployeeData doesn't exist, using getAllEmployees for now
-        return await employeeApi.getAllEmployees();
+        // Fetch employees with session-specific performance data from sessionApi
+        return await sessionApi.getEmployeeDataBySession(sessionId);
       }
+      // Fetch all master employees without session filtering
       return await employeeApi.getAllEmployees();
     },
-    enabled: Boolean(sessionId), // Only run if sessionId is provided
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 };
@@ -48,17 +48,33 @@ export const useSaveEmployeeData = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       employees,
+      sessionName,
     }: {
       employees: Employee[];
       sessionName?: string;
-    }) => employeeApi.importEmployeesFromCSV(employees),
-    onSuccess: () => {
-      // Invalidate and refetch employee data
-      queryClient.invalidateQueries({ queryKey: queryKeys.employees.all });
-      // Also invalidate sessions since we might have created a new one
-      queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all });
+    }) => {
+      // Use sessionApi to save employee data with performance scores
+      return await sessionApi.saveEmployeeData(employees, sessionName);
+    },
+    onSuccess: async (sessionId) => {
+      // Invalidate all employee and session queries
+      await queryClient.invalidateQueries({ queryKey: queryKeys.employees.all });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.sessions.current });
+      
+      // Invalidate and refetch the specific session data
+      if (sessionId) {
+        await queryClient.invalidateQueries({ queryKey: queryKeys.employees.session(sessionId) });
+        // Prefetch the new session data to ensure it's loaded
+        await queryClient.prefetchQuery({
+          queryKey: queryKeys.employees.session(sessionId),
+          queryFn: async () => {
+            return await sessionApi.getEmployeeDataBySession(sessionId);
+          },
+        });
+      }
     },
   });
 };

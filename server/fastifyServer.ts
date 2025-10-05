@@ -33,6 +33,7 @@ export class FastifyServer {
   private db: KyselyDatabaseService;
   private options: Required<FastifyServerOptions>;
   private pluginsReady: Promise<void>;
+  private currentSessionId: string | null = null;
   
   // Constants to avoid duplicate strings
   private static readonly FAILED_TO_GET_MESSAGE = 'Failed to get';
@@ -323,6 +324,23 @@ export class FastifyServer {
         timestamp: new Date().toISOString(),
       });
     });
+  }
+
+  /**
+   * Resolve the active session identifier, defaulting to the latest upload when unset
+   */
+  private async resolveCurrentSessionId(): Promise<string | null> {
+    if (this.currentSessionId) {
+      return this.currentSessionId;
+    }
+
+    const latestSession = await this.db.getLatestSessionPeriod();
+    if (latestSession) {
+      this.currentSessionId = latestSession;
+      return latestSession;
+    }
+
+    return null;
   }
 
   /**
@@ -659,6 +677,9 @@ export class FastifyServer {
         });
       }
       const sessionId = await this.db.saveEmployeeData(employees, sessionName);
+
+      // Mark the newly saved session as the active one for subsequent requests
+      this.currentSessionId = sessionId;
       
       reply.code(201).send({
         success: true,
@@ -730,6 +751,10 @@ export class FastifyServer {
   async deleteUploadSession(request: FastifyRequest<{ Params: { sessionId: string } }>, reply: FastifyReply) {
     try {
       await this.db.deleteUploadSession(request.params.sessionId);
+
+      if (this.currentSessionId === request.params.sessionId) {
+        this.currentSessionId = await this.db.getLatestSessionPeriod();
+      }
       reply.send({
         success: true,
         data: { message: 'Upload session deleted successfully' },
@@ -1027,20 +1052,19 @@ export class FastifyServer {
 
   async getCurrentSession(_request: FastifyRequest, reply: FastifyReply) {
     try {
-      // For now, return the current dataset ID as session ID
-      const currentDatasetId = await this.db.getCurrentDatasetId();
-      
-      if (!currentDatasetId) {
-        return reply.code(404).send({
-          success: false,
-          error: 'No current session found',
+      const currentSessionId = await this.resolveCurrentSessionId();
+
+      if (!currentSessionId) {
+        return reply.send({
+          success: true,
+          data: null,
           timestamp: new Date().toISOString(),
         });
       }
-      
+
       reply.send({
         success: true,
-        data: { session_id: currentDatasetId },
+        data: { session_id: currentSessionId },
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
@@ -1065,13 +1089,23 @@ export class FastifyServer {
         });
       }
       
-      // Note: Implementation would need to store current session state
-      // For now, just log and return success
-      logger.info('Current session set', { sessionId });
+      const normalizedSessionId = sessionId.trim();
+
+      const sessionExists = await this.db.sessionExists(normalizedSessionId);
+      if (!sessionExists && normalizedSessionId !== this.currentSessionId) {
+        return reply.code(404).send({
+          success: false,
+          error: 'Session not found',
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      this.currentSessionId = normalizedSessionId;
+      logger.info('Current session set', { sessionId: normalizedSessionId });
       
       reply.send({
         success: true,
-        data: { message: 'Current session set successfully', sessionId },
+        data: { message: 'Current session set successfully', sessionId: normalizedSessionId },
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
