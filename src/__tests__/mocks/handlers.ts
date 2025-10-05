@@ -40,6 +40,17 @@ const mockEmployees: Employee[] = [
   },
 ]
 
+const mockApiEmployees = mockEmployees.map((employee, index) => ({
+  id: index + 1,
+  name: employee.name,
+  nip: `1234567890123456${index + 1}`,
+  gol: 'III/d',
+  pangkat: 'Penata Tingkat I',
+  position: index % 2 === 0 ? 'Kepala Sub Bagian' : 'Analis',
+  sub_position: index % 2 === 0 ? 'Staff Perencanaan' : 'Sekretariat',
+  organizational_level: employee.organizational_level,
+}))
+
 const mockDatasets = [
   {
     id: 1,
@@ -175,6 +186,128 @@ export const handlers = [
         name: decodeURIComponent(name as string),
         summary: body.summary || '',
         updated_at: new Date().toISOString()
+      }
+    })
+  }),
+
+  // Employee API client endpoints
+  http.get('/api/employees', () => {
+    return HttpResponse.json({
+      success: true,
+      data: mockApiEmployees,
+      metadata: { total: mockApiEmployees.length }
+    })
+  }),
+
+  http.get('/api/employees/:id', ({ params }) => {
+    const employee = mockApiEmployees.find(emp => emp.id === Number(params.id))
+    if (!employee) {
+      return HttpResponse.json({ success: false, message: 'Employee not found' }, { status: 404 })
+    }
+
+    return HttpResponse.json({ success: true, data: employee })
+  }),
+
+  http.post('/api/employees', async ({ request }) => {
+    const body = await request.json() as Record<string, unknown>
+    const newEmployee = {
+      id: mockApiEmployees.length + 1,
+      ...body,
+    } as typeof mockApiEmployees[0]
+    mockApiEmployees.push(newEmployee)
+
+    return HttpResponse.json({ success: true, data: { id: newEmployee.id } })
+  }),
+
+  http.put('/api/employees/:id', async ({ params, request }) => {
+    const id = Number(params.id)
+    const body = await request.json() as Record<string, unknown>
+    const index = mockApiEmployees.findIndex(emp => emp.id === id)
+    if (index === -1) {
+      return HttpResponse.json({ success: false, message: 'Employee not found' }, { status: 404 })
+    }
+
+    mockApiEmployees[index] = { ...mockApiEmployees[index], ...body }
+    return HttpResponse.json({ success: true })
+  }),
+
+  http.delete('/api/employees/:id', ({ params }) => {
+    const id = Number(params.id)
+    const index = mockApiEmployees.findIndex(emp => emp.id === id)
+    if (index === -1) {
+      return HttpResponse.json({ success: false, message: 'Employee not found' }, { status: 404 })
+    }
+
+    mockApiEmployees.splice(index, 1)
+    return HttpResponse.json({ success: true })
+  }),
+
+  http.post('/api/employees/bulk/delete', async ({ request }) => {
+    const body = await request.json() as { ids?: number[] }
+    const ids = body.ids || []
+    ids.forEach(id => {
+      const index = mockApiEmployees.findIndex(emp => emp.id === id)
+      if (index !== -1) {
+        mockApiEmployees.splice(index, 1)
+      }
+    })
+
+    return HttpResponse.json({ success: true, data: { deleted: ids.length } })
+  }),
+
+  http.post('/api/employees/import', async ({ request }) => {
+    const body = await request.json() as { employees?: unknown[] }
+    const count = body.employees?.length || 0
+
+    return HttpResponse.json({
+      success: true,
+      data: {
+        inserted: count,
+        updated: 0,
+        total: count,
+      }
+    })
+  }),
+
+  http.get('/api/employees-count', () => {
+    return HttpResponse.json({ success: true, data: { count: mockApiEmployees.length } })
+  }),
+
+  http.get('/api/employees/org-level-mapping', () => {
+    const mapping = mockApiEmployees.reduce<Record<string, { organizationalLevel: string }>>((acc, emp) => {
+      acc[emp.name] = { organizationalLevel: emp.organizational_level || 'Unknown' }
+      return acc
+    }, {})
+
+    return HttpResponse.json({ success: true, data: mapping })
+  }),
+
+  http.get('/api/employees/suggestions', ({ request }) => {
+    const url = new URL(request.url)
+    const nameQuery = url.searchParams.get('name')?.toLowerCase() || ''
+    const suggestions = mockApiEmployees
+      .filter(emp => emp.name.toLowerCase().includes(nameQuery))
+      .map(emp => ({
+        name: emp.name,
+        nip: emp.nip,
+        organizationalLevel: emp.organizational_level,
+      }))
+
+    return HttpResponse.json({ success: true, data: suggestions })
+  }),
+
+  http.post('/api/employees/resolve', async ({ request }) => {
+    const body = await request.json() as { mappings?: Record<string, string> }
+    return HttpResponse.json({ success: true, data: body.mappings || {} })
+  }),
+
+  http.put('/api/employees/:name/summary', async ({ params, request }) => {
+    const body = await request.json() as { summary?: string }
+    return HttpResponse.json({
+      success: true,
+      data: {
+        name: decodeURIComponent(params.name as string),
+        summary: body.summary || '',
       }
     })
   }),

@@ -1,0 +1,314 @@
+
+> performance-monitoring@1.0.0 test:run /Volumes/San/employee-performance-analyzer
+> vitest run -- --coverage --coverage.reporter=text --coverage.reporter=json-summary
+
+
+ RUN  v3.2.4 /Volumes/San/employee-performance-analyzer
+
+ ✓ src/__tests__/components/sample.test.tsx (5 tests) 68ms
+stdout | test/fastifyServer.employees-crud.test.ts > FastifyServer employee-centric routes
+2025-10-02T03:11:37.053Z [_INFO] Kysely database service created {"dbPath":"/Volumes/San/employee-performance-analyzer/test/test-fastify-crud.db"}
+
+stdout | test/integrationTeamValidation.test.ts > Team A & Team B Integration Validation
+2025-10-02T03:11:37.056Z [_INFO] Kysely database service created {"dbPath":"/Volumes/San/employee-performance-analyzer/test/integration-validation.db"}
+
+stdout | test/fastifyServer.test.ts > FastifyServer
+2025-10-02T03:11:37.054Z [_INFO] Kysely database service created {"dbPath":"/Volumes/San/employee-performance-analyzer/test/test-fastify.db"}
+
+stdout | test/fastifyServer.employees-crud.test.ts > FastifyServer employee-centric routes
+2025-10-02T03:11:37.065Z [_INFO] Initializing Kysely database...
+2025-10-02T03:11:37.067Z [_DEBUG] Created table: employee_database
+2025-10-02T03:11:37.067Z [_DEBUG] Created table: competencies
+2025-10-02T03:11:37.067Z [_DEBUG] Created table: performance_scores
+2025-10-02T03:11:37.067Z [_DEBUG] Created table: datasets
+2025-10-02T03:11:37.067Z [_DEBUG] Created table: current_dataset
+2025-10-02T03:11:37.067Z [_DEBUG] Created table: manual_leadership_scores
+2025-10-02T03:11:37.068Z [_INFO] Kysely database initialized successfully
+
+stdout | test/integrationTeamValidation.test.ts > Team A & Team B Integration Validation
+2025-10-02T03:11:37.067Z [_INFO] Initializing Kysely database...
+2025-10-02T03:11:37.068Z [_DEBUG] Created table: employee_database
+2025-10-02T03:11:37.068Z [_DEBUG] Created table: competencies
+2025-10-02T03:11:37.068Z [_DEBUG] Created table: performance_scores
+2025-10-02T03:11:37.068Z [_DEBUG] Created table: datasets
+2025-10-02T03:11:37.068Z [_DEBUG] Created table: current_dataset
+2025-10-02T03:11:37.068Z [_DEBUG] Created table: manual_leadership_scores
+2025-10-02T03:11:37.068Z [_INFO] Kysely database initialized successfully
+
+stdout | test/fastifyServer.test.ts > FastifyServer
+2025-10-02T03:11:37.068Z [_INFO] Initializing Kysely database...
+2025-10-02T03:11:37.068Z [_DEBUG] Created table: employee_database
+2025-10-02T03:11:37.068Z [_DEBUG] Created table: competencies
+2025-10-02T03:11:37.068Z [_DEBUG] Created table: performance_scores
+2025-10-02T03:11:37.068Z [_DEBUG] Created table: datasets
+2025-10-02T03:11:37.068Z [_DEBUG] Created table: current_dataset
+2025-10-02T03:11:37.068Z [_DEBUG] Created table: manual_leadership_scores
+2025-10-02T03:11:37.069Z [_INFO] Kysely database initialized successfully
+
+stdout | test/integrationTeamValidation.test.ts > Team A & Team B Integration Validation
+2025-10-02T03:11:37.073Z [_INFO] Fastify server initialized without network listener
+
+stdout | test/fastifyServer.test.ts > FastifyServer
+2025-10-02T03:11:37.074Z [_INFO] Fastify server initialized without network listener
+
+stdout | test/fastifyServer.employees-crud.test.ts > FastifyServer employee-centric routes
+2025-10-02T03:11:37.077Z [_INFO] Fastify server initialized without network listener
+
+stdout | test/integrationTeamValidation.test.ts > Team A & Team B Integration Validation > End-to-End Data Flow > should complete full employee data lifecycle
+2025-10-02T03:11:37.107Z [_INFO] [API] Saved employees to session {"employeeCount":2,"sessionId":"Integration Test"}
+
+stdout | test/fastifyServer.test.ts > FastifyServer
+2025-10-02T03:11:37.111Z [_INFO] Database connection closed
+2025-10-02T03:11:37.111Z [_INFO] Fastify server stopped
+
+ ✓ test/fastifyServer.test.ts (29 tests) 83ms
+stdout | test/fastifyServer.employees-crud.test.ts > FastifyServer employee-centric routes
+2025-10-02T03:11:37.120Z [_INFO] Database connection closed
+2025-10-02T03:11:37.120Z [_INFO] Fastify server stopped
+
+ ✓ test/fastifyServer.employees-crud.test.ts (17 tests) 94ms
+stdout | test/integrationTeamValidation.test.ts > Team A & Team B Integration Validation
+2025-10-02T03:11:37.123Z [_INFO] Database connection closed
+2025-10-02T03:11:37.123Z [_INFO] Fastify server stopped
+
+ ✓ test/integrationTeamValidation.test.ts (12 tests) 84ms
+ ✓ src/__tests__/components/Report.test.tsx (5 tests) 221ms
+ ✓ src/__tests__/components/ResolveEmployeesDialog.test.tsx (5 tests) 167ms
+ ✓ src/__tests__/components/EmployeeManagement.test.tsx (6 tests) 228ms
+stdout | test/kyselyDatabase.test.ts > KyselyDatabaseService
+2025-10-02T03:11:37.748Z [_INFO] Kysely database service created {"dbPath":"/Volumes/San/employee-performance-analyzer/test/test-kysely.db"}
+2025-10-02T03:11:37.748Z [_INFO] Initializing Kysely database...
+2025-10-02T03:11:37.749Z [_DEBUG] Created table: employee_database
+2025-10-02T03:11:37.749Z [_DEBUG] Created table: competencies
+2025-10-02T03:11:37.749Z [_DEBUG] Created table: performance_scores
+2025-10-02T03:11:37.749Z [_DEBUG] Created table: datasets
+2025-10-02T03:11:37.749Z [_DEBUG] Created table: current_dataset
+2025-10-02T03:11:37.749Z [_DEBUG] Created table: manual_leadership_scores
+2025-10-02T03:11:37.749Z [_INFO] Kysely database initialized successfully
+
+stdout | test/kyselyDatabase.test.ts > KyselyDatabaseService
+2025-10-02T03:11:37.796Z [_INFO] Database connection closed
+
+ ✓ test/kyselyDatabase.test.ts (29 tests) 60ms
+ ✓ test/validators.test.ts (26 tests) 11ms
+stdout | test/simpleIntegration.test.ts > Integration Tests - API Contract Verification
+2025-10-02T03:11:37.962Z [_INFO] Kysely database service created {"dbPath":"/Volumes/San/employee-performance-analyzer/test/integration-test.db"}
+2025-10-02T03:11:37.963Z [_INFO] Initializing Kysely database...
+2025-10-02T03:11:37.963Z [_DEBUG] Created table: employee_database
+2025-10-02T03:11:37.963Z [_DEBUG] Created table: competencies
+2025-10-02T03:11:37.963Z [_DEBUG] Created table: performance_scores
+2025-10-02T03:11:37.963Z [_DEBUG] Created table: datasets
+2025-10-02T03:11:37.963Z [_DEBUG] Created table: current_dataset
+2025-10-02T03:11:37.963Z [_DEBUG] Created table: manual_leadership_scores
+2025-10-02T03:11:37.964Z [_INFO] Kysely database initialized successfully
+
+stdout | test/staff-classification-integration.test.ts > Staff Classification Integration Tests > should pass basic integration test
+🧪 Staff Classification Integration Tests
+==========================================
+
+✅ Test fixture loaded successfully
+
+🔍 Testing parseEmployeeCSV function...
+-----------------------------------
+Parsed 10 employees from test fixture
+
+✅ TEST STAFF OVERRIDE 1, S.Sos
+   Position: "Kepala Sub Bagian" | Sub-Position: "STAFF Perencanaan"
+   Result: Staff (correct)
+
+✅ TEST STAFF OVERRIDE 2, SE
+   Position: "Kepala Seksi" | Sub-Position: "Staff Jaminan Sosial"
+   Result: Staff (correct)
+
+✅ TEST STAF OVERRIDE 3, S.ST
+   Position: "Kepala Bidang" | Sub-Position: "STAF Rehabilitasi"
+   Result: Staff (correct)
+
+✅ TEST STAFF MIXED CASE, S.Pd
+   Position: "Sekretaris Dinas" | Sub-Position: "staff administrasi"
+   Result: Staff (correct)
+
+✅ TEST STAFF SIMPLE, S.Sos
+   Position: "Kepala Sub Bagian" | Sub-Position: "Staff"
+   Result: Staff (correct)
+
+✅ TEST STAF SIMPLE, SE
+   Position: "Kepala Seksi" | Sub-Position: "STAF"
+   Result: Staff (correct)
+
+✅ TEST REGULAR ESELON IV, S.ST
+   Position: "Kepala Sub Bagian" | Sub-Position: "Perencanaan Regular"
+   Result: Eselon IV (correct)
+
+✅ TEST REGULAR ESELON III, S.Pd
+   Position: "Kepala Bidang" | Sub-Position: "Rehabilitasi Regular"
+   Result: Eselon III (correct)
+
+✅ TEST REGULAR STAFF, S.Sos
+   Position: "Analis" | Sub-Position: "Sekretariat"
+   Result: Staff (correct)
+
+✅ TEST EDGE CASE EMPTY, SE
+   Position: "Unknown Position" | Sub-Position: "Some Department"
+   Result: Other (correct)
+
+📊 parseEmployeeCSV: 10/10 tests passed
+
+🔍 Testing parseEmployeeData function...
+----------------------------------
+Parsed 10 employees from test fixture
+
+✅ TEST STAFF OVERRIDE 1, S.Sos
+   Detailed Position: "Staff ASN Sekretariat"
+   Category: Staff (correct)
+
+✅ TEST STAFF OVERRIDE 2, SE
+   Detailed Position: "Staff ASN Bidang Perlindungan dan Jaminan Sosial"
+   Category: Staff (correct)
+
+✅ TEST STAF OVERRIDE 3, S.ST
+   Detailed Position: "Staff ASN Bidang Rehabilitasi Sosial"
+   Category: Staff (correct)
+
+✅ TEST STAFF MIXED CASE, S.Pd
+   Detailed Position: "Staff ASN Sekretariat"
+   Category: Staff (correct)
+
+✅ TEST STAFF SIMPLE, S.Sos
+   Detailed Position: "Staff ASN Sekretariat"
+   Category: Staff (correct)
+
+✅ TEST STAF SIMPLE, SE
+   Detailed Position: "Staff ASN Sekretariat"
+   Category: Staff (correct)
+
+✅ TEST REGULAR ESELON IV, S.ST
+   Detailed Position: "Eselon IV"
+   Category: Eselon IV (correct)
+
+✅ TEST REGULAR ESELON III, S.Pd
+   Detailed Position: "Eselon III"
+   Category: Eselon III (correct)
+
+✅ TEST REGULAR STAFF, S.Sos
+   Detailed Position: "Staff ASN Sekretariat"
+   Category: Staff (correct)
+
+✅ TEST EDGE CASE EMPTY, SE
+   Detailed Position: "Other"
+   Category: Other (correct)
+
+📊 parseEmployeeData: 10/10 tests passed
+
+🔍 Testing consistency between parsing methods...
+-----------------------------------------------
+✅ TEST STAFF OVERRIDE 1, S.Sos: Both methods agree on "Staff"
+✅ TEST STAFF OVERRIDE 2, SE: Both methods agree on "Staff"
+✅ TEST STAF OVERRIDE 3, S.ST: Both methods agree on "Staff"
+✅ TEST STAFF MIXED CASE, S.Pd: Both methods agree on "Staff"
+✅ TEST STAFF SIMPLE, S.Sos: Both methods agree on "Staff"
+✅ TEST STAF SIMPLE, SE: Both methods agree on "Staff"
+✅ TEST REGULAR ESELON IV, S.ST: Both methods agree on "Eselon IV"
+✅ TEST REGULAR ESELON III, S.Pd: Both methods agree on "Eselon III"
+✅ TEST REGULAR STAFF, S.Sos: Both methods agree on "Staff"
+✅ TEST EDGE CASE EMPTY, SE: Both methods agree on "Other"
+
+📊 Consistency check: 10/10 tests passed
+
+🎯 INTEGRATION TEST SUMMARY
+============================
+parseEmployeeCSV: 10/10
+parseEmployeeData: 10/10
+Consistency check: 10/10
+Overall: 30/30 tests passed
+
+🎉 All integration tests passed! Staff classification is working correctly.
+
+stdout | test/simpleIntegration.test.ts > Integration Tests - API Contract Verification
+2025-10-02T03:11:38.001Z [_INFO] Database connection closed
+
+ ✓ test/staff-classification-integration.test.ts (4 tests) 7ms
+ ✓ test/simpleIntegration.test.ts (10 tests) 44ms
+stdout | test/simpleServerIntegration.test.ts > Simple Server Integration Test
+2025-10-02T03:11:38.007Z [_INFO] Kysely database service created {"dbPath":"/Volumes/San/employee-performance-analyzer/test/simple-integration.db"}
+2025-10-02T03:11:38.007Z [_INFO] Initializing Kysely database...
+2025-10-02T03:11:38.009Z [_DEBUG] Created table: employee_database
+2025-10-02T03:11:38.009Z [_DEBUG] Created table: competencies
+2025-10-02T03:11:38.009Z [_DEBUG] Created table: performance_scores
+2025-10-02T03:11:38.009Z [_DEBUG] Created table: datasets
+2025-10-02T03:11:38.009Z [_DEBUG] Created table: current_dataset
+2025-10-02T03:11:38.009Z [_DEBUG] Created table: manual_leadership_scores
+2025-10-02T03:11:38.009Z [_INFO] Kysely database initialized successfully
+
+stdout | test/simpleServerIntegration.test.ts > Simple Server Integration Test
+2025-10-02T03:11:38.027Z [_INFO] Database connection closed
+
+ ✓ test/simpleServerIntegration.test.ts (8 tests) 28ms
+ ✓ services/api/clients/__tests__/SessionApiClient.test.ts (6 tests) 6ms
+stdout | test/services.test.ts > Data Services > DataParserService > should parse valid JSON employee data
+2025-10-02T03:11:38.210Z [_DEBUG] Starting performance data parsing {"dataLength":103,"options":{"autoFix":true,"useDefaultValues":true,"skipCorruptedRecords":false,"maxRecoveryAttempts":3}}
+2025-10-02T03:11:38.210Z [_DEBUG] Parse attempt {"attempt":1}
+2025-10-02T03:11:38.211Z [_DEBUG] Starting data cleaning and normalization {"recordCount":1}
+2025-10-02T03:11:38.211Z [_INFO] Data cleaning completed {"originalCount":1,"cleanedCount":1,"rejectedCount":0}
+2025-10-02T03:11:38.211Z [_INFO] Performance data parsed successfully {"attempts":1,"recordsProcessed":1,"recordsRetained":1,"recordsRecovered":0}
+
+stdout | test/services.test.ts > Data Services > DataParserService > should handle corrupted JSON with auto-fix
+2025-10-02T03:11:38.211Z [_DEBUG] Starting performance data parsing {"dataLength":68,"options":{"autoFix":true,"useDefaultValues":true,"skipCorruptedRecords":false,"maxRecoveryAttempts":3}}
+2025-10-02T03:11:38.211Z [_DEBUG] Parse attempt {"attempt":1}
+2025-10-02T03:11:38.211Z [_DEBUG] Parse attempt failed {"attempt":1,"error":"Expected property name or '}' in JSON at position 2 (line 1 column 3)"}
+2025-10-02T03:11:38.211Z [_DEBUG] Parse attempt {"attempt":2}
+2025-10-02T03:11:38.211Z [_DEBUG] Applying common JSON fixes
+2025-10-02T03:11:38.211Z [_DEBUG] Starting data cleaning and normalization {"recordCount":1}
+2025-10-02T03:11:38.211Z [_INFO] Data cleaning completed {"originalCount":1,"cleanedCount":1,"rejectedCount":0}
+2025-10-02T03:11:38.211Z [_INFO] Performance data parsed successfully {"attempts":2,"recordsProcessed":1,"recordsRetained":1,"recordsRecovered":0}
+
+stdout | test/services.test.ts > Data Services > DataParserService > should return failure for completely invalid data
+2025-10-02T03:11:38.212Z [_DEBUG] Starting performance data parsing {"dataLength":23,"options":{"autoFix":true,"useDefaultValues":true,"skipCorruptedRecords":false,"maxRecoveryAttempts":1}}
+2025-10-02T03:11:38.212Z [_DEBUG] Parse attempt {"attempt":1}
+2025-10-02T03:11:38.212Z [_DEBUG] Parse attempt failed {"attempt":1,"error":"Unexpected token 'h', \"this is not\"... is not valid JSON"}
+
+stdout | test/services.test.ts > Data Services > DataRecoveryService > should recover employee data with missing fields
+2025-10-02T03:11:38.212Z [_DEBUG] Starting data recovery process {"originalRecords":1,"options":{"autoFix":true,"useDefaultValues":true,"maxRecoveryAttempts":3}}
+2025-10-02T03:11:38.212Z [_INFO] Data recovery completed {"originalRecords":1,"recoveredRecords":1,"fixedRecords":1,"qualityScore":75}
+
+stdout | test/services.test.ts > Data Services > DataRecoveryService > should calculate quality score correctly
+2025-10-02T03:11:38.212Z [_DEBUG] Starting data recovery process {"originalRecords":1,"options":{"autoFix":true,"useDefaultValues":true,"maxRecoveryAttempts":3}}
+2025-10-02T03:11:38.212Z [_INFO] Data recovery completed {"originalRecords":1,"recoveredRecords":1,"fixedRecords":0,"qualityScore":100}
+
+stdout | test/services.test.ts > Data Services > DataRecoveryService > should apply default values when requested
+2025-10-02T03:11:38.212Z [_DEBUG] Applying default values to missing fields
+2025-10-02T03:11:38.212Z [_INFO] Default values applied {"totalRecords":1,"modifiedRecords":1}
+
+stdout | test/services.test.ts > Data Services > DatabaseOperationsService > should successfully store employee data
+2025-10-02T03:11:38.213Z [_INFO] Starting database store operation {"operation":"store_employee_data","recordCount":1,"options":{"validateData":true,"checkIntegrity":true,"autoFix":true,"useTransactions":true}}
+2025-10-02T03:11:38.213Z [_DEBUG] Validating employee data
+2025-10-02T03:11:38.213Z [_DEBUG] Checking data integrity
+2025-10-02T03:11:38.213Z [_INFO] Database store operation completed {"operation":"store_employee_data","success":true,"recordsProcessed":1,"duration":0}
+
+stdout | test/services.test.ts > Data Services > Service Integration > should work together in a processing pipeline
+2025-10-02T03:11:38.213Z [_DEBUG] Starting performance data parsing {"dataLength":206,"options":{"autoFix":true,"useDefaultValues":true,"skipCorruptedRecords":false,"maxRecoveryAttempts":3}}
+2025-10-02T03:11:38.213Z [_DEBUG] Parse attempt {"attempt":1}
+2025-10-02T03:11:38.213Z [_DEBUG] Starting data cleaning and normalization {"recordCount":1}
+2025-10-02T03:11:38.213Z [_INFO] Data cleaning completed {"originalCount":1,"cleanedCount":1,"rejectedCount":0}
+2025-10-02T03:11:38.213Z [_INFO] Performance data parsed successfully {"attempts":1,"recordsProcessed":1,"recordsRetained":1,"recordsRecovered":0}
+
+stdout | test/services.test.ts > Data Services > Service Integration > should work together in a processing pipeline
+2025-10-02T03:11:38.213Z [_DEBUG] Starting data recovery process {"originalRecords":1,"options":{"autoFix":true,"useDefaultValues":true,"maxRecoveryAttempts":3}}
+2025-10-02T03:11:38.213Z [_INFO] Data recovery completed {"originalRecords":1,"recoveredRecords":1,"fixedRecords":0,"qualityScore":100}
+
+stdout | test/services.test.ts > Data Services > Service Integration > should work together in a processing pipeline
+2025-10-02T03:11:38.213Z [_INFO] Starting database store operation {"operation":"store_employee_data","recordCount":1,"options":{"validateData":true,"checkIntegrity":true,"autoFix":true,"useTransactions":true}}
+2025-10-02T03:11:38.213Z [_DEBUG] Validating employee data
+2025-10-02T03:11:38.213Z [_DEBUG] Checking data integrity
+2025-10-02T03:11:38.213Z [_INFO] Database store operation completed {"operation":"store_employee_data","success":true,"recordsProcessed":1,"duration":0}
+
+ ✓ test/services.test.ts (13 tests) 6ms
+ ✓ hooks/__tests__/useImportState.test.ts (5 tests) 3ms
+ ✓ test/organizationalLevelsValidation.test.ts (4 tests) 2ms
+ ✓ src/__tests__/setup.test.ts (5 tests) 2ms
+
+ Test Files  17 passed (17)
+      Tests  189 passed (189)
+   Start at  10:11:35
+   Duration  2.64s (transform 693ms, setup 3.75s, collect 2.74s, tests 1.11s, environment 5.39s, prepare 1.33s)
+

@@ -3,16 +3,15 @@
  * Provides a unified interface for managing upload sessions and current session state
  */
 
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { sessionApi } from '../services/api';
-import { queryKeys, invalidateQueries } from './useQueryClient';
-import { logger } from '../services/logger';
-import { useSessionEmployees } from './useEmployeeData';
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { sessionApi } from "../services/api";
+import { queryKeys, invalidateQueries } from "./useQueryClient";
+import { logger } from "../services/logger";
 import {
   handleQueryError,
   queryRetryConfig,
-  mutationRetryConfig
-} from './queryErrorHandling';
+  mutationRetryConfig,
+} from "./queryErrorHandling";
 
 /**
  * Fetch all upload sessions
@@ -57,7 +56,7 @@ export function useSetCurrentSession() {
       invalidateQueries.sessions();
     },
     onError: (error) => {
-      handleQueryError(error, 'set current session');
+      handleQueryError(error, "set current session");
     },
     ...mutationRetryConfig,
   });
@@ -76,7 +75,7 @@ export function useDeleteSession() {
       invalidateQueries.employees();
     },
     onError: (error) => {
-      handleQueryError(error, 'delete session');
+      handleQueryError(error, "delete session");
     },
     retry: 1, // Delete operations should retry less
   });
@@ -87,37 +86,37 @@ export function useDeleteSession() {
  * This combines multiple queries and provides a unified interface
  */
 export function useSessionManager(initialSessionId?: string) {
-  const { data: sessions = [], isLoading: sessionsLoading, error: sessionsError } = useSessions();
-  const { data: currentSession, error: currentSessionError } = useCurrentSession();
+  const {
+    data: sessions = [],
+    isLoading: sessionsLoading,
+    error: sessionsError,
+  } = useSessions();
+  const { data: currentSession, error: currentSessionError } =
+    useCurrentSession();
   const setCurrentSession = useSetCurrentSession();
 
   // Determine the active session ID
-  const activeSessionId = initialSessionId || currentSession?.session_id || (sessions as Array<{session_id: string}>)[0]?.session_id;
-
-  // Use the existing useSessionEmployees hook instead of creating a new query
-  const {
-    data: employees = [],
-    isLoading: employeesLoading,
-    error: employeesError
-  } = useSessionEmployees(activeSessionId);
+  const activeSessionId =
+    initialSessionId ||
+    currentSession?.session_id ||
+    (sessions as Array<{ session_id: string }>)[0]?.session_id;
 
   const handleSessionChange = async (sessionId: string) => {
     try {
       await setCurrentSession.mutateAsync(sessionId);
     } catch (error) {
-      logger.error('Session change failed', { sessionId, error });
+      logger.error("Session change failed", { sessionId, error });
       throw error;
     }
   };
 
   // Aggregate errors for consumers
-  const error = sessionsError || currentSessionError || employeesError;
+  const error = sessionsError || currentSessionError;
 
   return {
     sessions,
     activeSessionId,
-    employees,
-    isLoading: sessionsLoading || employeesLoading,
+    isLoading: sessionsLoading,
     isSwitching: setCurrentSession.isPending,
     changeSession: handleSessionChange,
     error,

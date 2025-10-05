@@ -1,16 +1,16 @@
 /// <reference types="vite/client" />
-import { Employee } from '../../types';
-import { 
-  apiClientFactory, 
-  UploadSession, 
-  EmployeeWithSession, 
-  EmployeeSuggestion 
-} from './interfaces';
+import { Employee, EmployeeUpdateParams } from "../../types";
+import {
+  apiClientFactory,
+  UploadSession,
+  EmployeeWithSession,
+  EmployeeSuggestion,
+} from "./interfaces";
 
 /**
  * Legacy compatibility layer for the old ApiService singleton pattern.
  * This maintains backward compatibility while delegating to the new client architecture.
- * 
+ *
  * TODO: Gradually migrate components to use specific clients directly:
  * - import { employeeApi, sessionApi, dataApi, leadershipApi } from 'services/api/interfaces'
  * - Replace `api.getAllEmployees()` with `employeeApi.getAllEmployees()`
@@ -37,32 +37,46 @@ class LegacyApiService {
   }
 
   async addEmployee(
-    name: string, 
-    nip: string, 
-    gol: string, 
-    pangkat: string, 
-    position: string, 
-    subPosition: string, 
-    organizationalLevel?: string
+    name: string,
+    nip: string,
+    gol: string,
+    pangkat: string,
+    position: string,
+    subPosition: string,
+    organizationalLevel?: string,
   ): Promise<number> {
-    return apiClientFactory.getEmployeeClient().addEmployee(
-      name, nip, gol, pangkat, position, subPosition, organizationalLevel
-    );
+    const params: EmployeeUpdateParams = {
+      name,
+      nip,
+      gol,
+      pangkat,
+      position,
+      subPosition,
+      organizationalLevel,
+    };
+    return apiClientFactory.getEmployeeClient().addEmployee(params);
   }
 
   async updateEmployee(
-    id: number, 
-    name: string, 
-    nip: string, 
-    gol: string, 
-    pangkat: string, 
-    position: string, 
-    subPosition: string, 
-    organizationalLevel?: string
+    id: number,
+    name: string,
+    nip: string,
+    gol: string,
+    pangkat: string,
+    position: string,
+    subPosition: string,
+    organizationalLevel?: string,
   ): Promise<void> {
-    return apiClientFactory.getEmployeeClient().updateEmployee(
-      id, name, nip, gol, pangkat, position, subPosition, organizationalLevel
-    );
+    const params: EmployeeUpdateParams = {
+      name,
+      nip,
+      gol,
+      pangkat,
+      position,
+      subPosition,
+      organizationalLevel,
+    };
+    return apiClientFactory.getEmployeeClient().updateEmployee(id, params);
   }
 
   async deleteEmployee(id: number): Promise<void> {
@@ -73,8 +87,12 @@ class LegacyApiService {
     return apiClientFactory.getEmployeeClient().bulkDeleteEmployees(ids);
   }
 
-  async importEmployeesFromCSV(employees: Employee[]): Promise<string> {
-    return apiClientFactory.getEmployeeClient().importEmployeesFromCSV(employees);
+  async importEmployeesFromCSV(
+    employees: Employee[],
+  ): Promise<{ inserted: number; updated: number; total: number }> {
+    return apiClientFactory
+      .getEmployeeClient()
+      .importEmployeesFromCSV(employees);
   }
 
   async getEmployeesCount(): Promise<number> {
@@ -90,16 +108,26 @@ class LegacyApiService {
   }
 
   // Session operations (delegate to SessionApiClient)
-  async saveEmployeeData(employees: Employee[], sessionName?: string): Promise<string> {
-    return apiClientFactory.getSessionClient().saveEmployeeData(employees, sessionName);
+  async saveEmployeeData(
+    employees: Employee[],
+    sessionName?: string,
+  ): Promise<string> {
+    return apiClientFactory
+      .getSessionClient()
+      .saveEmployeeData(employees, sessionName);
   }
 
   async getAllUploadSessions(): Promise<UploadSession[]> {
     return apiClientFactory.getSessionClient().getAllUploadSessions();
   }
 
-  async getEmployeeDataBySession(sessionId: string, signal?: AbortSignal): Promise<EmployeeWithSession[]> {
-    return apiClientFactory.getSessionClient().getEmployeeDataBySession(sessionId, signal);
+  async getEmployeeDataBySession(
+    sessionId: string,
+    signal?: AbortSignal,
+  ): Promise<EmployeeWithSession[]> {
+    return apiClientFactory
+      .getSessionClient()
+      .getEmployeeDataBySession(sessionId, signal);
   }
 
   async deleteUploadSession(sessionId: string): Promise<void> {
@@ -107,8 +135,13 @@ class LegacyApiService {
   }
 
   // Data operations (delegate to DataApiClient)
-  async getEmployeeDataByTimeRange(startTime?: string, endTime?: string): Promise<EmployeeWithSession[]> {
-    return apiClientFactory.getDataClient().getEmployeeDataByTimeRange(startTime, endTime);
+  async getEmployeeDataByTimeRange(
+    startTime?: string,
+    endTime?: string,
+  ): Promise<EmployeeWithSession[]> {
+    return apiClientFactory
+      .getDataClient()
+      .getEmployeeDataByTimeRange(startTime, endTime);
   }
 
   async getLatestEmployeeData(): Promise<EmployeeWithSession[]> {
@@ -120,12 +153,21 @@ class LegacyApiService {
     return apiClientFactory.getLeadershipClient().getManualLeadershipScores();
   }
 
-  async setManualLeadershipScore(employeeName: string, score: number): Promise<void> {
-    return apiClientFactory.getLeadershipClient().setManualLeadershipScore(employeeName, score);
+  async setManualLeadershipScore(
+    employeeName: string,
+    score: number,
+  ): Promise<void> {
+    return apiClientFactory
+      .getLeadershipClient()
+      .setManualLeadershipScore(employeeName, score);
   }
 
-  async bulkUpdateManualLeadershipScores(scores: Record<string, number>): Promise<void> {
-    return apiClientFactory.getLeadershipClient().bulkUpdateManualLeadershipScores(scores);
+  async bulkUpdateManualLeadershipScores(
+    scores: Record<string, number>,
+  ): Promise<void> {
+    return apiClientFactory
+      .getLeadershipClient()
+      .bulkUpdateManualLeadershipScores(scores);
   }
 }
 

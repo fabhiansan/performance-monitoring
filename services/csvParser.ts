@@ -29,9 +29,10 @@ export interface EmployeeData {
  */
 const parseCsvLine = (line: string): string[] => {
   // Enhanced delimiter detection for Google Sheets copy-paste
-  const commaCount = (line.match(/,/g) || []).length;
-  const tabCount = (line.match(/\t/g) || []).length;
-  const multiSpaceCount = (line.match(/\s{2,}/g) || []).length; // 2+ consecutive spaces
+  const sanitizedLine = line.replace(/"(?:[^"]|""|\n)*"/g, "");
+  const commaCount = (sanitizedLine.match(/,/g) || []).length;
+  const tabCount = (sanitizedLine.match(/\t/g) || []).length;
+  const multiSpaceCount = (sanitizedLine.match(/\s{2,}/g) || []).length; // 2+ consecutive spaces
 
   let delimiter = ",";
   let isSpaceDelimited = false;
@@ -39,7 +40,7 @@ const parseCsvLine = (line: string): string[] => {
   // Priority: tabs > multiple spaces > commas
   if (tabCount > 0) {
     delimiter = "\t";
-  } else if (multiSpaceCount > 0 && multiSpaceCount >= commaCount) {
+  } else if (multiSpaceCount > 0 && commaCount === 0) {
     // Use regex-based splitting for multiple spaces
     isSpaceDelimited = true;
   } else {
@@ -80,132 +81,327 @@ const parseCsvLine = (line: string): string[] => {
   return fields;
 };
 
-// Helper function to create employee object from columns
-function createEmployeeFromColumns(
-  columns: string[],
-  nameIndex: number,
-  nipIndex: number,
-  golIndex: number,
-  pangkatIndex: number | null,
-  positionIndex: number,
-  subPositionIndex: number | null,
-): EmployeeData | null {
-  const position = columns[positionIndex]?.trim() || "-";
-  const subPosition =
-    subPositionIndex != null ? columns[subPositionIndex]?.trim() || "-" : "-";
+type HeaderField =
+  | "name"
+  | "nip"
+  | "gol"
+  | "pangkat"
+  | "position"
+  | "subPosition";
 
-  // First try to match organizational level directly from sub-position
-  const directMatch = matchOrganizationalLevelFromSubPosition(subPosition);
+type HeaderIndexMap = Partial<Record<HeaderField, number>>;
 
-  let detailedLevel: string;
-  let categoryLevel: string;
+interface EmployeeFieldSet {
+  name?: string;
+  nip?: string;
+  gol?: string;
+  pangkat?: string;
+  position?: string;
+  subPosition?: string;
+}
 
-  if (directMatch) {
-    detailedLevel = directMatch;
-    categoryLevel = String(
-      categorizeOrganizationalLevel(directMatch, columns[golIndex]?.trim()),
-    );
-  } else {
-    const positionBasedLevel = determineOrganizationalLevelFromPosition(
-      position,
-      subPosition,
-    );
-    detailedLevel = positionBasedLevel;
+const sanitizeNip = (value: string): { display: string; digits: string } => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return { display: "", digits: "" };
+  }
+  const compact = trimmed.replace(/\s+/g, "");
+  const digitsOnly = compact.replace(/[^0-9]/g, "");
+  // Prefer digits when available, otherwise keep compact form for display
+  const displayValue = digitsOnly.length > 0 ? digitsOnly : compact;
+  return { display: displayValue, digits: digitsOnly };
+};
 
-    // Check if position explicitly indicates unknown/unclear
-    // In this case, don't use golongan fallback
-    const isExplicitlyUnknown =
-      position &&
-      typeof position === "string" &&
-      (position.toLowerCase().includes("unknown") ||
-        position.toLowerCase().includes("tidak diketahui"));
+const deriveOrganizationalLevels = (
+  position: string,
+  subPosition: string,
+  gol: string,
+): { detailed: string; categorized: string } => {
+  const safePosition = position?.trim() || "";
+  const safeSubPosition = subPosition?.trim() || "";
 
-    categoryLevel = String(
-      categorizeOrganizationalLevel(
-        positionBasedLevel === "Other" && isExplicitlyUnknown
-          ? "Other"
-          : positionBasedLevel,
-        positionBasedLevel === "Other" && isExplicitlyUnknown
-          ? undefined
-          : columns[golIndex]?.trim(),
-      ),
-    );
+  const directMatch = matchOrganizationalLevelFromSubPosition(safeSubPosition);
+  const detailedLevel =
+    directMatch ||
+    determineOrganizationalLevelFromPosition(safePosition, safeSubPosition) ||
+    "Staff";
+
+  const isExplicitlyUnknown =
+    safePosition &&
+    (safePosition.toLowerCase().includes("unknown") ||
+      safePosition.toLowerCase().includes("tidak diketahui"));
+
+  const categorySource =
+    detailedLevel === "Other" && isExplicitlyUnknown ? "Other" : detailedLevel;
+
+  const categorized = categorizeOrganizationalLevel(
+    categorySource,
+    detailedLevel === "Other" && isExplicitlyUnknown ? undefined : gol,
+  );
+
+  return {
+    detailed: detailedLevel,
+    categorized:
+      typeof categorized === "string" ? categorized : String(categorized),
+  };
+};
+
+const buildEmployee = (fields: EmployeeFieldSet): EmployeeData | null => {
+  const name = fields.name?.trim() || "";
+  if (!name) {
+    return null;
   }
 
-  const employee = {
-    name: columns[nameIndex]?.trim() || "",
-    nip: columns[nipIndex]?.trim() || "-",
-    gol: columns[golIndex]?.trim() || "-",
-    pangkat: pangkatIndex != null ? columns[pangkatIndex]?.trim() || "-" : "-",
-    position: position,
-    subPosition: subPosition,
-    organizationalLevel: detailedLevel,
-    organizational_level: categoryLevel,
+  const { display: nip } = sanitizeNip(fields.nip || "");
+  const gol = fields.gol?.trim() || "";
+  const pangkat = fields.pangkat?.trim() || "";
+  const position = fields.position?.trim() || "";
+  const subPosition = fields.subPosition?.trim() || "";
+
+  const { detailed, categorized } = deriveOrganizationalLevels(
+    position,
+    subPosition,
+    gol,
+  );
+
+  return {
+    name,
+    nip,
+    gol,
+    pangkat,
+    position,
+    subPosition,
+    organizationalLevel: detailed,
+    organizational_level: categorized,
+  };
+};
+
+const buildHeaderIndexMap = (headers: string[]): HeaderIndexMap => {
+  const map: HeaderIndexMap = {};
+
+  headers.forEach((header, index) => {
+    const normalized = header.trim().toLowerCase();
+    if (!normalized) return;
+
+    if (normalized.includes("nama")) {
+      map.name ??= index;
+      return;
+    }
+
+    if (normalized.includes("nip")) {
+      map.nip ??= index;
+      return;
+    }
+
+    if (normalized.includes("gol")) {
+      map.gol ??= index;
+      return;
+    }
+
+    if (normalized.includes("pangkat")) {
+      map.pangkat ??= index;
+      return;
+    }
+
+    if (
+      normalized.includes("sub posisi") ||
+      normalized.includes("sub-posisi") ||
+      normalized.includes("subposisi") ||
+      (normalized.includes("sub") && normalized.includes("jabat"))
+    ) {
+      map.subPosition ??= index;
+      return;
+    }
+
+    if (normalized.includes("jabatan")) {
+      map.position ??= index;
+    }
+  });
+
+  return map;
+};
+
+const parseEmployeeRowWithHeader = (
+  row: string[],
+  headerColumns: string[],
+  headerMap: HeaderIndexMap,
+): EmployeeData | null => {
+  if (headerMap.name === undefined) {
+    return null;
+  }
+
+  const paddedRow = headerColumns.map((_, index) => row[index] ?? "");
+
+  const getField = (field: HeaderField): string => {
+    const index = headerMap[field];
+    if (index === undefined) {
+      return "";
+    }
+    return paddedRow[index]?.trim() || "";
   };
 
-  // Only return if name is not empty (minimum required field for both ASN and Non-ASN staff)
-  if (employee.name) {
-    return employee;
+  return buildEmployee({
+    name: getField("name"),
+    nip: getField("nip"),
+    gol: getField("gol"),
+    pangkat: getField("pangkat"),
+    position: getField("position"),
+    subPosition: getField("subPosition"),
+  });
+};
+
+const parseEmployeeRowFallback = (columns: string[]): EmployeeData | null => {
+  const trimmed = columns.map((col) => col.trim());
+
+  if (trimmed.length >= 7 && trimmed[1]) {
+    return buildEmployee({
+      name: trimmed[1],
+      nip: trimmed[2],
+      gol: trimmed[3],
+      pangkat: trimmed[4],
+      position: trimmed[5],
+      subPosition: trimmed[6],
+    });
   }
-  return null;
-}
 
-// Helper function to parse a single line and create employee
-function parseEmployeeLine(line: string): EmployeeData | null {
-  const columns = parseCsvLine(line).map((col) => col.trim());
-
-  // Format: No, Nama, NIP, Gol, Pangkat, Jabatan, Sub-Jabatan (7 columns)
-  if (columns.length >= 7 && columns[1].trim()) {
-    return createEmployeeFromColumns(columns, 1, 2, 3, 4, 5, 6);
+  if (trimmed.length === 6 && trimmed[1]) {
+    return buildEmployee({
+      name: trimmed[1],
+      nip: trimmed[2],
+      gol: trimmed[3],
+      position: trimmed[4],
+      subPosition: trimmed[5],
+    });
   }
 
-  // Format: No, Nama, NIP, Gol, Jabatan, Sub-Jabatan (6 columns, no Pangkat)
-  if (columns.length === 6 && columns[1].trim()) {
-    return createEmployeeFromColumns(columns, 1, 2, 3, null, 4, 5);
-  }
-
-  // Fallback: if no number column, assume format: Nama, NIP, Pangkat, Jabatan, Sub-Jabatan
-  if (columns.length >= 5 && !columns[0].match(/^\d+$/) && columns[0].trim()) {
-    if (columns.length >= 6) {
-      return createEmployeeFromColumns(columns, 0, 1, 2, 3, 4, 5);
+  if (trimmed.length >= 5 && !/^\d+$/.test(trimmed[0]) && trimmed[0]) {
+    if (trimmed.length >= 6) {
+      return buildEmployee({
+        name: trimmed[0],
+        nip: trimmed[1],
+        gol: trimmed[2],
+        pangkat: trimmed[3],
+        position: trimmed[4],
+        subPosition: trimmed[5],
+      });
     }
-    // Format without sub-position: Nama, NIP, Gol, Pangkat, Jabatan
-    return createEmployeeFromColumns(columns, 0, 1, 2, 3, 4, null);
+
+    return buildEmployee({
+      name: trimmed[0],
+      nip: trimmed[1],
+      gol: trimmed[2],
+      pangkat: trimmed[3],
+      position: trimmed[4],
+    });
   }
 
   return null;
+};
+
+export interface ParseEmployeeCSVResult {
+  employees: EmployeeData[];
+  validation: ValidationResult;
 }
 
-export function parseEmployeeCSV(csvText: string): EmployeeData[] {
+// Helper function to process CSV data lines
+function processDataLines(
+  dataLines: string[],
+  startIndex: number,
+  hasUsableHeader: boolean,
+  firstLineColumns: string[]
+): { employees: EmployeeData[]; parseWarnings: ValidationWarning[] } {
+  const employees: EmployeeData[] = [];
+  const parseWarnings: ValidationWarning[] = [];
+  const headerMap = buildHeaderIndexMap(firstLineColumns);
+
+  for (let i = startIndex; i < dataLines.length; i++) {
+    const rawLine = dataLines[i];
+    const columns = parseCsvLine(rawLine).map((col) => col.trim());
+
+    if (columns.length === 0 || columns.every((value) => value === "")) {
+      continue;
+    }
+
+    const lineNumber = i + 1;
+    let employee: EmployeeData | null = null;
+
+    if (hasUsableHeader) {
+      employee = parseEmployeeRowWithHeader(columns, firstLineColumns, headerMap);
+    }
+
+    if (!employee) {
+      employee = parseEmployeeRowFallback(columns);
+    }
+
+    if (!employee) {
+      parseWarnings.push({
+        type: "partial_data",
+        message: `Baris ${lineNumber}: Baris data dilewati karena format tidak dikenali`,
+        details: "Baris tidak memiliki nama pegawai atau kolom wajib.",
+      });
+      continue;
+    }
+
+    const numericNip = employee.nip.replace(/[^0-9]/g, "");
+    if (numericNip && numericNip.length !== 18) {
+      parseWarnings.push({
+        type: "partial_data",
+        message: `Baris ${lineNumber}: Panjang NIP tidak standar`,
+        details: `NIP memiliki ${numericNip.length} digit (standar 18 digit).`,
+        employeeName: employee.name,
+      });
+    }
+
+    employees.push(employee);
+  }
+
+  return { employees, parseWarnings };
+}
+
+export function parseEmployeeCSV(csvText: string): ParseEmployeeCSVResult {
   try {
-    const lines = csvText.trim().split("\n");
-    const employees: EmployeeData[] = [];
+    const normalizedText = csvText?.replace(/\r\n/g, "\n") ?? "";
+    if (!normalizedText.trim()) {
+      return { employees: [], validation: validateEmployeeDataV2([]) };
+    }
 
-    // Filter out empty lines
+    const lines = normalizedText.split("\n");
     const dataLines = lines.filter((line) => line.trim().length > 0);
+
     if (dataLines.length === 0) {
-      return employees;
+      return { employees: [], validation: validateEmployeeDataV2([]) };
     }
 
-    // Skip header line if it exists (check if first line contains column headers)
-    const firstLine = dataLines[0].toLowerCase();
-    const hasHeader =
-      firstLine.includes("nama") ||
-      firstLine.includes("nip") ||
-      firstLine.includes("gol");
-    const startIndex = hasHeader ? 1 : 0;
+    const firstLineRaw = dataLines[0];
+    const firstLineColumns = parseCsvLine(firstLineRaw);
+    const headerMap = buildHeaderIndexMap(firstLineColumns);
+    const looksLikeHeader = /nama|nip|gol|pangkat|jabatan/i.test(firstLineRaw);
+    const hasUsableHeader = looksLikeHeader && headerMap.name !== undefined;
+    const startIndex = hasUsableHeader ? 1 : 0;
 
-    for (let i = startIndex; i < dataLines.length; i++) {
-      const line = dataLines[i].trim();
-      if (!line) continue;
+    const { employees, parseWarnings } = processDataLines(
+      dataLines,
+      startIndex,
+      hasUsableHeader,
+      firstLineColumns
+    );
 
-      const employee = parseEmployeeLine(line);
-      if (employee) {
-        employees.push(employee);
-      }
+    let validation = validateEmployeeDataV2(employees);
+
+    if (parseWarnings.length > 0) {
+      const combinedWarnings = [...validation.warnings, ...parseWarnings];
+      validation = {
+        ...validation,
+        warnings: combinedWarnings,
+        summary: {
+          ...validation.summary,
+          warningCount: combinedWarnings.length,
+          totalWarnings: combinedWarnings.length,
+        },
+      };
     }
 
-    return employees;
+    return { employees, validation };
   } catch (error) {
     logger.error("Error parsing CSV data", {
       error: error instanceof Error ? error.message : String(error),

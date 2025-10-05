@@ -127,11 +127,12 @@ const EmployeeAnalytics: React.FC<EmployeeAnalyticsProps> = ({ employees }) => {
             <div className="flex-1">
               <Input
                 type="text"
-                placeholder="Cari pegawai atau jabatan..."
+                placeholder="Masukkan nama pegawai atau level"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 leftIcon={<IconSearch className="w-5 h-5" />}
                 className="w-full"
+                size="lg"
               />
             </div>
             

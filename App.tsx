@@ -1,6 +1,7 @@
 /**
  * Refactored App Component
  * Simplified with React Query - no manual data fetching or state management
+ * Uses master employees with session-filtered performance data
  */
 
 import React, { useState } from "react";
@@ -19,7 +20,7 @@ import EmployeeManagement from "./components/employees/EmployeeManagement";
 import Report from "./components/reporting/Report";
 import { IconSparkles } from "./components/shared/Icons";
 import { LAYOUT_SPACING } from "./constants/ui";
-import { useEmployees } from "./hooks/useEmployeeData";
+import { useEmployeesWithSessionData } from "./hooks/useEmployeeData";
 import { useSessionManager } from "./hooks/useSessionData";
 import { useOrganizationalMappings } from "./hooks/useEmployeeData";
 import { useSaveEmployeeData } from "./hooks/useEmployeeData";
@@ -40,33 +41,36 @@ const AppContent: React.FC = () => {
 
   // Use React Query hooks for data management
   const {
-    data: masterEmployees = [],
-    isLoading: masterLoading,
-    error: masterError,
-  } = useEmployees();
-  const { data: orgMappings = {}, error: orgMappingsError } =
-    useOrganizationalMappings();
-  const {
     sessions,
     activeSessionId,
-    employees: sessionEmployees,
     isLoading: sessionLoading,
     isSwitching,
     changeSession,
     error: sessionError,
   } = useSessionManager();
 
+  // Get all employees with session-filtered performance data
+  // This returns ALL master employees (161 total), with performance data filtered by active session
+  const {
+    data: employees = [],
+    isLoading: employeesLoading,
+    error: employeesError,
+  } = useEmployeesWithSessionData(activeSessionId);
+
+  const { data: orgMappings = {}, error: orgMappingsError } =
+    useOrganizationalMappings();
+
   const saveEmployeeData = useSaveEmployeeData();
 
   // Display errors from React Query
   React.useEffect(() => {
-    if (masterError) {
-      showError(masterError, {
+    if (employeesError) {
+      showError(employeesError, {
         component: "App",
-        operation: "fetch master employees",
+        operation: "fetch employees with session data",
       });
     }
-  }, [masterError, showError]);
+  }, [employeesError, showError]);
 
   React.useEffect(() => {
     if (orgMappingsError) {
@@ -97,8 +101,12 @@ const AppContent: React.FC = () => {
         sessionName,
       });
 
-      // Auto-navigate to overview after successful import
-      if (newEmployeeData.length > 0 && activeView === "data") {
+      // Redirect to overview after saving session data
+      if (
+        sessionName &&
+        sessionName.trim().length > 0 &&
+        activeView === "data"
+      ) {
         setActiveView("overview");
       }
     } catch (error) {
@@ -174,7 +182,7 @@ const AppContent: React.FC = () => {
   useKeyboardShortcuts({ shortcuts, enabled: true });
 
   // Loading state
-  if (masterLoading || sessionLoading) {
+  if (employeesLoading || sessionLoading) {
     return (
       <div className="min-h-screen bg-gray-100 dark:bg-gray-950 flex items-center justify-center">
         <div className="text-center">
@@ -187,11 +195,7 @@ const AppContent: React.FC = () => {
     );
   }
 
-  const hasMasterEmployees = masterEmployees.length > 0;
-  const hasSessionEmployees = sessionEmployees.length > 0;
-  const overviewEmployees = hasSessionEmployees
-    ? sessionEmployees
-    : masterEmployees;
+  const hasEmployees = employees.length > 0;
 
   // Determine which empty state to show based on data availability
   const getEmptyStateConfig = (): {
@@ -199,14 +203,11 @@ const AppContent: React.FC = () => {
     type: "no-employees" | "no-session-data" | "no-performance-data";
   } => {
     if (activeView === "overview") {
-      if (overviewEmployees.length === 0) {
-        if (hasMasterEmployees) {
-          return { show: true, type: "no-session-data" };
-        }
+      if (!hasEmployees) {
         return { show: true, type: "no-employees" };
       }
 
-      const hasPerformanceData = overviewEmployees.some(
+      const hasPerformanceData = employees.some(
         (emp) => emp.performance && emp.performance.length > 0,
       );
 
@@ -215,30 +216,29 @@ const AppContent: React.FC = () => {
       }
     }
 
-    // Master employees exist but selected session is empty
-    const sessionViews = [
-      "analytics",
-      "employees",
-      "rekap-kinerja",
-      "report",
-      "table",
-    ];
-    if (sessionViews.includes(activeView) && sessionEmployees.length === 0) {
-      return { show: true, type: "no-session-data" };
+    // Check if employees exist for other views
+    if (activeView !== "overview" && !hasEmployees) {
+      return { show: true, type: "no-employees" };
     }
 
     return { show: false, type: "no-employees" };
   };
 
   const renderActiveView = () => {
+    // Get the current session name for display
+    const currentSessionName = sessions.find(
+      (s) => s.session_id === activeSessionId,
+    )?.session_name;
+
     switch (activeView) {
       case "overview":
         return (
           <ErrorBoundary>
             <DashboardOverview
-              employees={overviewEmployees}
+              employees={employees}
               organizationalMappings={orgMappings}
               onNavigateToDataManagement={() => setActiveView("data")}
+              sessionName={currentSessionName}
             />
           </ErrorBoundary>
         );
@@ -246,23 +246,23 @@ const AppContent: React.FC = () => {
       case "employees":
         return (
           <ErrorBoundary>
-            <EmployeeAnalytics employees={sessionEmployees} />
+            <EmployeeAnalytics employees={employees} />
           </ErrorBoundary>
         );
       case "rekap-kinerja":
         return (
           <ErrorBoundary>
-            <RekapKinerja employees={sessionEmployees} />
+            <RekapKinerja employees={employees} />
           </ErrorBoundary>
         );
       case "report":
-        return <Report employees={sessionEmployees} />;
+        return <Report employees={employees} />;
       case "table":
-        return <TableView employees={sessionEmployees} />;
+        return <TableView employees={employees} />;
       case VIEW_NAMES.EMPLOYEE_MANAGEMENT:
         return (
           <EmployeeManagement
-            employees={masterEmployees}
+            employees={employees}
             onEmployeeUpdate={async () => {
               // React Query will automatically refetch after mutations
               // No manual refresh needed
@@ -273,7 +273,7 @@ const AppContent: React.FC = () => {
         return (
           <ErrorBoundary>
             <DataManagementRefactored
-              employees={sessionEmployees}
+              employees={employees}
               onDataUpdate={handleDataUpdate}
             />
           </ErrorBoundary>
@@ -282,9 +282,10 @@ const AppContent: React.FC = () => {
         return (
           <ErrorBoundary>
             <DashboardOverview
-              employees={overviewEmployees}
+              employees={employees}
               organizationalMappings={orgMappings}
               onNavigateToDataManagement={() => setActiveView("data")}
+              sessionName={currentSessionName}
             />
           </ErrorBoundary>
         );

@@ -1,275 +1,214 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Employee } from '../../types';
-import { parsePerformanceData } from '../../services/parser';
-import { parseEmployeeCSV, validateEmployeeData } from '../../services/csvParser';
-import { ValidationResult, getValidationSeverity } from '../../services/validationService';
-import { useError } from '../../contexts/ErrorContext';
-import ResolveEmployeesDialog from '../shared/ResolveEmployeesDialog';
-import ValidationFeedback from './ValidationFeedback';
-import { api, UploadSession } from '../../services/api';
-import { IconClipboardData, IconAnalyze, IconSparkles, IconUsers } from '../shared/Icons';
-import { Alert, Button } from '../../design-system';
-import { showErrorToast, showSuccessToast, showWarningToast } from '../../services/toast';
-import { simplifyOrganizationalLevel } from '../../utils/organizationalLevels';
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Employee } from "../../types";
+import { parsePerformanceData } from "../../services/parser";
+import {
+  parseEmployeeCSV,
+  validateEmployeeData,
+} from "../../services/csvParser";
+import {
+  ValidationResult,
+  getValidationSeverity,
+} from "../../services/validationService";
+import { useError } from "../../contexts/ErrorContext";
+import ResolveEmployeesDialog from "../shared/ResolveEmployeesDialog";
+import ValidationFeedback from "./ValidationFeedback";
+import { api, UploadSession } from "../../services/api";
+import {
+  IconClipboardData,
+  IconAnalyze,
+  IconSparkles,
+  IconUsers,
+} from "../shared/Icons";
+import { Alert, Button } from "../../design-system";
+import { showErrorToast, showSuccessToast } from "../../services/toast";
+import { simplifyOrganizationalLevel } from "../../utils/organizationalLevels";
+import { queryKeys } from "../../hooks/useQueryClient";
+import {
+  detectDataType,
+  extractEmployeeNamesFromData,
+} from "../../services/ImportOrchestrator";
 
 // Constants for repeated string literals
-const CRITICAL_VALIDATION_ERROR_MESSAGE = 'Terjadi kesalahan validasi data kritis. Perbaiki masalah tersebut sebelum melanjutkan.';
+const CRITICAL_VALIDATION_ERROR_MESSAGE =
+  "Terjadi kesalahan validasi data kritis. Perbaiki masalah tersebut sebelum melanjutkan.";
 
 interface DataManagementProps {
   employees: Employee[];
   onDataUpdate: (_employees: Employee[], _sessionName?: string) => void;
   pendingSaves?: Set<string>;
-  savingStatus?: 'idle' | 'saving' | 'saved' | 'error';
+  savingStatus?: "idle" | "saving" | "saved" | "error";
   selectedSessionId?: string;
 }
 
-const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate, pendingSaves = new Set(), savingStatus = 'idle', selectedSessionId: _selectedSessionId }) => {
-  const [rawText, setRawText] = useState('');
+const DataManagement: React.FC<DataManagementProps> = ({
+  employees,
+  onDataUpdate,
+  pendingSaves = new Set(),
+  savingStatus = "idle",
+  selectedSessionId: _selectedSessionId,
+}) => {
+  const queryClient = useQueryClient();
+  const [rawText, setRawText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { showError } = useError();
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadSessions, setUploadSessions] = useState<UploadSession[]>([]);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
-  const [sessionName, setSessionName] = useState('');
-  const [selectedSessions, setSelectedSessions] = useState<Set<string>>(new Set());
+  const [sessionName, setSessionName] = useState("");
+  const [selectedSessions, setSelectedSessions] = useState<Set<string>>(
+    new Set(),
+  );
   const [showMergeOptions, setShowMergeOptions] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [resolveModal, setResolveModal] = useState<{unknown: string[]; orgMap: Record<string, string>} | null>(null);
-  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const [resolveModal, setResolveModal] = useState<{
+    unknown: string[];
+    orgMap: Record<string, string>;
+  } | null>(null);
+  const [validationResult, setValidationResult] =
+    useState<ValidationResult | null>(null);
+  const [pendingPerformanceData, setPendingPerformanceData] = useState<
+    Employee[] | null
+  >(null);
 
-  const detectDataType = (data: string): 'employee_roster' | 'performance_data' => {
-    const lines = data.trim().split('\n').filter(line => line.trim().length > 1);
-    if (lines.length < 1) return 'performance_data'; // default fallback
-    
-    const header = lines[0].toLowerCase();
-    
-    // Check for employee roster headers (Indonesian)
-    const employeeRosterKeywords = ['nama', 'nip', 'gol', 'pangkat', 'jabatan'];
-    const foundEmployeeKeywords = employeeRosterKeywords.filter(keyword => 
-      header.includes(keyword)
-    );
-    
-    // Check for performance data headers (employee names in brackets)
-    const hasBracketedNames = header.includes('[') && header.includes(']');
-    
-    // If 3+ employee roster keywords found, it's employee roster data
-    if (foundEmployeeKeywords.length >= 3) {
-      return 'employee_roster';
-    }
-    
-    // If bracketed names found, it's performance data
-    if (hasBracketedNames) {
-      return 'performance_data';
-    }
-    
-    // Default to performance data if unclear
-    return 'performance_data';
-  };
 
-  // Helper function to detect delimiter type
-  const detectDelimiter = (header: string): { delimiter: string; isSpaceDelimited: boolean } => {
-    const commaCount = (header.match(/,/g) || []).length;
-    const tabCount = (header.match(/\t/g) || []).length;
-    const multiSpaceCount = (header.match(/\s{2,}/g) || []).length;
-    
-    if (tabCount > 0) {
-      return { delimiter: '\t', isSpaceDelimited: false };
-    } else if (multiSpaceCount > 0 && multiSpaceCount >= commaCount) {
-      return { delimiter: '', isSpaceDelimited: true };
-    } else {
-      return { delimiter: ',', isSpaceDelimited: false };
-    }
-  };
 
-  // Helper function to parse CSV fields with quotes
-  const parseCsvFields = (header: string, delimiter: string): string[] => {
-    let currentField = '';
-    let inQuotes = false;
-    const fields: string[] = [];
-    
-    for (let i = 0; i < header.length; i++) {
-      const char = header[i];
-      if (char === '"') {
-        if (inQuotes && i < header.length - 1 && header[i + 1] === '"') {
-          currentField += '"';
-          i++;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (char === delimiter && !inQuotes) {
-        fields.push(currentField.trim());
-        currentField = '';
-      } else {
-        currentField += char;
-      }
-    }
-    fields.push(currentField.trim());
-    return fields.filter(field => field.length > 0);
-  };
-
-  // Helper function to extract employee names from fields
-  const extractNamesFromFields = (fields: string[]): string[] => {
-    const employeeNames: string[] = [];
-    
-    fields.forEach(field => {
-      const match = field.match(/\[(.*?)\]/);
-      if (match) {
-        let employeeName = match[1].trim();
-        // Remove leading numbering like "1." or "4. "
-        employeeName = employeeName.replace(/^\d+\.?\s*/, '');
-        if (employeeName && !employeeNames.includes(employeeName)) {
-          employeeNames.push(employeeName);
-        }
-      }
-    });
-    
-    return employeeNames;
-  };
-
-  const extractEmployeeNamesFromData = (data: string): string[] => {
-    const lines = data.trim().split('\n').filter(line => line.trim().length > 1);
-    if (lines.length < 1) return [];
-    
-    const header = lines[0];
-    const { delimiter, isSpaceDelimited } = detectDelimiter(header);
-    
-    let fields: string[] = [];
-    if (isSpaceDelimited) {
-      // Split on 2+ consecutive spaces, then trim each field
-      fields = header.split(/\s{2,}/).map(field => field.trim()).filter(field => field.length > 0);
-    } else {
-      fields = parseCsvFields(header, delimiter);
-    }
-    
-    return extractNamesFromFields(fields);
-  };
 
   const handleProcessData = async () => {
     if (!rawText.trim()) {
-      setError('Silakan tempel data pada area teks.');
+      setError("Silakan tempel data pada area teks.");
       return;
     }
     setIsLoading(true);
     setError(null);
-    
+
     setTimeout(async () => {
       try {
         // Detect data type first
-        const dataType = detectDataType(rawText);
-        
-        if (dataType === 'employee_roster') {
+        const dataType = detectDataType(rawText).type;
+
+        if (dataType === "employee_roster") {
           // Handle employee roster data import
-          
+
           try {
-            const parsedEmployees = parseEmployeeCSV(rawText);
-            const validation = validateEmployeeData(parsedEmployees);
-            
+            const parsedResult = parseEmployeeCSV(rawText);
+            const validation = validateEmployeeData(parsedResult.employees);
+
             if (!validation.valid) {
-              setError(`Data tidak valid:\n${validation.errors.join('\n')}`);
+              setError(`Data tidak valid:\n${validation.errors.join("\n")}`);
               return;
             }
-            
+
             // Import employee roster data to database (convert EmployeeData to Employee)
-            await api.importEmployeesFromCSV(parsedEmployees as unknown as Employee[]);
-            
-            // Fetch all employees from database and load into state
-            try {
-              const allEmployees = await api.getAllEmployees();
-              
-              // Transform database employees to display format (without performance data initially)
-              const employeesForState = allEmployees.map(emp => ({
-                ...emp,
-                performance: [] // Initialize with empty performance array
-              }));
-              
-              // Load employees into application state
-              onDataUpdate(employeesForState);
-              
-              // Show success message and guide user to next step
-              setError(null);
-              setRawText('');
-              
-              // Create a more informative success notification
-              const successMessage = `✅ Berhasil mengimpor ${parsedEmployees.length} data pegawai!\n\nData pegawai sekarang ditampilkan di dashboard. Untuk melihat analisis kinerja, silakan impor data kinerja yang berisi skor kompetensi dengan format: "Kompetensi [Nama Pegawai]".`;
-              showSuccessToast(successMessage, 6000);
-              
-              return;
-            } catch (fetchError) {
-              showError(fetchError, {
-                component: 'DataManagement',
-                operation: 'fetchEmployeesAfterImport'
-              });
-              
-              // Show success for import but error for loading into state
-              const partialSuccessMessage = `✅ Data pegawai berhasil diimpor ke database, tetapi gagal memuat ke tampilan.\n\nSilakan refresh halaman atau navigasi ke bagian lain untuk melihat data.`;
-              showWarningToast(partialSuccessMessage, 6000);
-              return;
-            }
+            await api.importEmployeesFromCSV(
+              parsedResult.employees as unknown as Employee[],
+            );
+
+            // Invalidate React Query cache to trigger automatic refresh
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.employees.all,
+            });
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.organizational.mappings,
+            });
+
+            // Show success message and guide user to next step
+            setError(null);
+            setRawText("");
+
+            // Create a more informative success notification
+            const successMessage = `✅ Berhasil mengimpor ${parsedResult.employees.length} data pegawai!\n\nData pegawai sekarang ditampilkan di dashboard. Untuk melihat analisis kinerja, silakan impor data kinerja yang berisi skor kompetensi dengan format: "Kompetensi [Nama Pegawai]".`;
+            showSuccessToast(successMessage, 6000);
+
+            return;
           } catch (err) {
             showError(err, {
-              component: 'DataManagement',
-              operation: 'importEmployeeRoster',
-              dataType: 'employee_roster'
+              component: "DataManagement",
+              operation: "importEmployeeRoster",
+              dataType: "employee_roster",
             });
-            showErrorToast('Gagal mengimpor data pegawai. Silakan coba lagi.');
+            showErrorToast("Gagal mengimpor data pegawai. Silakan coba lagi.");
             return;
           } finally {
             setIsLoading(false);
           }
         }
-        
+
         // Handle performance data (existing logic)
         // Extract employee names from performance data
         const employeeNamesInData = extractEmployeeNamesFromData(rawText);
-        
+
         // Fetch organizational level mapping from database
         let orgLevelMapping: { [key: string]: string } = {};
         try {
           orgLevelMapping = await api.getEmployeeOrgLevelMapping();
-          
+
           if (Object.keys(orgLevelMapping).length === 0) {
-            console.warn('WARNING: No employee data found in employee_database table!');
+            console.warn(
+              "WARNING: No employee data found in employee_database table!",
+            );
           }
-          
-          
         } catch (mappingError) {
           showError(mappingError, {
-            component: 'DataManagement',
-            operation: 'fetchOrgLevelMapping'
+            component: "DataManagement",
+            operation: "fetchOrgLevelMapping",
           });
         }
-        
+
         // Helper function to normalize names for comparison
         const normalizeName = (name: string): string => {
           // List of common Indonesian academic titles and honorifics to strip out
           const stopWords = [
-            'st', 'sh', 'se', 'mm', 'si', 'sk', 'sos', 'ssos', 'sap', 'skep',
-            'ners', 'mi', 'mps', 'sp', 'kom', 'stp', 'ap', 'pd', 'map', 'msc',
-            'ma', 'mph', 'dra', 'dr', 'ir', 'amd'
+            "st",
+            "sh",
+            "se",
+            "mm",
+            "si",
+            "sk",
+            "sos",
+            "ssos",
+            "sap",
+            "skep",
+            "ners",
+            "mi",
+            "mps",
+            "sp",
+            "kom",
+            "stp",
+            "ap",
+            "pd",
+            "map",
+            "msc",
+            "ma",
+            "mph",
+            "dra",
+            "dr",
+            "ir",
+            "amd",
           ];
-          const titleRegex = new RegExp(`\\b(${stopWords.join('|')})\\b`, 'g');
+          const titleRegex = new RegExp(`\\b(${stopWords.join("|")})\\b`, "g");
 
           return name
             .toLowerCase()
-            .replace(/[.,\-_]/g, '') // Remove punctuation characters
-            .replace(/\s+/g, ' ') // Collapse multiple spaces first
-            .replace(titleRegex, '') // Remove detected titles/qualifications
-            .replace(/\s+/g, ' ') // Collapse spaces again after removals
+            .replace(/[.,\-_]/g, "") // Remove punctuation characters
+            .replace(/\s+/g, " ") // Collapse multiple spaces first
+            .replace(titleRegex, "") // Remove detected titles/qualifications
+            .replace(/\s+/g, " ") // Collapse spaces again after removals
             .trim();
         };
-        
+
         // Enhanced fuzzy matching with Levenshtein distance
         const calculateSimilarity = (str1: string, str2: string): number => {
           const longer = str1.length > str2.length ? str1 : str2;
           const shorter = str1.length > str2.length ? str2 : str1;
-          
+
           if (longer.length === 0) return 1.0;
-          
+
           const editDistance = levenshteinDistance(longer, shorter);
           return (longer.length - editDistance) / longer.length;
         };
-        
+
         const levenshteinDistance = (str1: string, str2: string): number => {
           const matrix = [];
           for (let i = 0; i <= str2.length; i++) {
@@ -286,119 +225,151 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
                 matrix[i][j] = Math.min(
                   matrix[i - 1][j - 1] + 1,
                   matrix[i][j - 1] + 1,
-                  matrix[i - 1][j] + 1
+                  matrix[i - 1][j] + 1,
                 );
               }
             }
           }
           return matrix[str2.length][str1.length];
         };
-        
+
         // Create a normalized mapping for better matching
         const normalizedOrgMapping: { [key: string]: string } = {};
         const originalToNormalizedMap: { [key: string]: string } = {};
-        
-        Object.keys(orgLevelMapping).forEach(originalName => {
+
+        Object.keys(orgLevelMapping).forEach((originalName) => {
           const normalized = normalizeName(originalName);
           normalizedOrgMapping[normalized] = orgLevelMapping[originalName];
           originalToNormalizedMap[normalized] = originalName;
         });
-        
+
         // Check for unknown employees with enhanced fuzzy matching
         const unknownEmployees: string[] = [];
         const fuzzyMatchedEmployees: { [key: string]: string } = {};
-        
-        employeeNamesInData.forEach(name => {
+
+        employeeNamesInData.forEach((name) => {
           const normalizedName = normalizeName(name);
-          
+
           // Direct exact match
           if (orgLevelMapping[name]) {
             return;
           }
-          
+
           // Normalized exact match
           if (normalizedOrgMapping[normalizedName]) {
             fuzzyMatchedEmployees[name] = normalizedOrgMapping[normalizedName];
             return;
           }
-          
+
           // Enhanced fuzzy matching with similarity threshold
-          let bestMatch = '';
+          let bestMatch = "";
           let bestSimilarity = 0;
           const SIMILARITY_THRESHOLD = 0.8; // 80% similarity required
-          
-          Object.keys(orgLevelMapping).forEach(dbName => {
+
+          Object.keys(orgLevelMapping).forEach((dbName) => {
             const normalizedDbName = normalizeName(dbName);
-            const similarity = calculateSimilarity(normalizedName, normalizedDbName);
-            
-            if (similarity > bestSimilarity && similarity >= SIMILARITY_THRESHOLD) {
+            const similarity = calculateSimilarity(
+              normalizedName,
+              normalizedDbName,
+            );
+
+            if (
+              similarity > bestSimilarity &&
+              similarity >= SIMILARITY_THRESHOLD
+            ) {
               bestSimilarity = similarity;
               bestMatch = dbName;
             }
           });
-          
+
           if (bestMatch) {
             fuzzyMatchedEmployees[name] = orgLevelMapping[bestMatch];
             return;
           }
-          
+
           // No match found
           unknownEmployees.push(name);
         });
-        
+
         // Add fuzzy matches to the orgLevelMapping
-        Object.entries(fuzzyMatchedEmployees).forEach(([originalName, orgLevel]) => {
-          orgLevelMapping[originalName] = orgLevel;
-        });
-        
+        Object.entries(fuzzyMatchedEmployees).forEach(
+          ([originalName, orgLevel]) => {
+            orgLevelMapping[originalName] = orgLevel;
+          },
+        );
+
         if (unknownEmployees.length > 0) {
-          setResolveModal({ unknown: unknownEmployees, orgMap: orgLevelMapping as Record<string,string> });
+          setResolveModal({
+            unknown: unknownEmployees,
+            orgMap: orgLevelMapping as Record<string, string>,
+          });
           setIsLoading(false);
           return;
         }
-        
+
         // If still any unknown (should be none here), default them to Staff/Other
-        unknownEmployees.forEach(name => {
-          orgLevelMapping[name] = 'Staff/Other';
+        unknownEmployees.forEach((name) => {
+          orgLevelMapping[name] = "Staff/Other";
         });
-        
-        const parseResult = parsePerformanceData(rawText, undefined, orgLevelMapping);
-        const sortedData = parseResult.employees.sort((a, b) => a.name.localeCompare(b.name));
-        
+
+        // Convert string mapping to EmployeeMapping format
+        const employeeMapping: Record<string, { organizational_level?: string }> = {};
+        Object.entries(orgLevelMapping).forEach(([name, level]) => {
+          employeeMapping[name] = { organizational_level: level };
+        });
+
+        const parseResult = parsePerformanceData(
+          rawText,
+          undefined,
+          employeeMapping,
+        );
+        const sortedData = parseResult.employees.sort((a, b) =>
+          a.name.localeCompare(b.name),
+        );
+
         // Store validation result for display
         setValidationResult(parseResult.validation);
-        
+
         // Check if validation passed with acceptable quality
         const severity = getValidationSeverity(parseResult.validation);
-        if (severity === 'critical') {
+        if (severity === "critical") {
           setError(CRITICAL_VALIDATION_ERROR_MESSAGE);
           return;
         }
-        
-        onDataUpdate(sortedData);
-        // Automatically open save dialog and ask for month/year identifier
+
+        // Store performance data and show save dialog for user confirmation
+        setPendingPerformanceData(sortedData);
+
+        // Set default session name
         const now = new Date();
-        const defaultName = `${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+        const defaultName = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
         setSessionName(defaultName);
+
+        // Show save dialog
         setShowSaveDialog(true);
-        setRawText('');
+        setRawText("");
       } catch (e) {
-        console.error('Parsing error details:', e);
+        console.error("Parsing error details:", e);
         if (e instanceof Error) {
           let errorMessage = `Parsing error: ${e.message}`;
-          
+
           // Provide specific guidance based on common error patterns
-          if (e.message.includes('header row')) {
-            errorMessage += '\n\nTips:\n• Ensure the first row contains column headers\n• Headers should include employee names in brackets like: "Competency [Employee Name]"';
-          } else if (e.message.includes('numeric scores')) {
-            errorMessage += '\n\nTips:\n• Ensure data rows contain numeric scores (10, 65, 75, etc.) or string ratings\n• Supported string ratings: \'Baik\' (75), \'Sangat Baik\' (85), \'Kurang Baik\' (65)\n• Check for missing or invalid values in score columns';
-          } else if (e.message.includes('format')) {
-            errorMessage += '\n\nSupported formats:\n• Standard CSV with quoted fields\n• Headers: "Competency [Employee Name]"\n• Multiple assessment rows per employee are supported';
+          if (e.message.includes("header row")) {
+            errorMessage +=
+              '\n\nTips:\n• Ensure the first row contains column headers\n• Headers should include employee names in brackets like: "Competency [Employee Name]"';
+          } else if (e.message.includes("numeric scores")) {
+            errorMessage +=
+              "\n\nTips:\n• Ensure data rows contain numeric scores (10, 65, 75, etc.) or string ratings\n• Supported string ratings: 'Baik' (75), 'Sangat Baik' (85), 'Kurang Baik' (65)\n• Check for missing or invalid values in score columns";
+          } else if (e.message.includes("format")) {
+            errorMessage +=
+              '\n\nSupported formats:\n• Standard CSV with quoted fields\n• Headers: "Competency [Employee Name]"\n• Multiple assessment rows per employee are supported';
           }
-          
+
           setError(errorMessage);
         } else {
-          setError('Terjadi kesalahan tak dikenal saat memproses data. Periksa konsol untuk detail lebih lanjut.');
+          setError(
+            "Terjadi kesalahan tak dikenal saat memproses data. Periksa konsol untuk detail lebih lanjut.",
+          );
         }
       } finally {
         setIsLoading(false);
@@ -406,24 +377,31 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
     }, 50);
   };
 
-  const handleResolveSubmit = async (mapping: Record<string, { chosenName: string; orgLevel: string; isNew: boolean }>) => {
+  const handleResolveSubmit = async (
+    mapping: Record<
+      string,
+      { chosenName: string; orgLevel: string; isNew: boolean }
+    >,
+  ) => {
     if (!resolveModal) return;
 
     // Check if there are new employees that need to be created
-    const newEmployees = Object.entries(mapping).filter(([, value]) => value.isNew);
+    const newEmployees = Object.entries(mapping).filter(
+      ([, value]) => value.isNew,
+    );
 
     if (newEmployees.length > 0) {
       try {
         // Create all new employees in database immediately with minimal data
         for (const [, value] of newEmployees) {
           await api.addEmployee(
-            value.chosenName,  // name
-            '-',               // nip (placeholder)
-            '-',               // gol (placeholder)
-            '-',               // pangkat (placeholder)
-            '-',               // position (placeholder)
-            '-',               // subPosition (placeholder)
-            value.orgLevel     // organizational_level
+            value.chosenName, // name
+            "-", // nip (placeholder)
+            "-", // gol (placeholder)
+            "-", // pangkat (placeholder)
+            "-", // position (placeholder)
+            "-", // subPosition (placeholder)
+            value.orgLevel, // organizational_level
           );
         }
 
@@ -432,11 +410,13 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
 
         // Update the mapping with the database org levels
         for (const [orig] of Object.entries(mapping)) {
-          resolveModal.orgMap[orig] = updatedOrgMapping[mapping[orig].chosenName] || mapping[orig].orgLevel;
+          resolveModal.orgMap[orig] =
+            updatedOrgMapping[mapping[orig].chosenName] ||
+            mapping[orig].orgLevel;
         }
       } catch (e) {
-        console.error('Error creating new employees:', e);
-        setError('Failed to create new employees in database.');
+        console.error("Error creating new employees:", e);
+        setError("Failed to create new employees in database.");
         return;
       }
     } else {
@@ -450,25 +430,44 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
     setResolveModal(null);
     setIsLoading(true);
 
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
-        const parseResult = parsePerformanceData(rawText, undefined, resolveModal.orgMap);
-        const sorted = parseResult.employees.sort((a, b) => a.name.localeCompare(b.name));
+        // Convert string mapping to EmployeeMapping format
+        const employeeMapping: Record<string, { organizational_level?: string }> = {};
+        Object.entries(resolveModal.orgMap).forEach(([name, level]) => {
+          employeeMapping[name] = { organizational_level: level };
+        });
+
+        const parseResult = parsePerformanceData(
+          rawText,
+          undefined,
+          employeeMapping,
+        );
+        const sorted = parseResult.employees.sort((a, b) =>
+          a.name.localeCompare(b.name),
+        );
         setValidationResult(parseResult.validation);
 
         const severity = getValidationSeverity(parseResult.validation);
-        if (severity === 'critical') {
+        if (severity === "critical") {
           setError(CRITICAL_VALIDATION_ERROR_MESSAGE);
           return;
         }
 
-        onDataUpdate(sorted);
+        // Store performance data and show save dialog for user confirmation
+        setPendingPerformanceData(sorted);
+
+        // Set default session name
+        const now = new Date();
+        const defaultName = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+        setSessionName(defaultName);
+
+        // Show save dialog
         setShowSaveDialog(true);
-        setSessionName(`${new Date().getMonth() + 1}/${new Date().getFullYear()}`);
-        setRawText('');
+        setRawText("");
       } catch (e) {
         console.error(e);
-        setError('Failed after resolving employees.');
+        setError("Failed after resolving employees.");
       } finally {
         setIsLoading(false);
       }
@@ -492,7 +491,7 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
     e.preventDefault();
     setIsDragOver(false);
     const files = e.dataTransfer.files;
-    if (files.length > 0 && files[0].type === 'text/csv') {
+    if (files.length > 0 && files[0].type === "text/csv") {
       handleFileUpload(files[0]);
     }
   };
@@ -508,47 +507,56 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
 
   const exportData = () => {
     if (employees.length === 0) return;
-    
+
     // Check if there are pending saves and prevent export
-    if (pendingSaves.size > 0 || savingStatus === 'saving') {
-      setError('Tunggu hingga proses penyimpanan selesai sebelum mengekspor.');
+    if (pendingSaves.size > 0 || savingStatus === "saving") {
+      setError("Tunggu hingga proses penyimpanan selesai sebelum mengekspor.");
       return;
     }
-    
-    const csvData = employees.map(emp => {
-      const avgScore = emp.performance && emp.performance.length > 0 
-        ? emp.performance.reduce((s, p) => s + p.score, 0) / emp.performance.length 
-        : 0;
+
+    const csvData = employees.map((emp) => {
+      const avgScore =
+        emp.performance && emp.performance.length > 0
+          ? emp.performance.reduce((s, p) => s + p.score, 0) /
+            emp.performance.length
+          : 0;
       return {
         Name: emp.name,
         Job: simplifyOrganizationalLevel(emp.organizational_level, emp.gol),
-        'Average Score': avgScore.toFixed(2),
-        ...(emp.performance && emp.performance.length > 0 
-          ? emp.performance.reduce((acc, perf) => ({
-              ...acc,
-              [perf.name]: perf.score
-            }), {}) 
-          : {})
+        "Average Score": avgScore.toFixed(2),
+        ...(emp.performance && emp.performance.length > 0
+          ? emp.performance.reduce(
+              (acc, perf) => ({
+                ...acc,
+                [perf.name]: perf.score,
+              }),
+              {},
+            )
+          : {}),
       };
     });
 
     const headers = Object.keys(csvData[0]);
     const csvContent = [
-      headers.join(','),
-      ...csvData.map(row => headers.map(header => `"${row[header as keyof typeof row]}"`).join(','))
-    ].join('\n');
+      headers.join(","),
+      ...csvData.map((row) =>
+        headers
+          .map((header) => `"${row[header as keyof typeof row]}"`)
+          .join(","),
+      ),
+    ].join("\n");
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = 'employee-performance-data.csv';
+    a.download = "employee-performance-data.csv";
     a.click();
     window.URL.revokeObjectURL(url);
   };
 
   const clearData = () => {
-    setRawText('');
+    setRawText("");
     onDataUpdate([]);
     setError(null);
     setValidationResult(null);
@@ -560,45 +568,77 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
       setUploadSessions(sessions);
     } catch (error) {
       showError(error, {
-        component: 'DataManagement',
-        operation: 'loadUploadSessions'
+        component: "DataManagement",
+        operation: "loadUploadSessions",
       });
     }
   }, [showError]);
 
   const saveCurrentSession = async () => {
-    if (employees.length === 0) return;
-    
     try {
-      await onDataUpdate(employees, sessionName);
+      // Check if we have pending performance data (from import flow)
+      if (pendingPerformanceData && pendingPerformanceData.length > 0) {
+        // Save performance data to session
+        const sessionId = await api.saveEmployeeData(
+          pendingPerformanceData,
+          sessionName,
+        );
+
+        // Invalidate React Query cache to trigger automatic refresh
+        queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.sessions.detail(sessionId),
+        });
+
+        // Show success message
+        showSuccessToast(
+          `✅ Berhasil mengimpor data kinerja untuk ${pendingPerformanceData.length} pegawai!\n\nData kinerja sekarang tersedia di dashboard.`,
+          6000,
+        );
+
+        // Clear pending data
+        setPendingPerformanceData(null);
+      } else if (employees.length > 0) {
+        // Fallback: save current employees via onDataUpdate (legacy flow)
+        await onDataUpdate(employees, sessionName);
+      } else {
+        return; // Nothing to save
+      }
+
+      // Close dialog and reset
       setShowSaveDialog(false);
-      setSessionName('');
+      setSessionName("");
       await loadUploadSessions();
     } catch (error) {
       showError(error, {
-        component: 'DataManagement',
-        operation: 'saveCurrentSession',
+        component: "DataManagement",
+        operation: "saveCurrentSession",
         sessionName,
-        employeeCount: employees.length
+        employeeCount: pendingPerformanceData?.length || employees.length,
       });
+      showErrorToast("Gagal menyimpan data. Silakan coba lagi.");
     }
   };
-  
+
   // Helper to check if we can perform export operations
   const canExport = () => {
-    return employees.length > 0 && pendingSaves.size === 0 && savingStatus !== 'saving';
+    return (
+      employees.length > 0 &&
+      pendingSaves.size === 0 &&
+      savingStatus !== "saving"
+    );
   };
-  
+
   // Helper to get save status message
   const getSaveStatusMessage = () => {
-    if (pendingSaves.size > 0 || savingStatus === 'saving') {
-      return 'Saving data...';
+    if (pendingSaves.size > 0 || savingStatus === "saving") {
+      return "Saving data...";
     }
-    if (savingStatus === 'saved') {
-      return 'Data saved successfully!';
+    if (savingStatus === "saved") {
+      return "Data saved successfully!";
     }
-    if (savingStatus === 'error') {
-      return 'Gagal menyimpan. Silakan coba lagi.';
+    if (savingStatus === "error") {
+      return "Gagal menyimpan. Silakan coba lagi.";
     }
     return null;
   };
@@ -610,7 +650,7 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
         onDataUpdate(employees);
       }
     } catch (_error) {
-      setError('Failed to load session');
+      setError("Failed to load session");
     }
   };
 
@@ -619,7 +659,7 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
       await api.deleteUploadSession(sessionId);
       await loadUploadSessions();
     } catch (_error) {
-      setError('Failed to delete session');
+      setError("Failed to delete session");
     }
   };
 
@@ -635,43 +675,43 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
 
   const mergeSelectedSessions = async () => {
     if (selectedSessions.size < 2) {
-      setError('Silakan pilih minimal 2 sesi untuk digabung');
+      setError("Silakan pilih minimal 2 sesi untuk digabung");
       return;
     }
-    
+
     try {
       setIsLoading(true);
       const allEmployees: Employee[] = [];
-      
+
       // Fetch data from all selected sessions
       for (const sessionId of selectedSessions) {
         const employees = await api.getEmployeeDataBySession(sessionId);
         allEmployees.push(...employees);
       }
-      
+
       // Remove duplicates based on employee name
       const uniqueEmployees = allEmployees.reduce((acc, current) => {
-        const existing = acc.find(emp => emp.name === current.name);
+        const existing = acc.find((emp) => emp.name === current.name);
         if (!existing) {
           acc.push(current);
         }
         return acc;
       }, [] as Employee[]);
-      
+
       const mergedSessionName = `Merged ${selectedSessions.size} sessions - ${new Date().toLocaleString()}`;
       onDataUpdate(uniqueEmployees, mergedSessionName);
       setSelectedSessions(new Set());
       setShowMergeOptions(false);
       setError(null);
     } catch (_error) {
-      setError('Failed to merge sessions');
+      setError("Failed to merge sessions");
     } finally {
       setIsLoading(false);
     }
   };
 
   const selectAllSessions = () => {
-    const allIds = new Set(uploadSessions.map(s => s.session_id));
+    const allIds = new Set(uploadSessions.map((s) => s.session_id));
     setSelectedSessions(allIds);
   };
 
@@ -697,15 +737,15 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white dark:bg-gray-900 shadow-xl rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
           <h2 className="flex items-center text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4">
-            <IconClipboardData className="w-8 h-8 mr-3 text-gray-500"/>
+            <IconClipboardData className="w-8 h-8 mr-3 text-gray-500" />
             Import Data
           </h2>
-          
-          <div 
+
+          <div
             className={`border-2 border-dashed rounded-lg p-4 mb-4 transition-colors ${
-              isDragOver 
-                ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20' 
-                : 'border-gray-300 dark:border-gray-600'
+              isDragOver
+                ? "border-blue-400 bg-blue-50 dark:bg-blue-900/20"
+                : "border-gray-300 dark:border-gray-600"
             }`}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
@@ -714,8 +754,8 @@ const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate
             <div className="text-center">
               <IconClipboardData className="w-12 h-12 mx-auto text-gray-400 mb-2" />
               <p className="text-gray-600 dark:text-gray-400">
-                Drag & drop CSV file here or 
-                <button 
+                Drag & drop CSV file here or
+                <button
                   onClick={() => fileInputRef.current?.click()}
                   className="text-blue-600 hover:text-blue-700 ml-1"
                 >
@@ -748,7 +788,7 @@ Supported data types:
 - After import, you'll see employees in the dashboard without scores
 
 📊 PERFORMANCE DATA (Step 2):
-- Headers with employee names in brackets: 'Competency [Employee Name]'  
+- Headers with employee names in brackets: 'Competency [Employee Name]'
 - Data rows with numeric scores (10, 65, 75, etc.) or string ratings
 - Supported string ratings: 'Baik' (75), 'Sangat Baik' (85), 'Kurang Baik' (65)
 - Employee names must match those from Step 1
@@ -760,7 +800,7 @@ Supported data types:
 - Names in performance data should exactly match roster names"
             className="w-full h-60 p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-sm font-mono mb-4"
           />
-          
+
           <div className="flex gap-3">
             <Button
               onClick={handleProcessData}
@@ -769,16 +809,14 @@ Supported data types:
               size="lg"
               fullWidth
               loading={isLoading}
-              leftIcon={!isLoading ? <IconAnalyze className="w-5 h-5" /> : undefined}
+              leftIcon={
+                !isLoading ? <IconAnalyze className="w-5 h-5" /> : undefined
+              }
             >
-              {isLoading ? 'Processing...' : 'Analyze Data'}
+              {isLoading ? "Processing..." : "Analyze Data"}
             </Button>
-            
-            <Button
-              onClick={clearData}
-              variant="outline"
-              size="lg"
-            >
+
+            <Button onClick={clearData} variant="outline" size="lg">
               Clear
             </Button>
           </div>
@@ -796,44 +834,63 @@ Supported data types:
           )}
 
           {validationResult && (
-            <ValidationFeedback validation={validationResult} className="mt-4" />
+            <ValidationFeedback
+              validation={validationResult}
+              className="mt-4"
+            />
           )}
         </div>
 
         <div className="bg-white dark:bg-gray-900 shadow-xl rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
           <h2 className="flex items-center text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4">
-            <IconSparkles className="w-8 h-8 mr-3 text-gray-500"/>
+            <IconSparkles className="w-8 h-8 mr-3 text-gray-500" />
             Current Dataset
           </h2>
-          
+
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                <p className="text-sm text-gray-600 dark:text-gray-400">Total Employees</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{employees.length}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Total Employees
+                </p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {employees.length}
+                </p>
               </div>
               <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                <p className="text-sm text-gray-600 dark:text-gray-400">Competencies</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Competencies
+                </p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {employees.length > 0 && employees[0].performance ? employees[0].performance.length : 0}
+                  {employees.length > 0 && employees[0].performance
+                    ? employees[0].performance.length
+                    : 0}
                 </p>
               </div>
             </div>
-            
+
             <div className="space-y-2 max-h-40 overflow-y-auto">
               {employees.map((emp, index) => (
-                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded">
-                  <span className="font-medium text-gray-900 dark:text-white">{emp.name}</span>
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded"
+                >
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {emp.name}
+                  </span>
                   <span
                     className="text-sm text-gray-600 dark:text-gray-400"
                     title={emp.organizational_level || undefined}
                   >
-                    {simplifyOrganizationalLevel(emp.organizational_level, emp.gol)}
+                    {simplifyOrganizationalLevel(
+                      emp.organizational_level,
+                      emp.gol,
+                    )}
                   </span>
                 </div>
               ))}
             </div>
-            
+
             <div className="flex gap-3 pt-4">
               <Button
                 onClick={() => setShowSaveDialog(true)}
@@ -844,31 +901,39 @@ Supported data types:
               >
                 Save Dataset
               </Button>
-              
+
               <Button
                 onClick={exportData}
                 disabled={!canExport()}
                 variant="success"
                 size="md"
                 fullWidth
-                loading={pendingSaves.size > 0 || savingStatus === 'saving'}
-                title={!canExport() && pendingSaves.size > 0 ? 'Waiting for saves to complete...' : 'Export data as CSV'}
+                loading={pendingSaves.size > 0 || savingStatus === "saving"}
+                title={
+                  !canExport() && pendingSaves.size > 0
+                    ? "Waiting for saves to complete..."
+                    : "Export data as CSV"
+                }
               >
                 Export CSV
               </Button>
-              
+
               <Button
                 onClick={() => {
                   if (!canExport()) {
-                    setError('Tunggu hingga proses penyimpanan selesai sebelum mengekspor.');
+                    setError(
+                      "Tunggu hingga proses penyimpanan selesai sebelum mengekspor.",
+                    );
                     return;
                   }
                   const jsonData = JSON.stringify(employees, null, 2);
-                  const blob = new Blob([jsonData], { type: 'application/json' });
+                  const blob = new Blob([jsonData], {
+                    type: "application/json",
+                  });
                   const url = window.URL.createObjectURL(blob);
-                  const a = document.createElement('a');
+                  const a = document.createElement("a");
                   a.href = url;
-                  a.download = 'employee-data.json';
+                  a.download = "employee-data.json";
                   a.click();
                   window.URL.revokeObjectURL(url);
                 }}
@@ -876,37 +941,78 @@ Supported data types:
                 variant="secondary"
                 size="md"
                 fullWidth
-                loading={pendingSaves.size > 0 || savingStatus === 'saving'}
-                title={!canExport() && pendingSaves.size > 0 ? 'Waiting for saves to complete...' : 'Export data as JSON'}
+                loading={pendingSaves.size > 0 || savingStatus === "saving"}
+                title={
+                  !canExport() && pendingSaves.size > 0
+                    ? "Waiting for saves to complete..."
+                    : "Export data as JSON"
+                }
               >
                 Export JSON
               </Button>
             </div>
           </div>
-          
+
           {/* Save Status Indicator */}
           {getSaveStatusMessage() && (
-            <div className={`mt-4 p-3 rounded-lg text-sm font-medium ${
-              savingStatus === 'saving' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200' :
-              savingStatus === 'saved' ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200' :
-              savingStatus === 'error' ? 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200' :
-              'bg-gray-100 dark:bg-gray-900/50 text-gray-800 dark:text-gray-200'
-            }`}>
+            <div
+              className={`mt-4 p-3 rounded-lg text-sm font-medium ${
+                savingStatus === "saving"
+                  ? "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200"
+                  : savingStatus === "saved"
+                    ? "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200"
+                    : savingStatus === "error"
+                      ? "bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200"
+                      : "bg-gray-100 dark:bg-gray-900/50 text-gray-800 dark:text-gray-200"
+              }`}
+            >
               <div className="flex items-center">
-                {(pendingSaves.size > 0 || savingStatus === 'saving') && (
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                {(pendingSaves.size > 0 || savingStatus === "saving") && (
+                  <svg
+                    className="animate-spin -ml-1 mr-2 h-4 w-4"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
                   </svg>
                 )}
-                {savingStatus === 'saved' && (
-                  <svg className="-ml-1 mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                {savingStatus === "saved" && (
+                  <svg
+                    className="-ml-1 mr-2 h-4 w-4"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                 )}
-                {savingStatus === 'error' && (
-                  <svg className="-ml-1 mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                {savingStatus === "error" && (
+                  <svg
+                    className="-ml-1 mr-2 h-4 w-4"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                 )}
                 {getSaveStatusMessage()}
@@ -916,12 +1022,11 @@ Supported data types:
         </div>
       </div>
 
-
       {uploadSessions.length > 0 && (
         <div className="bg-white dark:bg-gray-900 shadow-xl rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
             <h2 className="flex items-center text-2xl font-bold text-gray-800 dark:text-gray-200">
-              <IconUsers className="w-8 h-8 mr-3 text-gray-500"/>
+              <IconUsers className="w-8 h-8 mr-3 text-gray-500" />
               Saved Datasets
             </h2>
             <div className="flex gap-2">
@@ -929,15 +1034,16 @@ Supported data types:
                 onClick={() => setShowMergeOptions(!showMergeOptions)}
                 className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
               >
-                {showMergeOptions ? 'Cancel' : 'Merge Datasets'}
+                {showMergeOptions ? "Cancel" : "Merge Datasets"}
               </button>
             </div>
           </div>
-          
+
           {showMergeOptions && (
             <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
               <p className="text-sm text-blue-800 dark:text-blue-200 mb-3">
-                Select multiple sessions to merge them together. Selected: {selectedSessions.size}
+                Select multiple sessions to merge them together. Selected:{" "}
+                {selectedSessions.size}
               </p>
               <div className="flex gap-2 mb-3">
                 <button
@@ -954,26 +1060,45 @@ Supported data types:
                 </button>
                 <button
                   onClick={mergeSelectedSessions}
-                  disabled={selectedSessions.size < 2 || isLoading || pendingSaves.size > 0 || savingStatus === 'saving'}
+                  disabled={
+                    selectedSessions.size < 2 ||
+                    isLoading ||
+                    pendingSaves.size > 0 ||
+                    savingStatus === "saving"
+                  }
                   className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title={pendingSaves.size > 0 || savingStatus === 'saving' ? 'Wait for saves to complete before merging' : ''}
+                  title={
+                    pendingSaves.size > 0 || savingStatus === "saving"
+                      ? "Wait for saves to complete before merging"
+                      : ""
+                  }
                 >
-                  {isLoading ? 'Merging...' : `Merge ${selectedSessions.size} Sessions`}
+                  {isLoading
+                    ? "Merging..."
+                    : `Merge ${selectedSessions.size} Sessions`}
                 </button>
               </div>
             </div>
           )}
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {uploadSessions.map((session) => (
-              <div key={session.session_id} className={`bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border ${selectedSessions.has(session.session_id) ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700'}`}>
+              <div
+                key={session.session_id}
+                className={`bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border ${selectedSessions.has(session.session_id) ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-gray-200 dark:border-gray-700"}`}
+              >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center">
                     {showMergeOptions && (
                       <input
                         type="checkbox"
                         checked={selectedSessions.has(session.session_id)}
-                        onChange={(e) => handleSessionSelection(session.session_id, e.target.checked)}
+                        onChange={(e) =>
+                          handleSessionSelection(
+                            session.session_id,
+                            e.target.checked,
+                          )
+                        }
                         className="mr-3 w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                       />
                     )}
@@ -1020,7 +1145,7 @@ Supported data types:
             </h3>
             <input
               type="month"
-              placeholder="MM/YYYY e.g. 07/2025"
+              placeholder="YYYY-MM e.g. 2025-10"
               value={sessionName}
               onChange={(e) => setSessionName(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white mb-4"
@@ -1030,7 +1155,8 @@ Supported data types:
               <button
                 onClick={() => {
                   setShowSaveDialog(false);
-                  setSessionName('');
+                  setSessionName("");
+                  setPendingPerformanceData(null);
                 }}
                 className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
               >
@@ -1047,15 +1173,15 @@ Supported data types:
           </div>
         </div>
       )}
-    {resolveModal && (
-      <ResolveEmployeesDialog
-        unknownEmployees={resolveModal.unknown}
-        onSubmit={handleResolveSubmit}
-        onCancel={handleResolveCancel}
-      />
-    )}
-  </div>
- );
+      {resolveModal && (
+        <ResolveEmployeesDialog
+          unknownEmployees={resolveModal.unknown}
+          onSubmit={handleResolveSubmit}
+          onCancel={handleResolveCancel}
+        />
+      )}
+    </div>
+  );
 };
 
 export default DataManagement;

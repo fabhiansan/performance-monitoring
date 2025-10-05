@@ -50,7 +50,8 @@ console.log('🔍 Testing parseEmployeeCSV function...');
 console.log('-----------------------------------');
 
 try {
-  const employees = parseEmployeeCSV(csvContent);
+  const csvParseResult = parseEmployeeCSV(csvContent);
+  const employees = csvParseResult.employees;
   
   console.log(`Parsed ${employees.length} employees from test fixture\n`);
   
@@ -93,26 +94,20 @@ try {
   console.log(`Parsed ${Object.keys(employeeMapping).length} employees from test fixture\n`);
   
   Object.entries(expectedResults).forEach(([name, expected]) => {
-    const actual = employeeMapping[name];
-    if (actual !== undefined) {
+    const entry = employeeMapping[name];
+    if (entry !== undefined) {
       parseDataTotalTests++;
-      
-      // For parseEmployeeData, we need to map the detailed position back to organizational category
-      let actualCategory = 'Other';
-      if (actual === 'Eselon II' || actual === 'Eselon III' || actual === 'Eselon IV') {
-        actualCategory = actual;
-      } else if (actual.includes('Staff')) {
-        actualCategory = 'Staff';
-      }
-      
+      const detailedPosition = entry.detailedPosition;
+      const actualCategory = entry.organizational_level;
+
       if (actualCategory === expected) {
         parseDataPassedTests++;
         console.log(`✅ ${name}`);
-        console.log(`   Detailed Position: "${actual}"`);
+        console.log(`   Detailed Position: "${detailedPosition}"`);
         console.log(`   Category: ${actualCategory} (correct)\n`);
       } else {
         console.log(`❌ ${name}`);
-        console.log(`   Detailed Position: "${actual}"`);
+        console.log(`   Detailed Position: "${detailedPosition}"`);
         console.log(`   Expected Category: "${expected}" | Got Category: "${actualCategory}"\n`);
       }
     }
@@ -133,22 +128,16 @@ let consistencyPassedTests = 0;
 let consistencyTotalTests = 0;
 
 try {
-  const csvEmployees = parseEmployeeCSV(csvContent);
+  const csvResult = parseEmployeeCSV(csvContent);
+  const csvEmployees = csvResult.employees;
   const dataEmployees = parseEmployeeData(csvContent);
   
   csvEmployees.forEach(csvEmp => {
     const dataResult = dataEmployees[csvEmp.name];
     if (dataResult) {
       consistencyTotalTests++;
-      
-      // Map parseEmployeeData result to organizational category
-      let dataCategory = 'Other';
-      if (dataResult === 'Eselon II' || dataResult === 'Eselon III' || dataResult === 'Eselon IV') {
-        dataCategory = dataResult;
-      } else if (dataResult.includes('Staff')) {
-        dataCategory = 'Staff';
-      }
-      
+      const dataCategory = dataResult.organizational_level;
+
       if (csvEmp.organizational_level === dataCategory) {
         consistencyPassedTests++;
         console.log(`✅ ${csvEmp.name}: Both methods agree on "${csvEmp.organizational_level}"`);

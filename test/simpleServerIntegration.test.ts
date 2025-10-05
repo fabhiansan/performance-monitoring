@@ -94,6 +94,40 @@ describe('Simple Server Integration Test', () => {
             return jsonResponse(mapping);
           }
 
+          if (method === 'POST' && url.pathname === '/api/employees/import') {
+            let payload: unknown;
+            try {
+              payload = await request.json();
+            } catch {
+              return jsonResponse({
+                success: false,
+                error: 'Invalid JSON payload',
+                timestamp: new Date().toISOString()
+              }, 400);
+            }
+
+            const employees = (payload as { employees?: Employee[] }).employees;
+            if (!Array.isArray(employees) || employees.length === 0) {
+              return jsonResponse({
+                success: false,
+                error: 'Employees array is required',
+                timestamp: new Date().toISOString()
+              }, 400);
+            }
+
+            const { inserted, updated } = await db.importEmployees(employees);
+            return jsonResponse({
+              success: true,
+              data: {
+                inserted,
+                updated,
+                total: inserted + updated
+              },
+              message: 'Employees imported successfully',
+              timestamp: new Date().toISOString()
+            }, 201);
+          }
+
           if (method === 'POST' && url.pathname === '/api/employee-data') {
             let payload: unknown;
             try {
@@ -192,9 +226,9 @@ describe('Simple Server Integration Test', () => {
       ];
 
       // Import employees
-      const sessionId = await employeeApi.importEmployeesFromCSV(testEmployees);
-      expect(typeof sessionId).toBe('string');
-      expect(sessionId.length).toBeGreaterThan(0);
+      const importResult = await employeeApi.importEmployeesFromCSV(testEmployees);
+      expect(importResult.total).toBe(1);
+      expect(importResult.inserted).toBe(1);
 
       // Verify employees were saved
       const allEmployees = await employeeApi.getAllEmployees();

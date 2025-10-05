@@ -198,12 +198,16 @@ describe('Team A & Team B Integration Validation', () => {
         }
       ];
 
-      // 2. Import via frontend API
-      const sessionId = await employeeApi.importEmployeesFromCSV(testEmployees);
+      // 2. Import roster via frontend API
+      const importResult = await employeeApi.importEmployeesFromCSV(testEmployees);
+      expect(importResult.total).toBe(2);
+
+      // 3. Persist performance data as a session
+      const sessionId = await sessionApi.saveEmployeeData(testEmployees, 'Integration Test');
       expect(typeof sessionId).toBe('string');
       expect(sessionId.length).toBeGreaterThan(0);
 
-      // 3. Verify employees were created
+      // 4. Verify employees were created
       const allEmployees = await employeeApi.getAllEmployees();
       expect(allEmployees).toHaveLength(2);
       
@@ -213,21 +217,28 @@ describe('Team A & Team B Integration Validation', () => {
       expect(firstEmployee?.nip).toBe('123456789');
       expect(firstEmployee?.organizational_level).toBe('Pranata Komputer');
 
-      // 4. Test employee suggestions
+      // 5. Test employee suggestions
       const suggestions = await employeeApi.getEmployeeSuggestions('Integration');
       expect(suggestions.length).toBeGreaterThan(0);
       expect(suggestions[0].name).toContain('Integration Test Employee');
 
-      // 5. Test organizational level mapping
+      // 6. Test organizational level mapping
       const orgMapping = await employeeApi.getEmployeeOrgLevelMapping();
       const levelCount = Object.values(orgMapping).filter(level => level === 'Pranata Komputer').length;
       expect(levelCount).toBeGreaterThan(0);
 
-      // 6. Verify session management
+      // 7. Verify session management
       const sessions = await sessionApi.getAllUploadSessions();
       expect(sessions.length).toBeGreaterThan(0);
       
-      const currentSession = sessions.find(s => s.session_id === sessionId);
+      const currentSession = sessions.find((s) => {
+        return (
+          (typeof (s as { session_id?: string }).session_id === 'string' &&
+            (s as { session_id?: string }).session_id === sessionId) ||
+          (typeof (s as { period?: string }).period === 'string' &&
+            (s as { period?: string }).period === sessionId)
+        );
+      });
       expect(currentSession).toBeDefined();
       expect(currentSession?.employee_count).toBe(2);
     });

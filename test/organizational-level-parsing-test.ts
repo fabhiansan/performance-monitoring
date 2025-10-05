@@ -127,13 +127,13 @@ if (fs.existsSync(csvPath)) {
     
     Object.entries(expectedCategorizations).forEach(([name, expected]) => {
       csvTotalTests++;
-      const actual = employeeMapping[name];
-      
+      const actual = employeeMapping[name]?.organizational_level;
+
       if (actual === expected) {
         csvPassedTests++;
         console.log(`✅ ${name}: ${actual} (correct)`);
       } else {
-        console.log(`❌ ${name}: Expected "${expected}", got "${actual}"`);
+        console.log(`❌ ${name}: Expected "${expected}", got "${actual || "(missing)"}"`);
       }
     });
     
@@ -141,7 +141,8 @@ if (fs.existsSync(csvPath)) {
     
     // Test parseEmployeeCSV function
     console.log('Testing parseEmployeeCSV function:');
-    const employees = parseEmployeeCSV(csvContent);
+    const csvParseResult = parseEmployeeCSV(csvContent);
+    const employees = csvParseResult.employees;
     
     csvParserPassedTests = 0;
     csvParserTotalTests = 0;

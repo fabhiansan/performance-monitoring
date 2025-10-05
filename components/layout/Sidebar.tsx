@@ -79,7 +79,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           <h2 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
             Dashboard Penilaian Kinerja
           </h2>
-          {/* <h2 className="text-xl font-bold text-gray-900 dark:text-white">Pegawai Dinas Sosial</h2> */}
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
             Dinas Sosial
           </p>
@@ -105,13 +104,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                   size="md"
                   fullWidth
                   leftIcon={<Icon className="w-5 h-5" />}
-                  className={`justify-start ${
+                  className={`justify-start items-center ${
                     isDisabled &&
                     item.id !== "data" &&
                     item.id !== EMPLOYEE_MANAGEMENT_ID
                       ? "opacity-50 cursor-not-allowed"
                       : ""
-                  }`}
+                  } ${isActive ? "h-10" : "h-10"}`}
                   title={
                     isImporting &&
                     item.id !== "data" &&
@@ -131,7 +130,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       {/* Dataset selector */}
       {datasets.length > 0 && (
         <div className="px-4 pb-4">
-          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">
             Dataset (Periode)
             {isDisabled && (
               <span className="ml-2 inline-flex items-center">
@@ -180,9 +179,11 @@ const Sidebar: React.FC<SidebarProps> = ({
             }}
             disabled={isDisabled}
             title={
-              isImporting ? "Tidak dapat mengganti sesi saat proses impor" : undefined
+              isImporting
+                ? "Tidak dapat mengganti sesi saat proses impor"
+                : undefined
             }
-            className={`w-full text-sm px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white transition-opacity duration-200 ${
+            className={`w-full text-sm px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white transition-opacity duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
               isDisabled ? "opacity-50 cursor-not-allowed" : ""
             }`}
           >

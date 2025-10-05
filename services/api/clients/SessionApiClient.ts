@@ -90,10 +90,51 @@ export class SessionApiClient extends BaseApiClient {
   }
 
   async getAllUploadSessions(signal?: AbortSignal): Promise<UploadSession[]> {
-    return this.get<UploadSession[]>("/upload-sessions", {
+    const rawSessions = await this.get<Array<UploadSession | {
+      period: string;
+      employee_count: number;
+      competency_count?: number;
+      latest_upload: string;
+    }>>("/upload-sessions", {
       operation: "getAllUploadSessions",
       signal,
     });
+
+    return rawSessions.map((session) => {
+      if ("session_id" in session) {
+        return session;
+      }
+
+      const period = session.period;
+      const formattedName = period.includes("/") ? period : this.formatPeriod(period);
+
+      return {
+        session_id: period,
+        session_name: formattedName,
+        upload_timestamp: session.latest_upload,
+        employee_count: session.employee_count,
+        competency_count: session.competency_count,
+      } satisfies UploadSession;
+    });
+  }
+
+  private formatPeriod(period: string): string {
+    if (!period) return "Dataset";
+
+    // Attempt to parse formats like YYYY-MM or YYYYMM
+    const dashMatch = period.match(/^(\d{4})[-_](\d{1,2})$/);
+    if (dashMatch) {
+      const [, year, month] = dashMatch;
+      return `${month.padStart(2, "0")}/${year}`;
+    }
+
+    const compactMatch = period.match(/^(\d{4})(\d{2})$/);
+    if (compactMatch) {
+      const [, year, month] = compactMatch;
+      return `${month}/${year}`;
+    }
+
+    return period;
   }
 
   async getEmployeeDataBySession(
@@ -176,7 +217,7 @@ export class SessionApiClient extends BaseApiClient {
       });
     }
 
-    await this.delete<void>(`/upload-sessions/${sessionId}`, {
+    await this.delete<void>(`/upload-sessions/${encodeURIComponent(sessionId)}`, {
       operation: "deleteUploadSession",
     });
   }

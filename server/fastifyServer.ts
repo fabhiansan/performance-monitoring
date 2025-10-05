@@ -220,6 +220,9 @@ export class FastifyServer {
     // Get organizational level mapping (employee name -> org level)
     this.app.get(`${employeePrefix}/org-level-mapping`, this.getOrgLevelMapping.bind(this));
 
+    // Bulk import employees (CSV roster)
+    this.app.post(`${employeePrefix}/import`, this.importEmployees.bind(this));
+
     // Get organizational level counts (org level -> count)
     this.app.get(`${employeePrefix}/org-level-counts`, this.getOrgLevelCounts.bind(this));
 
@@ -440,6 +443,40 @@ export class FastifyServer {
       reply.code(500).send({
         success: false,
         error: 'Failed to add employee',
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+
+  async importEmployees(request: FastifyRequest<{ Body: { employees: Employee[] } }>, reply: FastifyReply) {
+    try {
+      const employees = request.body?.employees;
+
+      if (!Array.isArray(employees) || employees.length === 0) {
+        return reply.code(400).send({
+          success: false,
+          error: 'Employees array is required',
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      const { inserted, updated } = await this.db.importEmployees(employees);
+
+      reply.code(201).send({
+        success: true,
+        data: {
+          inserted,
+          updated,
+          total: inserted + updated,
+        },
+        message: 'Employees imported successfully',
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      logger.error('Error importing employees', { error: error instanceof Error ? error.message : String(error) });
+      reply.code(500).send({
+        success: false,
+        error: 'Failed to import employees',
         timestamp: new Date().toISOString(),
       });
     }

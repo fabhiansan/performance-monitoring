@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Employee } from '../types';
 import { parsePerformanceData } from '../services/parser';
-import { parseEmployeeCSV, validateEmployeeData } from '../services/csvParser';
+import { parseEmployeeCSV, EmployeeData } from '../services/csvParser';
 import { ValidationResult } from '../services/validationService';
 import { UploadSession } from '../services/api';
 
@@ -66,26 +66,7 @@ export const useDataManagement = ({
     return foundEmployeeKeywords >= 2 ? 'employee_roster' : 'performance_data';
   };
 
-  const createValidationResult = useCallback((employees: unknown[], validation: { valid: boolean; errors: string[] }): ValidationResult => {
-    return {
-      isValid: validation.valid,
-      errors: validation.errors.map((error: string) => ({ type: 'critical_data' as const, message: error })),
-      warnings: [],
-      summary: {
-        totalEmployees: employees.length,
-        validEmployees: validation.valid ? employees.length : 0,
-        invalidEmployees: validation.valid ? 0 : employees.length,
-        totalCompetencies: 0,
-        requiredCompetencies: [],
-        missingCompetencies: [],
-        dataCompleteness: validation.valid ? 100 : 0,
-        completeness: validation.valid ? 100 : 0,
-        scoreQuality: validation.valid ? 'excellent' as const : 'poor' as const
-      }
-    };
-  }, []);
-
-  const convertToEmployeeData = useCallback((employees: Array<{ name: string; nip: string; gol: string; pangkat: string; position: string; organizational_level?: string }>): Employee[] => {
+  const convertToEmployeeData = useCallback((employees: EmployeeData[]): Employee[] => {
     return employees.map((emp, index) => ({
       id: index + 1,
       name: emp.name,
@@ -93,24 +74,22 @@ export const useDataManagement = ({
       gol: emp.gol,
       pangkat: emp.pangkat,
       position: emp.position,
-      sub_position: 'General',
+      sub_position: emp.subPosition,
       organizational_level: emp.organizational_level || 'Staff',
       performance: []
     }));
   }, []);
 
   const processEmployeeRoster = useCallback((data: string, fileName?: string) => {
-    const employees = parseEmployeeCSV(data);
-    const validation = validateEmployeeData(employees);
-    const validationResult = createValidationResult(employees, validation);
-    
-    setValidationResult(validationResult);
-    
-    if (validationResult.isValid) {
+    const { employees, validation } = parseEmployeeCSV(data);
+
+    setValidationResult(validation);
+
+    if (validation.isValid) {
       const employeeData = convertToEmployeeData(employees);
       onDataUpdate(employeeData, fileName || 'Employee Roster Import');
     }
-  }, [createValidationResult, convertToEmployeeData, onDataUpdate]);
+  }, [convertToEmployeeData, onDataUpdate]);
 
   const processPerformanceData = useCallback((data: string, fileName?: string) => {
     const result = parsePerformanceData(data);

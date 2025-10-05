@@ -1,0 +1,122 @@
+[
+  {
+    "smell_type": "God Object",
+    "category": "Other Critical Smells",
+    "severity": "Critical",
+    "file_path": "server/fastifyServer.ts",
+    "line_number(s)": "140-258",
+    "code_snippet": "  private setupRoutes(): void {\n    this.app.get('/health', {\n      schema: {\n        tags: ['System'],\n        summary: 'Health check endpoint',\n        response: {\n          200: {\n            type: 'object',\n            properties: {\n              status: { type: 'string', enum: ['ok', 'error'] },\n              database: { type: 'boolean' },\n              uptime: { type: 'number' },\n              timestamp: { type: 'string', format: 'date-time' }\n            },\n            required: ['status', 'database', 'timestamp']\n          },\n        },\n      },\n    }, this.healthCheck.bind(this));\n    this.setupEmployeeRoutes();\n    this.setupSessionRoutes();\n    this.setupDatasetRoutes();\n    this.setupLeadershipRoutes();\n  }",
+    "explanation": "FastifyServer centralises plugin setup, health checks, employee CRUD, session lifecycle, dataset APIs, and leadership logic in a single 1,300+ line class. The route bootstrap shown here ties together four unrelated domains, forcing every feature change through one object and making regression risk extremely high.",
+    "suggested_refactoring": "Extract Class"
+  },
+  {
+    "smell_type": "Large Class",
+    "category": "Bloaters",
+    "severity": "Critical",
+    "file_path": "server/database.ts",
+    "line_number(s)": "201-292",
+    "code_snippet": "class SQLiteService {\n  private db: Database.Database | null = null;\n  private isInitialized: boolean = false;\n  private errorDetails: Error | { type: string; description: string; solution: string } | null = null;\n  private dbPath: string;\n\n  constructor(dbPath: string | null = null) {\n    this.db = null;\n    this.isInitialized = false;\n    this.errorDetails = null;\n    this.dbPath = process.env.DATABASE_PATH || dbPath || path.join(process.cwd(), 'server', 'performance_analyzer.db');\n    logger.database('Database path resolved', { dbPath: this.dbPath });\n  }\n\n  private resolveSymbolicLink(dbDir: string): string {\n    try {\n      const realPath = fs.realpathSync(dbDir);\n      if (realPath !== dbDir) {\n        logger.debug('Directory is a symbolic link', { originalPath: dbDir, realPath });\n        return realPath;\n      }\n    } catch {\n      // Path doesn't exist yet, which is fine\n    }\n    return dbDir;\n  }",
+    "explanation": "SQLiteService mixes filesystem provisioning, directory validation, logging, SQL statement management, migration helpers, and compatibility shims across 1,200+ lines. The constructor and helper snippet illustrate how persistence, infrastructure, and business rules cohabitate, making the class impossible to reason about or test in isolation.",
+    "suggested_refactoring": "Extract Class"
+  },
+  {
+    "smell_type": "Long Parameter List",
+    "category": "Bloaters",
+    "severity": "High",
+    "file_path": "server/database.ts",
+    "line_number(s)": "1073-1094",
+    "code_snippet": "  addEmployee(name: string, nip?: string, gol?: string, pangkat?: string, position?: string, subPosition?: string, organizationalLevel?: string) {\n    return this.upsertEmployee({\n      name,\n      nip: nip || undefined,\n      gol: gol || undefined,\n      pangkat: pangkat || undefined,\n      position: position || undefined,\n      sub_position: subPosition || undefined,\n      organizational_level: organizationalLevel || undefined\n    });\n  }\n\n  updateEmployee(id: number, name: string, nip?: string, gol?: string, pangkat?: string, position?: string, subPosition?: string, organizationalLevel?: string) {\n    const stmt = this.getDb().prepare(`\n      UPDATE employees\n      SET name = ?, nip = ?, gol = ?, pangkat = ?, position = ?, sub_position = ?, organizational_level = ?, updated_at = CURRENT_TIMESTAMP\n      WHERE id = ?\n    `);\n    stmt.run(name, nip, gol, pangkat, position, subPosition, organizationalLevel, id);\n  }",
+    "explanation": "Employee write operations require seven loosely-related scalar arguments, and the same list is repeated across add/update code paths. Any change to employee shape triggers wide edits and invites ordering mistakes or missing optional data.",
+    "suggested_refactoring": "Introduce Parameter Object"
+  },
+  {
+    "smell_type": "Complex Conditional Logic",
+    "category": "Other Critical Smells",
+    "severity": "High",
+    "file_path": "services/api/core/ApiClient.ts",
+    "line_number(s)": "62-128",
+    "code_snippet": "  protected async handleApiCall<T>(\n    operation: () => Promise<Response>,\n    context: RequestContext\n  ): Promise<T> {\n    try {\n      const response = await operation();\n\n      if (!response.ok) {\n        const responseData = await response.json().catch(() => ({ error: ERROR_MESSAGES.UNKNOWN_ERROR }));\n\n        if (responseData && typeof responseData === 'object' && 'success' in responseData && !responseData.success) {\n          const errorMessage = responseData.message || 'An error occurred';\n          const errorCode = responseData.metadata?.error?.code || 'UNKNOWN_ERROR';\n          const errorDetails = responseData.metadata?.error?.details;\n\n          throw new AppError(errorMessage, {\n            code: errorCode,\n            userMessage: errorMessage,\n            context: {\n              operation: context.operation,\n              additionalData: {\n                endpoint: context.endpoint,\n                status: response.status,\n                errorDetails\n              }\n            },\n            retryable: responseData.metadata?.error?.retryable || false\n          });\n        }\n\n        const errorText = responseData.error || responseData.message || 'Unknown error';\n\n        if (response.status >= 500) {\n          throw createServerError(\n            `Server error (${response.status}): ${errorText}`,\n            {\n              operation: context.operation,\n              additionalData: {\n                endpoint: context.endpoint,\n                status: response.status\n              }\n            }\n          );\n        } else if (response.status >= 400) {\n          throw createValidationError(\n            `Request error (${response.status}): ${errorText}`,\n            {\n              operation: context.operation,\n              additionalData: {\n                endpoint: context.endpoint,\n                status: response.status\n              }\n            }\n          );\n        } else {\n          throw createNetworkError(\n            `HTTP error (${response.status}): ${errorText}`,\n            {\n              operation: context.operation,\n              additionalData: {\n                endpoint: context.endpoint,\n                status: response.status\n              }\n            }\n          );\n        }\n      }\n\n      const responseData = await response.json();\n      return this.extractResponseData<T>(responseData);\n    } catch (error) {\n      if (error instanceof AppError) {\n        throw error;\n      }",
+    "explanation": "Error handling combines three nested branches, repeated metadata packing, and duplicated throw scaffolding inside one mega conditional. The interplay of legacy vs standard response formats is hard to follow and makes it easy to miss a retry flag or context field.",
+    "suggested_refactoring": "Extract Method"
+  },
+  {
+    "smell_type": "Middle Man",
+    "category": "Couplers",
+    "severity": "Medium",
+    "file_path": "services/api/legacy.ts",
+    "line_number(s)": "30-100",
+    "code_snippet": "  async getAllEmployees(): Promise<Employee[]> {\n    return apiClientFactory.getEmployeeClient().getAllEmployees();\n  }\n\n  async addEmployee(\n    name: string,\n    nip: string,\n    gol: string,\n    pangkat: string,\n    position: string,\n    subPosition: string,\n    organizationalLevel?: string\n  ): Promise<number> {\n    return apiClientFactory.getEmployeeClient().addEmployee(\n      name, nip, gol, pangkat, position, subPosition, organizationalLevel\n    );\n  }\n\n  async getAllUploadSessions(): Promise<UploadSession[]> {\n    return apiClientFactory.getSessionClient().getAllUploadSessions();\n  }",
+    "explanation": "LegacyApiService adds an extra hop that simply forwards every call to apiClientFactory. The indirection forces consumers through a redundant abstraction, increasing coupling without adding logic or safety.",
+    "suggested_refactoring": "Inline Class"
+  },
+  {
+    "smell_type": "Long Method",
+    "category": "Bloaters",
+    "severity": "High",
+    "file_path": "components/dashboard/DashboardOverview.tsx",
+    "line_number(s)": "140-238",
+    "code_snippet": "const DashboardOverview: React.FC<DashboardOverviewProps> = ({\n  employees,\n  onNavigateToDataManagement,\n}) => {\n  const {\n    filterState,\n    filterActions,\n    uniqueLevels,\n    filteredEmployees,\n  } = useDashboardFilters(employees);\n  const { searchTerm, levelFilter, showFilters } = filterState;\n  const { setSearchTerm, setLevelFilter, setShowFilters, resetFilters } =\n    filterActions;\n\n  const {\n    kpiData,\n    competencyData,\n    employeesByLevel,\n    organizationalSummary,\n    scoreRanges,\n  } = useDashboardCalculations(filteredEmployees);\n\n  const employeesWithPerformance = useMemo(\n    () =>\n      filteredEmployees.filter(\n        (emp) => emp.performance && emp.performance.length > 0,\n      ),\n    [filteredEmployees],\n  );\n\n  const coveragePercent = useMemo(() => {\n    if (filteredEmployees.length === 0) return 0;\n    return (employeesWithPerformance.length / filteredEmployees.length) * 100;\n  }, [filteredEmployees, employeesWithPerformance]);\n\n  const coverageRounded = Number(coveragePercent.toFixed(1));\n  const coverageTone: StatusTone =\n    coverageRounded >= 95 ? \"success\" : coverageRounded >= 75 ? \"warning\" : \"critical\";",
+    "explanation": "The top-level component mixes filter state orchestration, statistical calculations, dataset labelling, and presentation in one 1,100+ line function. Even this excerpt shows heavy hook wiring, derived collections, and view logic intertwined, making the component brittle and hard to unit test.",
+    "suggested_refactoring": "Extract Function"
+  },
+  {
+    "smell_type": "Divergent Change",
+    "category": "Change Preventers",
+    "severity": "High",
+    "file_path": "components/data/DataManagement.tsx",
+    "line_number(s)": "24-158",
+    "code_snippet": "const DataManagement: React.FC<DataManagementProps> = ({ employees, onDataUpdate, pendingSaves = new Set(), savingStatus = 'idle', selectedSessionId: _selectedSessionId }) => {\n  const queryClient = useQueryClient();\n  const [rawText, setRawText] = useState('');\n  const [isLoading, setIsLoading] = useState(false);\n  const [error, setError] = useState<string | null>(null);\n  const { showError } = useError();\n  const [isDragOver, setIsDragOver] = useState(false);\n  const [uploadSessions, setUploadSessions] = useState<UploadSession[]>([]);\n  const [showSaveDialog, setShowSaveDialog] = useState(false);\n  const [sessionName, setSessionName] = useState('');\n  const [selectedSessions, setSelectedSessions] = useState<Set<string>>(new Set());\n  const [showMergeOptions, setShowMergeOptions] = useState(false);\n  const fileInputRef = useRef<HTMLInputElement>(null);\n  const [resolveModal, setResolveModal] = useState<{unknown: string[]; orgMap: Record<string, string>} | null>(null);\n  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);\n\n  const detectDataType = (data: string): 'employee_roster' | 'performance_data' => {\n    const lines = data.trim().split('\\n').filter(line => line.trim().length > 1);\n    if (lines.length < 1) return 'performance_data';\n    const header = lines[0].toLowerCase();\n    const employeeRosterKeywords = ['nama', 'nip', 'gol', 'pangkat', 'jabatan'];\n    const foundEmployeeKeywords = employeeRosterKeywords.filter(keyword => header.includes(keyword));\n    const hasBracketedNames = header.includes('[') && header.includes(']');\n    if (foundEmployeeKeywords.length >= 3) {\n      return 'employee_roster';\n    }\n    if (hasBracketedNames) {\n      return 'performance_data';\n    }\n    return 'performance_data';\n  };",
+    "explanation": "DataManagement owns drag-and-drop UI toggles, raw text parsing, CSV heuristics, validation wiring, toast notifications, and session persistence inside a single component. Any tweak to import UX, parser rules, or error surfaces forces edits scattered throughout this monolith.",
+    "suggested_refactoring": "Extract Module"
+  },
+  {
+    "smell_type": "Duplicate Code",
+    "category": "Dispensables",
+    "severity": "Medium",
+    "file_path": "components/data/DataManagement.tsx",
+    "line_number(s)": "45-71",
+    "code_snippet": "  const detectDataType = (data: string): 'employee_roster' | 'performance_data' => {\n    const lines = data.trim().split('\\n').filter(line => line.trim().length > 1);\n    if (lines.length < 1) return 'performance_data';\n\n    const header = lines[0].toLowerCase();\n    const employeeRosterKeywords = ['nama', 'nip', 'gol', 'pangkat', 'jabatan'];\n    const foundEmployeeKeywords = employeeRosterKeywords.filter(keyword => header.includes(keyword));\n    const hasBracketedNames = header.includes('[') && header.includes(']');\n\n    if (foundEmployeeKeywords.length >= 3) {\n      return 'employee_roster';\n    }\n\n    if (hasBracketedNames) {\n      return 'performance_data';\n    }\n\n    return 'performance_data';\n  };",
+    "explanation": "The client-side detectDataType helper is a near copy of services/ImportOrchestrator.ts:53-84, duplicating keyword heuristics and maintenance risk. Parser fixes must now be applied in both places or behaviour diverges.",
+    "suggested_refactoring": "Extract Function"
+  },
+  {
+    "smell_type": "Data Clumps",
+    "category": "Bloaters",
+    "severity": "Medium",
+    "file_path": "hooks/useEmployeeApi.ts",
+    "line_number(s)": "63-66",
+    "code_snippet": "  return useMutation({\n    mutationFn: ({ id, employee }: { id: number; employee: Employee }) =>\n      employeeApi.updateEmployee(id, employee.name, employee.nip || '', employee.gol || '', employee.pangkat || '', employee.position || '', employee.subPosition || '', employee.organizationalLevel),\n    onSuccess: () => {\n      queryClient.invalidateQueries({ queryKey: queryKeys.employees.all });\n    },\n  });",
+    "explanation": "Every update funnels eight loosely-related fields from Employee into positional parameters, repeating the same bundle across API layers. The tight packing invites inconsistencies between client, server, and validator representations.",
+    "suggested_refactoring": "Introduce Parameter Object"
+  },
+  {
+    "smell_type": "Magic Numbers / Strings",
+    "category": "Other Critical Smells",
+    "severity": "Medium",
+    "file_path": "components/reporting/Report.tsx",
+    "line_number(s)": "39-93",
+    "code_snippet": "      const imgWidth = 210;\n      const pageHeight = 295;\n      const imgHeight = (canvas.height * imgWidth) / canvas.width;\n      let heightLeft = imgHeight;\n\n      while (heightLeft >= 0) {\n        position = heightLeft - imgHeight;\n        pdf.addPage();\n        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);\n        heightLeft -= pageHeight;\n      }\n\n      pdf.save(`Laporan_Kinerja_${selectedEmployee.name.replace(/\\s+/g, '_')}_Semester_${semester === 1 ? 'I' : 'II'}_${year}.pdf`);\n...\n  const calculatePerilakuKerjaScore = () => {\n    if (!selectedEmployee || !selectedEmployee.performance || selectedEmployee.performance.length === 0) return 0;\n    const perilakuKerja = selectedEmployee.performance.slice(0, 5).reduce((sum, perf) => sum + perf.score, 0);\n    return (perilakuKerja / 5) * 0.3;\n  };\n...\n  const getPenilaianPimpinanScore = () => {\n    return 17.0;\n  };\n\n  const getPerformanceLevel = (score: number) => {\n    if (score >= 90) return 'SANGAT BAIK';\n    if (score >= 80) return 'BAIK';\n    if (score >= 70) return 'KURANG BAIK';\n    return 'SANGAT KURANG';\n  };",
+    "explanation": "Hard-coded PDF dimensions, weighting factors (0.3, 0.5, 17.0), and performance thresholds are embedded in the component. Without named constants, business rule changes require code spelunking and risk inconsistent updates across the reporting stack.",
+    "suggested_refactoring": "Introduce Explanation Variable"
+  },
+  {
+    "smell_type": "Duplicate Code",
+    "category": "Dispensables",
+    "severity": "Medium",
+    "file_path": "components/reporting/Report.tsx",
+    "line_number(s)": "24-56",
+    "code_snippet": "  const generatePDF = async () => {\n    if (!selectedEmployee || !reportRef.current) return;\n\n    setIsGenerating(true);\n    try {\n      const canvas = await html2canvas(reportRef.current, {\n        scale: 2,\n        useCORS: true,\n        allowTaint: true,\n        backgroundColor: '#ffffff'\n      });\n\n      const imgData = canvas.toDataURL('image/png');\n      const pdf = new jsPDF('landscape', 'mm', 'a4');\n      const imgWidth = 210;\n      const pageHeight = 295;\n      const imgHeight = (canvas.height * imgWidth) / canvas.width;\n      let heightLeft = imgHeight;\n\n      let position = 0;\n\n      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);\n      heightLeft -= pageHeight;\n\n      while (heightLeft >= 0) {\n        position = heightLeft - imgHeight;\n        pdf.addPage();\n        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);\n        heightLeft -= pageHeight;\n      }\n\n      pdf.save(`Laporan_Kinerja_${selectedEmployee.name.replace(/\\s+/g, '_')}_Semester_${semester === 1 ? 'I' : 'II'}_${year}.pdf`);\n    } catch (error) {\n      showError(error, {\n        component: 'Report',\n        operation: 'generate PDF',\n        employeeName: selectedEmployee.name\n      });\n    } finally {\n      setIsGenerating(false);\n    }\n  };",
+    "explanation": "The PDF pagination logic duplicates ReportGenerationService.addCanvasToPDF almost line-for-line, creating two maintenance hotspots for the same behaviour. Any tweak to page sizing or export settings must be made in both places to stay aligned.",
+    "suggested_refactoring": "Extract Function"
+  },
+  {
+    "smell_type": "Dead Code",
+    "category": "Dispensables",
+    "severity": "Medium",
+    "file_path": "App-legacy.tsx",
+    "line_number(s)": "1-32",
+    "code_snippet": "import React, { useCallback, useEffect, useState } from 'react';\nimport { sessionApi, employeeApi, apiClientFactory, UploadSession } from './services/api';\nimport ErrorDisplay from './components/shared/ErrorDisplay';\nimport Sidebar from './components/layout/Sidebar';\nimport DashboardOverview from './components/dashboard/DashboardOverview';\nimport DataManagement from './components/data/DataManagement';\nimport TableView from './components/dashboard/TableView';\nimport EmployeeManagement from './components/employees/EmployeeManagement';\nimport Report from './components/reporting/Report';\n\nconst VIEW_NAMES = {\n  EMPLOYEE_MANAGEMENT: 'employee-management',\n  DATA: 'data',\n  OVERVIEW: 'overview'\n} as const;",
+    "explanation": "App-legacy.tsx retains the pre-refactor application shell but nothing references it anymore (no imports or entry points). Keeping a parallel app tree confuses future cleanups and risks stale behaviour leaking back in.",
+    "suggested_refactoring": "Remove Dead Code"
+  }
+]

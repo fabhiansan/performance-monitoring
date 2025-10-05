@@ -4,6 +4,37 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
+### Guidelines
+## GUIDELINES
+- **NEVER IGNORE TYPESCRIPT AND ESLINT ERROR**
+- **NEVER USE MOCKUP DATA OR HARDCODED VALUES** -> Immediately implement the backend
+- **NEVER MAKES A SHORT TERM SOLUTION** -> It will cause the code to be unmaintainable in the long run
+- **Less Code = Better Code**
+
+## ANTI-OVER-ENGINEERING PRINCIPLES
+**Core Philosophy: WORKING > BEAUTIFUL**
+- **NO complex abstractions when simple solutions work**
+- **NO creating multiple versions of the same component**
+- **NO elaborate error handling that masks real issues**
+- **NO premature optimization or "future-proofing"**
+- **NO custom implementations when standard solutions exist**
+
+### 🎯 DECISION FRAMEWORK
+When implementing features, ask:
+1. **Does a simple solution already exist?** → Use it
+2. **Can I copy a working pattern?** → Copy it
+3. **Will this work in 5 minutes?** → Choose that over "perfect" solution
+4. **Am I adding abstraction layers?** → Probably over-engineering
+5. **Would HTML/CSS/basic JS solve this?** → Use those first
+
+### 🚨 WARNING SIGNS OF OVER-ENGINEERING
+- Creating "reusable" components used only once
+- Adding configuration options "for flexibility"
+- Complex type hierarchies with minimal usage
+- Custom hooks that wrap standard functionality
+- Multiple files for simple features
+- Abstract base classes with single implementations
+
 ### Web Development
 - **Start frontend only**: `pnpm run dev:vite` (Vite dev server on port 5173)
 - **Start backend server**: `pnpm run server:node` (Fastify server on port 3002)

@@ -1,272 +1,352 @@
 import React, { useMemo } from "react";
 import { Employee } from "../../types";
-import { Button, Card } from "../../design-system";
-import { getLegacyPerformanceLevel, CHART_COLORS } from "../../constants/ui";
+import { Button, Card, Tooltip as DsTooltip } from "../../design-system";
 import {
+  ResponsiveContainer,
   BarChart,
   Bar,
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
   Cell,
-  LabelList,
 } from "recharts";
 import {
-  useResizeObserver,
-  useViewportObserver,
-  calculateYAxisWidth,
-  calculateChartMargins,
-  calculateDynamicHeight,
-  getResponsiveChartConfig,
-  calculateOptimalItemCount,
-} from "../../utils/useResizeObserver";
-import { useDashboardCalculations } from "../../hooks/useDashboardCalculations";
+  useDashboardCalculations,
+  calculateEmployeeAverageScore,
+} from "../../hooks/useDashboardCalculations";
 import { useDashboardFilters } from "../../hooks/useDashboardFilters";
 import {
-  generateKpiCards,
-  isTopPerformerCard,
-  hasCardDetail,
-} from "../../utils/kpiCardUtils";
+  IconSparkles,
+  IconUsers,
+  IconClipboardData,
+  IconAnalyze,
+} from "../shared/Icons";
+import PerformanceTrendChart from "./charts/PerformanceTrendChart";
+import CompetencyRadarChart from "./charts/CompetencyRadarChart";
+import EmployeeDistributionDonut from "./charts/EmployeeDistributionDonut";
+import CompetencyHeatMap from "./charts/CompetencyHeatMap";
+import ProgressGaugeCluster from "./charts/ProgressGaugeCluster";
 
 interface DashboardOverviewProps {
   employees: Employee[];
   organizationalMappings?: Record<string, string>;
   onNavigateToDataManagement?: () => void;
+  sessionName?: string; // Add session name prop
 }
 
-interface ChartContainerProps {
-  employeeScores: Array<{ name: string; score: number }>;
-  getScoreColor: (_score: number) => string;
-  getScoreLabel: (_score: number) => string;
-}
+type StatusTone = "success" | "warning" | "critical";
 
-const ChartContainer: React.FC<ChartContainerProps> = ({
-  employeeScores,
-  getScoreColor,
-  getScoreLabel,
-}) => {
-  const { width, height, ref, isSmallScreen, isMediumScreen } =
-    useResizeObserver();
-  const viewport = useViewportObserver();
-
-  // Memoize chart configuration for performance
-  const chartConfig = useMemo(() => getResponsiveChartConfig(width), [width]);
-
-  // Calculate dynamic height based on content, screen size, and viewport
-  const dynamicHeight = useMemo(() => {
-    const availableViewportHeight = viewport.height * 0.8; // Use 80% of viewport height
-    return calculateDynamicHeight(
-      {
-        baseHeight: 250,
-        minHeight: isSmallScreen ? 200 : isMediumScreen ? 250 : 300,
-        maxHeight: Math.min(
-          isSmallScreen ? 400 : isMediumScreen ? 500 : 600,
-          availableViewportHeight,
-        ),
-        contentCount: employeeScores.length,
-        itemHeight: isSmallScreen ? 35 : isMediumScreen ? 40 : 45,
-      },
-      width,
-      Math.max(height, availableViewportHeight),
-    );
-  }, [
-    width,
-    viewport.height,
-    employeeScores.length,
-    isSmallScreen,
-    isMediumScreen,
-    height,
-  ]);
-
-  // Memoize layout calculations
-  const layoutConfig = useMemo(() => {
-    const yAxisWidth = calculateYAxisWidth(width);
-    const margins = calculateChartMargins(width);
-    const optimalItemCount = calculateOptimalItemCount(
-      width,
-      dynamicHeight,
-      chartConfig.spacing.categoryGap + 20,
-    );
-
-    return {
-      yAxisWidth,
-      margins,
-      optimalItemCount,
-      displayedScores: employeeScores.slice(0, optimalItemCount),
-    };
-  }, [width, dynamicHeight, chartConfig.spacing.categoryGap, employeeScores]);
-
-  // Dynamic CSS custom properties for container queries
-  const containerStyle = useMemo(
-    () =>
-      ({
-        "--chart-min-height": `${dynamicHeight}px`,
-        "--chart-max-height": `${Math.min(dynamicHeight * 1.5, viewport.height * 0.9)}px`,
-      }) as React.CSSProperties,
-    [dynamicHeight, viewport.height],
-  );
-
-  return (
-    <div
-      ref={ref}
-      className="chart-container chart-dynamic-height responsive-chart-wrapper"
-      style={{
-        ...containerStyle,
-        height: `${dynamicHeight}px`,
-        minHeight: `${dynamicHeight}px`,
-      }}
-    >
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={layoutConfig.displayedScores}
-          layout="vertical"
-          margin={layoutConfig.margins}
-          barGap={chartConfig.spacing.barGap}
-          barCategoryGap={chartConfig.spacing.categoryGap}
-        >
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke={CHART_COLORS.GRID_COLOR}
-            strokeWidth={chartConfig.strokeWidth}
-          />
-          <XAxis
-            type="number"
-            stroke={CHART_COLORS.AXIS_COLOR}
-            domain={[0, 100]}
-            tick={{ fontSize: chartConfig.fontSize.tick }}
-          />
-          <YAxis
-            dataKey="name"
-            type="category"
-            width={layoutConfig.yAxisWidth}
-            axisLine={false}
-            tickLine={false}
-            tick={{ fontSize: chartConfig.fontSize.tick }}
-            stroke={CHART_COLORS.AXIS_COLOR}
-          />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: CHART_COLORS.BACKGROUND,
-              border: `2px solid ${CHART_COLORS.GRID_COLOR}`,
-              borderRadius: `${chartConfig.radius.tooltip}px`,
-              color: "#111827",
-              fontSize: `${chartConfig.fontSize.tooltip}px`,
-              fontWeight: 500,
-              boxShadow:
-                "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
-            }}
-            formatter={(value: number) => [
-              `${value} (${getScoreLabel(value)})`,
-              "Skor",
-            ]}
-          />
-          <Bar
-            dataKey="score"
-            radius={[0, chartConfig.radius.bar, chartConfig.radius.bar, 0]}
-          >
-            <LabelList
-              dataKey="name"
-              position="insideLeft"
-              style={{
-                fill: "#111827",
-                fontSize: chartConfig.fontSize.label,
-                fontWeight: isSmallScreen ? "normal" : "medium",
-              }}
-            />
-            {layoutConfig.displayedScores.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={getScoreColor(entry.score)} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-
-      {/* Show indicator if items were truncated */}
-      {employeeScores.length > layoutConfig.optimalItemCount && (
-        <div className="absolute bottom-2 right-2 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow">
-          +{employeeScores.length - layoutConfig.optimalItemCount} lagi
-        </div>
-      )}
-    </div>
-  );
+const STATUS_STYLES: Record<
+  StatusTone,
+  {
+    text: string;
+    bg: string;
+    border: string;
+    iconBg: string;
+    iconText: string;
+    bar: string;
+  }
+> = {
+  success: {
+    text: "text-emerald-600 dark:text-emerald-400",
+    bg: "bg-emerald-50 dark:bg-emerald-900/30",
+    border: "border-emerald-200 dark:border-emerald-700",
+    iconBg: "bg-emerald-100 dark:bg-emerald-900/60",
+    iconText: "text-emerald-600 dark:text-emerald-300",
+    bar: "bg-emerald-500",
+  },
+  warning: {
+    text: "text-amber-600 dark:text-amber-400",
+    bg: "bg-amber-50 dark:bg-amber-900/30",
+    border: "border-amber-200 dark:border-amber-700",
+    iconBg: "bg-amber-100 dark:bg-amber-900/60",
+    iconText: "text-amber-600 dark:text-amber-300",
+    bar: "bg-amber-500",
+  },
+  critical: {
+    text: "text-rose-600 dark:text-rose-400",
+    bg: "bg-rose-50 dark:bg-rose-900/30",
+    border: "border-rose-200 dark:border-rose-700",
+    iconBg: "bg-rose-100 dark:bg-rose-900/60",
+    iconText: "text-rose-600 dark:text-rose-300",
+    bar: "bg-rose-500",
+  },
 };
+
+const TONE_HEX: Record<StatusTone, string> = {
+  success: "#059669",
+  warning: "#d97706",
+  critical: "#dc2626",
+};
+
+const formatNumber = (value: number, options?: Intl.NumberFormatOptions) =>
+  new Intl.NumberFormat("id-ID", options).format(
+    Number.isFinite(value) ? value : 0,
+  );
+
+
+const InfoBadge: React.FC<{ ariaLabel: string; description: string }> = ({
+  ariaLabel,
+  description,
+}) => (
+  <DsTooltip content={description} position="top">
+    <button
+      type="button"
+      className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-500 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+      aria-label={ariaLabel}
+    >
+      <span className="text-xs font-semibold">i</span>
+    </button>
+  </DsTooltip>
+);
+
+interface SummaryMetric {
+  id: string;
+  title: string;
+  displayValue: string;
+  unit?: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+  tone?: StatusTone;
+}
 
 const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   employees,
   onNavigateToDataManagement,
+  sessionName,
 }) => {
-  // Function to get color based on score range using UI constants
-  const getScoreColor = (score: number): string => {
-    const level = getLegacyPerformanceLevel(score);
-    return level.color;
-  };
-
-  const getScoreLabel = (score: number): string => {
-    const level = getLegacyPerformanceLevel(score);
-    return level.label;
-  };
-
-  const getScoreBgColor = (score: number): string => {
-    const level = getLegacyPerformanceLevel(score);
-    return level.bgColor;
-  };
-
-  // Use custom hooks for filtering and calculations
   const { filterState, filterActions, uniqueLevels, filteredEmployees } =
     useDashboardFilters(employees);
   const { searchTerm, levelFilter, showFilters } = filterState;
-  const { setSearchTerm, setLevelFilter, setShowFilters } = filterActions;
+  const { setSearchTerm, setLevelFilter, setShowFilters, resetFilters } =
+    filterActions;
 
-  // Use dashboard calculations hook
-  const { kpiData, competencyData, employeesByLevel, organizationalSummary } =
-    useDashboardCalculations(filteredEmployees);
-
-  // Generate KPI cards using extracted utility
-  const kpiCards = generateKpiCards(
+  const {
     kpiData,
-    organizationalSummary,
+    competencyData,
     employeesByLevel,
+    organizationalSummary,
+    scoreRanges,
+  } = useDashboardCalculations(filteredEmployees);
+
+  const employeesWithPerformance = useMemo(
+    () =>
+      filteredEmployees.filter(
+        (emp) => emp.performance && emp.performance.length > 0,
+      ),
+    [filteredEmployees],
   );
 
-  // All calculations are now handled by the custom hooks above
+  const coveragePercent = useMemo(() => {
+    if (filteredEmployees.length === 0) return 0;
+    return (employeesWithPerformance.length / filteredEmployees.length) * 100;
+  }, [filteredEmployees, employeesWithPerformance]);
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white mb-2 tracking-tight">
-          Ringkasan Dashboard
-        </h1>
-        <p className="text-base md:text-lg text-gray-600 dark:text-gray-400 font-medium">
-          Tampilan komprehensif metrik kinerja tim
-        </p>
-        {/* Search + filter controls */}
-        <div className="mt-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="relative flex-1">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg
-                className="h-5 w-5 text-gray-400"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
-                />
-              </svg>
-            </div>
+  const coverageRounded = Number(coveragePercent.toFixed(1));
+  const coverageTone: StatusTone =
+    coverageRounded >= 95
+      ? "success"
+      : coverageRounded >= 75
+        ? "warning"
+        : "critical";
+
+  const averageScore = Number(kpiData.averageScore.toFixed(1));
+
+  const datasetMetadata = useMemo(() => {
+    // Use the session name from props if available, otherwise fall back to extraction
+    const periodLabel = sessionName || "Periode data tidak tersedia";
+    const datasetLabel = sessionName || "Dataset induk";
+
+    return { periodLabel, datasetLabel };
+  }, [sessionName]);
+
+  const summaryMetrics = useMemo<SummaryMetric[]>(() => {
+    const topPerformerName = kpiData.topPerformer
+      ? kpiData.topPerformer.name
+      : null;
+    const topPerformerScore = kpiData.topPerformerScore ?? null;
+    const topPerformerTone: StatusTone | undefined =
+      topPerformerScore === null
+        ? undefined
+        : topPerformerScore >= 85
+          ? "success"
+          : topPerformerScore >= 75
+            ? "warning"
+            : "critical";
+
+    return [
+      {
+        id: "total-employees",
+        title: "Total Pegawai",
+        displayValue: formatNumber(kpiData.totalEmployees),
+        unit: "orang",
+        description: `Total ${formatNumber(kpiData.totalEmployees)} pegawai yang aktif dalam dataset terpilih (termasuk yang memiliki dan belum memiliki data kinerja).`,
+        icon: IconUsers,
+      },
+      {
+        id: "coverage",
+        title: "Cakupan Data Kinerja",
+        displayValue: formatNumber(coverageRounded, {
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 1,
+        }),
+        unit: "%",
+        description: `${formatNumber(employeesWithPerformance.length)} pegawai memiliki data kinerja dari total ${formatNumber(filteredEmployees.length)} pegawai = ${formatNumber(coverageRounded, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}% cakupan data.`,
+        icon: IconClipboardData,
+        tone: coverageTone,
+      },
+      {
+        id: "competencies",
+        title: "Kompetensi Dinilai",
+        displayValue: formatNumber(competencyData.length),
+        unit: "kompetensi",
+        description: `Total ${formatNumber(competencyData.length)} jenis kompetensi unik yang telah dinilai dan memiliki skor dalam dataset periode ini.`,
+        icon: IconAnalyze,
+      },
+      {
+        id: "top-performer",
+        title: "Performa Terbaik",
+        displayValue: topPerformerName ?? "Belum tersedia",
+        unit:
+          topPerformerScore !== null
+            ? `${formatNumber(topPerformerScore, {
+                minimumFractionDigits: 1,
+                maximumFractionDigits: 1,
+              })} poin`
+            : undefined,
+        description:
+          topPerformerScore !== null
+            ? `${topPerformerName} memiliki rata-rata skor tertinggi (${formatNumber(topPerformerScore, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} poin) dari semua kompetensi yang dinilai.`
+            : "Belum ada data pegawai dengan penilaian kompetensi.",
+        icon: IconSparkles,
+        tone: topPerformerTone,
+      },
+    ];
+  }, [kpiData, coverageRounded, coverageTone, competencyData.length, employeesWithPerformance.length, filteredEmployees.length]);
+
+  const topPerformers = useMemo(
+    () =>
+      employeesWithPerformance
+        .map((emp) => {
+          const average = calculateEmployeeAverageScore(emp);
+          const tone: StatusTone =
+            average >= 85 ? "success" : average >= 75 ? "warning" : "critical";
+          return {
+            name: emp.name,
+            average: Number(average.toFixed(1)),
+            tone,
+            delta: Number((average - averageScore).toFixed(1)),
+            level: emp.organizational_level || "Tidak diketahui",
+          };
+        })
+        .sort((a, b) => b.average - a.average)
+        .slice(0, 5),
+    [employeesWithPerformance, averageScore],
+  );
+
+  const scoreDistributionSegments = useMemo(() => {
+    const total = scoreRanges.reduce((sum, range) => sum + range.value, 0);
+    const templates = [
+      { label: "Excellent (90-100)", color: "bg-emerald-500" },
+      { label: "Good (80-89)", color: "bg-sky-500" },
+      { label: "Average (70-79)", color: "bg-amber-500" },
+      { label: "Below Average (<70)", color: "bg-rose-500" },
+    ];
+
+    return scoreRanges.map((range, index) => {
+      const percent = total === 0 ? 0 : (range.value / total) * 100;
+      const template = templates[index] ?? templates[templates.length - 1];
+      return {
+        ...range,
+        percent: Number(percent.toFixed(1)),
+        barColor: template.color,
+        label: template.label,
+      };
+    });
+  }, [scoreRanges]);
+
+  const topCompetencies = useMemo(
+    () =>
+      competencyData.slice(0, 5).map((competency) => {
+        const tone: StatusTone =
+          competency.average >= 85
+            ? "success"
+            : competency.average >= 75
+              ? "warning"
+              : "critical";
+        return {
+          ...competency,
+          tone,
+          color: TONE_HEX[tone],
+        };
+      }),
+    [competencyData],
+  );
+
+  const levelBreakdown = useMemo(
+    () =>
+      Object.entries(employeesByLevel)
+        .map(([level, levelEmployees]) => ({
+          level,
+          count: levelEmployees.length,
+          percent:
+            kpiData.totalEmployees === 0
+              ? 0
+              : Number(
+                  (
+                    (levelEmployees.length / kpiData.totalEmployees) *
+                    100
+                  ).toFixed(1),
+                ),
+        }))
+        .filter((item) => item.count > 0)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 6),
+    [employeesByLevel, kpiData.totalEmployees],
+  );
+
+  const hasEmployees = filteredEmployees.length > 0;
+  const hasPerformanceData = employeesWithPerformance.length > 0;
+  const shouldDisplayMissingPerformance = hasEmployees && !hasPerformanceData;
+
+  const searchAndFilterSection = (
+    <section className="space-y-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="w-full lg:max-w-xl">
+          <label
+            htmlFor="dashboard-search"
+            className="text-sm font-semibold text-slate-600 dark:text-slate-300"
+          >
+            Cari pegawai atau level organisasi
+          </label>
+          <div className="relative mt-2">
+            <svg
+              className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+              />
+            </svg>
             <input
+              id="dashboard-search"
               type="text"
-              placeholder="Cari pegawai atau level organisasi..."
+              placeholder="Masukkan nama pegawai atau level"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md"
+              onChange={(event) => setSearchTerm(event.target.value)}
+              className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 placeholder:leading-normal focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-blue-400 leading-normal"
             />
           </div>
+        </div>
+        <div className="flex items-center gap-3">
           <Button
             onClick={() => setShowFilters(!showFilters)}
             variant="secondary"
@@ -278,7 +358,7 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
-                className="w-5 h-5"
+                className="h-5 w-5"
               >
                 <path
                   strokeLinecap="round"
@@ -291,378 +371,585 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             Filter
           </Button>
         </div>
-        {showFilters && (
-          <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Filter berdasarkan Level Organisasi
+      </div>
+      {showFilters && (
+        <div className="rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/40">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <label
+                htmlFor="level-filter"
+                className="text-sm font-semibold text-slate-600 dark:text-slate-300"
+              >
+                Filter berdasarkan level organisasi
               </label>
               <select
+                id="level-filter"
                 value={levelFilter}
-                onChange={(e) => setLevelFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                onChange={(event) => setLevelFilter(event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
               >
-                <option value="">Semua Level</option>
-                {uniqueLevels.map((l) => (
-                  <option key={l} value={l}>
-                    {l}
+                <option value="">Semua level</option>
+                {uniqueLevels.map((levelOption) => (
+                  <option key={levelOption} value={levelOption}>
+                    {levelOption}
                   </option>
                 ))}
               </select>
             </div>
+            <div className="flex items-end">
+              <Button variant="tertiary" onClick={resetFilters} size="md">
+                Reset filter
+              </Button>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+    </section>
+  );
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {kpiCards.map((card, index) => {
-          const Icon = card.icon;
-          const isTopPerformer = isTopPerformerCard(card);
-          const hasDetail = hasCardDetail(card);
+  let content: React.ReactNode;
 
-          return (
-            <Card
-              key={index}
-              variant="elevated"
-              size="md"
-              className={isTopPerformer ? "lg:col-span-2" : ""}
-            >
-              <Card.Body>
-                <div className="flex items-center justify-between">
-                  <div className={isTopPerformer ? "flex-1 pr-4" : ""}>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      {card.title}
-                    </p>
-
-                    {isTopPerformer && card.score ? (
-                      <div className="mt-2">
-                        <p className="text-lg font-bold text-gray-900 dark:text-white break-words">
-                          {card.value}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                            Skor:
-                          </span>
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getScoreBgColor(Number(card.score))} ${getScoreColor(Number(card.score))}`}
-                          >
-                            {card.score} ({getScoreLabel(Number(card.score))})
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="mt-2">
-                        <p
-                          className={`${isTopPerformer ? "text-lg" : "text-3xl"} font-bold text-gray-900 dark:text-white ${isTopPerformer ? "break-words" : ""}`}
-                        >
-                          {card.value}
-                        </p>
-                        {hasDetail && "detail" in card && card.detail && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {card.detail}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div
-                    className={`${card.bgColor} p-3 rounded-lg flex-shrink-0`}
-                  >
-                    <Icon className={`w-6 h-6 ${card.color}`} />
-                  </div>
-                </div>
-              </Card.Body>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Show message when employees exist but no performance data */}
-      {filteredEmployees.length > 0 &&
-        !filteredEmployees.some(
-          (emp) => emp.performance && emp.performance.length > 0,
-        ) && (
-          <Card
-            variant="elevated"
-            size="md"
-            className="border-blue-200 dark:border-blue-800"
-          >
-            <Card.Body>
-              <div className="text-center py-8">
-                <div className="inline-block bg-gradient-to-r from-blue-500 to-teal-400 p-0.5 rounded-lg shadow-lg mb-6">
-                  <div className="bg-gray-100 dark:bg-gray-900 p-4 rounded-md">
-                    <svg
-                      className="w-16 h-16 mx-auto text-blue-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                      />
-                    </svg>
-                  </div>
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                  Data Pegawai Berhasil Diimpor!
+  if (!hasEmployees) {
+    content = (
+      <Card
+        variant="elevated"
+        size="lg"
+        className="max-w-3xl border-dashed border-slate-300 dark:border-slate-600"
+      >
+        <Card.Body>
+          <div className="space-y-4 text-slate-600 dark:text-slate-300">
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
+              Tidak ada pegawai yang cocok
+            </h3>
+            <p className="text-sm leading-relaxed">
+              Ubah kata kunci pencarian atau reset filter untuk melihat kembali
+              seluruh data pegawai yang tersedia.
+            </p>
+            <Button variant="secondary" size="md" onClick={resetFilters}>
+              Tampilkan semua pegawai
+            </Button>
+          </div>
+        </Card.Body>
+      </Card>
+    );
+  } else if (shouldDisplayMissingPerformance) {
+    content = (
+      <section className="space-y-8">
+        <Card variant="elevated" size="lg" className="overflow-hidden">
+          <Card.Body>
+            <div className="grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+              <div className="space-y-4">
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
+                  Data pegawai siap dianalisis
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-6">
-                  Anda memiliki {filteredEmployees.length} pegawai dalam sistem,
-                  tetapi belum ada data kinerja.
-                  <br />
-                  Impor data kinerja untuk menampilkan analitik dan wawasan.
+                <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                  Kami menemukan {formatNumber(filteredEmployees.length)}{" "}
+                  pegawai tanpa skor kompetensi. Impor data kinerja untuk
+                  mengaktifkan visualisasi performa dan rekomendasi otomatis.
                 </p>
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
-                  <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
-                    Langkah Berikutnya:
-                  </h4>
-                  <p className="text-sm text-blue-800 dark:text-blue-200">
-                    Impor data kinerja dengan format:{" "}
-                    <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">
-                      Kompetensi [Nama Pegawai]
-                    </code>
-                    <br />
-                    Pastikan nama pegawai pada data kinerja sama dengan nama
-                    yang baru saja Anda impor.
-                  </p>
-                </div>
                 <Button
-                  onClick={() => {
-                    if (onNavigateToDataManagement) {
-                      onNavigateToDataManagement();
-                    } else {
-                      // Fallback: scroll to top if navigation function not provided
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }
-                  }}
                   variant="primary"
-                  size="lg"
-                  leftIcon={
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
-                      />
-                    </svg>
+                  size="md"
+                  onClick={() =>
+                    onNavigateToDataManagement
+                      ? onNavigateToDataManagement()
+                      : window.scrollTo({ top: 0, behavior: "smooth" })
                   }
                 >
-                  Impor Data Kinerja
+                  Impor data kinerja
                 </Button>
               </div>
-            </Card.Body>
-          </Card>
-        )}
+              <div className="rounded-3xl border border-blue-200 bg-blue-50/70 p-6 shadow-inner dark:border-blue-800 dark:bg-blue-900/30">
+                <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                  Langkah selanjutnya
+                </h4>
+                <ul className="mt-4 space-y-3 text-sm text-blue-800 dark:text-blue-200">
+                  <li>
+                    • Gunakan format{" "}
+                    <code className="rounded bg-blue-100 px-1 py-0.5 text-xs text-blue-900 dark:bg-blue-800 dark:text-blue-100">
+                      Kompetensi [Nama Pegawai]
+                    </code>{" "}
+                    saat menyiapkan file impor
+                  </li>
+                  <li>• Pastikan nama pegawai identik dengan data master</li>
+                  <li>
+                    • Unggah minimal satu kompetensi untuk setiap pegawai agar
+                    metrik kinerja aktif
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </Card.Body>
+        </Card>
 
-      {/* Show employee distribution when we have employees but no performance data */}
-      {filteredEmployees.length > 0 &&
-        !filteredEmployees.some(
-          (emp) => emp.performance && emp.performance.length > 0,
-        ) && (
-          <Card variant="elevated" size="md">
-            <Card.Header title="Daftar Pegawai Saat Ini" />
-            <Card.Body>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {Object.entries(employeesByLevel)
-                  .filter(([, employees]) => employees.length > 0)
-                  .sort(([a], [b]) => {
-                    // Sort order: Eselon levels first, then Staff levels, then Other
-                    if (a.includes("Eselon") && !b.includes("Eselon"))
-                      return -1;
-                    if (!a.includes("Eselon") && b.includes("Eselon")) return 1;
-                    if (a.includes("Staff") && b === "Other") return -1;
-                    if (a === "Other" && b.includes("Staff")) return 1;
-                    return a.localeCompare(b);
-                  })
-                  .map(([level, employees]) => (
+        <Card variant="elevated" size="md" className="group">
+          <Card.Header
+            title="Sebaran level organisasi"
+            subtitle="Distribusi pegawai berdasarkan struktur organisasi"
+            actions={
+              <InfoBadge
+                ariaLabel="Definisi sebaran level"
+                description="Menampilkan jumlah pegawai pada setiap level organisasi untuk membantu prioritas unggahan data kinerja."
+              />
+            }
+          />
+          <Card.Body>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {levelBreakdown.map((item) => (
+                <div
+                  key={item.level}
+                  className="rounded-2xl border border-slate-200 bg-white/60 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-700 dark:bg-slate-900/40"
+                >
+                  <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                    {item.level}
+                  </p>
+                  <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
+                    {formatNumber(item.count)}
+                    <span className="ml-1 text-sm font-medium text-slate-500 dark:text-slate-400">
+                      orang
+                    </span>
+                  </p>
+                  <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
                     <div
-                      key={level}
-                      className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg"
-                    >
-                      <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-                        {level}
-                      </h4>
-                      <div className="flex items-center justify-between">
-                        <span className="text-2xl font-bold text-gray-900 dark:text-white">
-                          {employees.length}
-                        </span>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          {(
-                            (employees.length / filteredEmployees.length) *
-                            100
-                          ).toFixed(1)}
-                          %
-                        </span>
-                      </div>
-                      <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                        Siap menerima data kinerja
-                      </div>
-                    </div>
-                  ))}
+                      className="h-full bg-slate-500/80"
+                      style={{ width: `${Math.min(item.percent, 100)}%` }}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    {formatNumber(item.percent, {
+                      minimumFractionDigits: 1,
+                      maximumFractionDigits: 1,
+                    })}
+                    % dari total pegawai
+                  </p>
+                </div>
+              ))}
+            </div>
+          </Card.Body>
+        </Card>
+      </section>
+    );
+  } else {
+    content = (
+      <section className="space-y-10">
+        <Card variant="elevated" size="lg" className="group">
+          <Card.Header
+            title="Dashboard Metrics"
+            subtitle="Ringkasan visual semua indikator kinerja utama"
+            actions={
+              <InfoBadge
+                ariaLabel="Dashboard Metrics"
+                description="Cluster gauge yang menampilkan 6 metrics penting organisasi dalam format visual yang mudah dipahami."
+              />
+            }
+          />
+          <Card.Body>
+            <ProgressGaugeCluster employees={filteredEmployees} />
+          </Card.Body>
+        </Card>
+
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+          <Card variant="elevated" size="md" className="group">
+            <Card.Body className="text-center">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-3">
+                Eselon II-IV
+              </p>
+              <div className="flex items-end justify-center gap-1">
+                <p className="text-3xl font-bold text-slate-900 dark:text-white">
+                  {formatNumber(organizationalSummary.eselon)}
+                </p>
+                <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">
+                  orang
+                </span>
               </div>
             </Card.Body>
           </Card>
-        )}
-
-      {competencyData.length > 0 && (
-        <div className="space-y-6">
-          {/* Organizational Level Overview */}
-          <Card variant="elevated" size="md">
-            <Card.Header title="Employee Distribution by Organizational Level" />
-            <Card.Body>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {Object.entries(employeesByLevel)
-                  .filter(([, employees]) => employees.length > 0)
-                  .sort(([a], [b]) => {
-                    // Sort order: Eselon levels first, then Staff levels, then Other
-                    if (a.includes("Eselon") && !b.includes("Eselon"))
-                      return -1;
-                    if (!a.includes("Eselon") && b.includes("Eselon")) return 1;
-                    if (a.includes("Staff") && b === "Other") return -1;
-                    if (a === "Other" && b.includes("Staff")) return 1;
-                    return a.localeCompare(b);
-                  })
-                  .map(([level, employees]) => (
-                    <div
-                      key={level}
-                      className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg"
-                    >
-                      <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-                        {level}
-                      </h4>
-                      <div className="flex items-center justify-between">
-                        <span className="text-2xl font-bold text-gray-900 dark:text-white">
-                          {employees.length}
-                        </span>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          {(
-                            (employees.length / kpiData.totalEmployees) *
-                            100
-                          ).toFixed(1)}
-                          %
-                        </span>
-                      </div>
-                      {employees.length > 0 && (
-                        <div className="mt-2">
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            Skor Rata-rata:{" "}
-                            {(
-                              employees.reduce((sum, emp) => {
-                                if (
-                                  !emp.performance ||
-                                  emp.performance.length === 0
-                                )
-                                  return sum;
-                                return (
-                                  sum +
-                                  emp.performance.reduce(
-                                    (s, p) => s + p.score,
-                                    0,
-                                  ) /
-                                    emp.performance.length
-                                );
-                              }, 0) / employees.length
-                            ).toFixed(1)}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+          <Card variant="elevated" size="md" className="group">
+            <Card.Body className="text-center">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-3">
+                Staff ASN
+              </p>
+              <div className="flex items-end justify-center gap-1">
+                <p className="text-3xl font-bold text-slate-900 dark:text-white">
+                  {formatNumber(organizationalSummary.asnStaff)}
+                </p>
+                <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">
+                  orang
+                </span>
               </div>
             </Card.Body>
           </Card>
+          <Card variant="elevated" size="md" className="group">
+            <Card.Body className="text-center">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-3">
+                Staff Non ASN
+              </p>
+              <div className="flex items-end justify-center gap-1">
+                <p className="text-3xl font-bold text-slate-900 dark:text-white">
+                  {formatNumber(organizationalSummary.nonAsnStaff)}
+                </p>
+                <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">
+                  orang
+                </span>
+              </div>
+            </Card.Body>
+          </Card>
+          <Card variant="elevated" size="md" className="group">
+            <Card.Body className="text-center">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-3">
+                Lainnya
+              </p>
+              <div className="flex items-end justify-center gap-1">
+                <p className="text-3xl font-bold text-slate-900 dark:text-white">
+                  {formatNumber(organizationalSummary.other)}
+                </p>
+                <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">
+                  orang
+                </span>
+              </div>
+            </Card.Body>
+          </Card>
+        </div>
 
-          {/* Competency Performance Charts - Now showing top 3 organizational levels by size */}
-          {competencyData.map((competency, competencyIndex) => {
-            const topLevels = Object.entries(employeesByLevel)
-              .filter(([, employees]) => employees.length > 0)
-              .sort(([, a], [, b]) => b.length - a.length)
-              .slice(0, 3);
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+          {summaryMetrics.map((metric) => {
+            const toneClasses = metric.tone
+              ? {
+                  iconWrapper: STATUS_STYLES[metric.tone].iconBg,
+                  iconColor: STATUS_STYLES[metric.tone].iconText,
+                }
+              : {
+                  iconWrapper: "bg-slate-100 dark:bg-slate-800",
+                  iconColor: "text-slate-500 dark:text-slate-300",
+                };
+
+            const IconComponent = metric.icon;
 
             return (
-              <div key={competencyIndex} className="space-y-4">
-                <h3 className="adaptive-title font-bold text-gray-900 dark:text-white mb-4">
-                  {competency.competency} - 3 Level Organisasi Teratas
-                </h3>
-                <div className="chart-grid">
-                  {topLevels.map(([level, levelEmployees], levelIndex) => {
-                    const employeeScores = levelEmployees
-                      .map((emp) => {
-                        if (!emp.performance || emp.performance.length === 0) {
-                          return {
-                            name:
-                              emp.name.length > 15
-                                ? emp.name.substring(0, 15) + "..."
-                                : emp.name,
-                            score: 0,
-                          };
-                        }
-                        const score =
-                          emp.performance.find(
-                            (p) => p.name === competency.competency,
-                          )?.score || 0;
-                        return {
-                          name:
-                            emp.name.length > 15
-                              ? emp.name.substring(0, 15) + "..."
-                              : emp.name,
-                          score: score,
-                        };
-                      })
-                      .filter((emp) => emp.score > 0)
-                      .sort((a, b) => b.score - a.score);
-
-                    if (employeeScores.length === 0)
-                      return (
-                        <div
-                          key={levelIndex}
-                          className="flex-1 flex items-center justify-center text-gray-500 dark:text-gray-400"
-                        >
-                          <div className="text-center">
-                            <div className="text-6xl mb-4 opacity-20">📊</div>
-                            <p>Tidak ada data untuk {level}</p>
-                          </div>
-                        </div>
-                      );
-
-                    return (
-                      <div
-                        key={levelIndex}
-                        className="bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 flex flex-col chart-container"
-                      >
-                        <h4 className="chart-title font-semibold text-gray-900 dark:text-white mb-4">
-                          <span className="adaptive-title">
-                            {level.length > 25
-                              ? level.substring(0, 25) + "..."
-                              : level}
-                          </span>
-                          <span className="adaptive-text text-gray-500 ml-2">
-                            ({employeeScores.length})
-                          </span>
-                        </h4>
-                        <ChartContainer
-                          employeeScores={employeeScores.slice(0, 10)}
-                          getScoreColor={getScoreColor}
-                          getScoreLabel={getScoreLabel}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              <Card
+                key={metric.id}
+                variant="elevated"
+                size="md"
+                className="group overflow-hidden"
+                interactive
+                tabIndex={0}
+              >
+                <Card.Body className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        {metric.title}
+                      </p>
+                      <InfoBadge
+                        ariaLabel={`Cara menghitung ${metric.title}`}
+                        description={metric.description}
+                      />
+                    </div>
+                    <p className="mt-3 text-2xl font-bold text-slate-900 dark:text-white">
+                      {metric.displayValue}
+                      {metric.unit && (
+                        <span className="ml-1 text-base font-semibold text-slate-500 dark:text-slate-400">
+                          {metric.unit}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <span
+                    className={`inline-flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl ${toneClasses.iconWrapper}`}
+                  >
+                    <IconComponent
+                      className={`h-6 w-6 ${toneClasses.iconColor}`}
+                    />
+                  </span>
+                </Card.Body>
+              </Card>
             );
           })}
         </div>
-      )}
+
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+          <Card variant="elevated" size="md" className="group">
+            <Card.Header
+              title="Sebaran performa organisasi"
+              subtitle="Distribusi nilai rata-rata pegawai pada rentang skor utama"
+              actions={
+                <InfoBadge
+                  ariaLabel="Definisi sebaran performa"
+                  description="Menunjukkan persentase pegawai dalam setiap rentang skor sehingga area fokus perbaikan dapat teridentifikasi."
+                />
+              }
+            />
+            <Card.Body>
+              <div className="space-y-5">
+                <div className="flex h-3 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                  {scoreDistributionSegments.map((segment) => (
+                    <div
+                      key={segment.label}
+                      className={`${segment.barColor}`}
+                      style={{ width: `${segment.percent}%` }}
+                      aria-label={`${segment.label} ${segment.percent}%`}
+                    />
+                  ))}
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {scoreDistributionSegments.map((segment) => (
+                    <div
+                      key={segment.label}
+                      className="flex items-center justify-between gap-4"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`inline-flex h-3 w-3 rounded-full flex-shrink-0 ${segment.barColor}`}
+                        />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                            {segment.label}
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {segment.name}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                          {formatNumber(segment.percent, {
+                            minimumFractionDigits: 1,
+                            maximumFractionDigits: 1,
+                          })}
+                          %
+                        </p>
+                        <p className="text-xs font-medium text-slate-400 dark:text-slate-500">
+                          ({formatNumber(segment.value)})
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+
+          <Card variant="elevated" size="md" className="group">
+            <Card.Header
+              title="Kompetensi teratas"
+              subtitle="Lima kompetensi dengan nilai rata-rata tertinggi"
+              actions={
+                <InfoBadge
+                  ariaLabel="Definisi kompetensi teratas"
+                  description="Daftar kompetensi dengan rata-rata skor tertinggi di antara pegawai yang memiliki data kinerja."
+                />
+              }
+            />
+            <Card.Body>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={topCompetencies}
+                    layout="vertical"
+                    margin={{ top: 8, right: 16, bottom: 8, left: 16 }}
+                    barSize={14}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="#e2e8f0"
+                      vertical={false}
+                    />
+                    <XAxis type="number" domain={[0, 100]} hide />
+                    <YAxis
+                      dataKey="shortName"
+                      type="category"
+                      tick={{ fill: "#475569", fontSize: 12 }}
+                      width={120}
+                    />
+                    <RechartsTooltip
+                      cursor={{ fill: "rgba(15, 23, 42, 0.08)" }}
+                      contentStyle={{
+                        backgroundColor: "#0f172a",
+                        borderRadius: 12,
+                        border: "none",
+                        color: "#f8fafc",
+                        padding: "12px 16px",
+                      }}
+                      formatter={(value: number) => [
+                        `${formatNumber(value, {
+                          minimumFractionDigits: 1,
+                          maximumFractionDigits: 1,
+                        })} poin`,
+                        "Rata-rata",
+                      ]}
+                    />
+                    <Bar dataKey="average" radius={[0, 12, 12, 0]}>
+                      {topCompetencies.map((item) => (
+                        <Cell key={item.competency} fill={item.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </Card.Body>
+          </Card>
+
+          <Card variant="elevated" size="md" className="group">
+            <Card.Header
+              title="Top performer"
+              subtitle="Pegawai dengan rata-rata skor tertinggi"
+              actions={
+                <InfoBadge
+                  ariaLabel="Definisi top performer"
+                  description="Menampilkan lima pegawai dengan skor rata-rata terbaik untuk membantu program apresiasi dan pembelajaran."
+                />
+              }
+            />
+            <Card.Body>
+              <ul className="space-y-4">
+                {topPerformers.map((performer, index) => (
+                  <li key={performer.name} className="flex items-center gap-3">
+                    <span className="w-8 text-sm font-semibold text-slate-400 dark:text-slate-500 flex-shrink-0 text-center">
+                      #{index + 1}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
+                        {performer.name}
+                      </p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                        {performer.level}
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0 min-w-0">
+                      <div className="flex items-end justify-end gap-1">
+                        <span
+                          className={`text-lg font-bold ${STATUS_STYLES[performer.tone].text}`}
+                        >
+                          {formatNumber(performer.average, {
+                            minimumFractionDigits: 1,
+                            maximumFractionDigits: 1,
+                          })}
+                        </span>
+                        <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-0.5">
+                          poin
+                        </span>
+                      </div>
+                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
+                        {performer.delta >= 0 ? "▲" : "▼"}
+                        {formatNumber(Math.abs(performer.delta), {
+                          minimumFractionDigits: 1,
+                          maximumFractionDigits: 1,
+                        })}{" "}
+                        vs rata-rata
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </Card.Body>
+          </Card>
+        </div>
+
+        {/* New Interactive Charts Section */}
+        <div className="grid gap-6 xl:grid-cols-2">
+          <Card variant="elevated" size="md" className="group">
+            <Card.Header
+              title="Tren Performa Organisasi"
+              subtitle="Perubahan skor rata-rata dari waktu ke waktu"
+              actions={
+                <InfoBadge
+                  ariaLabel="Tren Performa"
+                  description="Visualisasi tren performa organisasi menampilkan rata-rata skor, top performer, dan bottom performer dalam 6 bulan terakhir."
+                />
+              }
+            />
+            <Card.Body>
+              <PerformanceTrendChart employees={filteredEmployees} />
+            </Card.Body>
+          </Card>
+
+          <Card variant="elevated" size="md" className="group">
+            <Card.Header
+              title="Distribusi Pegawai"
+              subtitle="Sebaran pegawai berdasarkan level organisasi"
+              actions={
+                <InfoBadge
+                  ariaLabel="Distribusi Pegawai"
+                  description="Donut chart interaktif yang menampilkan distribusi pegawai di setiap level organisasi dengan persentase detail."
+                />
+              }
+            />
+            <Card.Body>
+              <div className="relative">
+                <EmployeeDistributionDonut employees={filteredEmployees} />
+              </div>
+            </Card.Body>
+          </Card>
+        </div>
+
+        <Card variant="elevated" size="lg" className="group">
+          <Card.Header
+            title="Radar Kompetensi"
+            subtitle="Analisis mendalam kompetensi organisasi"
+            actions={
+              <InfoBadge
+                ariaLabel="Radar Kompetensi"
+                description="Spider chart yang menampilkan 8 kompetensi teratas dengan skor rata-rata untuk identifikasi kekuatan dan area pengembangan."
+              />
+            }
+          />
+          <Card.Body>
+            <CompetencyRadarChart employees={filteredEmployees} />
+          </Card.Body>
+        </Card>
+
+        <Card variant="elevated" size="lg" className="group">
+          <Card.Header
+            title="Heat Map Kompetensi"
+            subtitle="Matriks kompetensi berdasarkan level organisasi"
+            actions={
+              <InfoBadge
+                ariaLabel="Heat Map"
+                description="Heat map interaktif menampilkan skor kompetensi di setiap level organisasi untuk identifikasi gap keterampilan."
+              />
+            }
+          />
+          <Card.Body>
+            <CompetencyHeatMap employees={filteredEmployees} />
+          </Card.Body>
+        </Card>
+      </section>
+    );
+  }
+
+  return (
+    <div className="space-y-10 pb-12">
+      <section className="rounded-3xl bg-gradient-to-r from-gray-900 via-slate-900 to-gray-900 px-8 py-10 text-white shadow-xl">
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-3 lg:flex-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-indigo-200">
+              Ringkasan kinerja
+            </p>
+            <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">
+              Dashboard Kinerja Pegawai
+            </h1>
+            <p className="max-w-2xl text-sm text-indigo-100 md:text-base">
+              Pantau performa organisasi, cakupan data, dan kompetensi unggulan
+              dengan tampilan yang lebih terstruktur dan mudah dipindai.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 rounded-3xl border border-white/20 bg-white/10 px-6 py-4 backdrop-blur lg:flex-shrink-0">
+            <span className="text-xs font-semibold uppercase tracking-wide text-indigo-100">
+              Periode data
+            </span>
+            <span className="text-lg font-bold text-white">
+              {datasetMetadata.periodLabel}
+            </span>
+            <span className="text-xs text-indigo-100/80">
+              Dataset aktif: {datasetMetadata.datasetLabel}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {searchAndFilterSection}
+
+      {content}
     </div>
   );
 };

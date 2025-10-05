@@ -159,6 +159,34 @@ describe('FastifyServer', () => {
       expect(response.status).toBe(200);
       expect(typeof response.body).toBe('object');
     });
+
+    it('should import employees in bulk', async () => {
+      const response = await injectJson({
+        method: 'POST',
+        url: '/api/employees/import',
+        payload: {
+          employees: [
+            {
+              name: 'Bulk Import Employee',
+              position: 'Analyst',
+              organizational_level: STAFF_OTHER_LEVEL
+            }
+          ]
+        }
+      });
+
+      expect(response.status).toBe(201);
+      expect(response.body).toMatchObject({
+        success: true,
+        data: {
+          inserted: 1,
+          updated: 0,
+          total: 1
+        },
+        message: 'Employees imported successfully',
+        timestamp: expect.any(String)
+      });
+    });
   });
 
   describe('Session Endpoints', () => {

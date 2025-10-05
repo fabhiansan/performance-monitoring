@@ -27,15 +27,15 @@ const EmployeeImport: React.FC<EmployeeImportProps> = ({ onImportComplete }) => 
 
     try {
       setError(null);
-      const employees = parseEmployeeCSV(rawText);
-      const validation = validateEmployeeData(employees);
-      
+      const parsedResult = parseEmployeeCSV(rawText);
+      const validation = validateEmployeeData(parsedResult.employees);
+
       if (!validation.valid) {
         setError(`Data tidak valid:\n${validation.errors.join('\n')}`);
         return;
       }
-      
-      setParsedEmployees(employees);
+
+      setParsedEmployees(parsedResult.employees);
       setShowPreview(true);
     } catch (err) {
       console.error('Kesalahan parsing:', err);

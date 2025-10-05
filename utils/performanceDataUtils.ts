@@ -95,6 +95,9 @@ export const processScoreValue = (
   }
 
   // Add score to employee's competency
+  if (!scoreData[mapping.employee].scores[mapping.competency]) {
+    scoreData[mapping.employee].scores[mapping.competency] = [];
+  }
   scoreData[mapping.employee].scores[mapping.competency].push(score);
   
   // Set organizational_level info if not already set
@@ -123,16 +126,37 @@ export const processDataRow = (
     return;
   }
   
-  const rowIsScoreRow = isScoreRow(values);
-  const rowOrganizationalLevelInfo = extractRowOrganizationalLevel(values, rowIsScoreRow);
+  const columnCount = Object.keys(competencyEmployeeMap).length;
+  const firstValue = values[0] ?? "";
+  const rowLabelDetected =
+    columnCount > 0 &&
+    typeof firstValue === "string" &&
+    firstValue.includes("[") &&
+    extractEmployeeName(firstValue) !== null;
+
+  const normalizedValues = [...values];
+  const expectedLength = rowLabelDetected ? columnCount + 1 : columnCount;
+  while (normalizedValues.length < expectedLength) {
+    normalizedValues.push("");
+  }
+
+  const hasRowLabel = rowLabelDetected || normalizedValues.length === columnCount + 1;
+
+  const rowIsScoreRow = hasRowLabel
+    ? isScoreRow(normalizedValues.slice(1))
+    : isScoreRow(normalizedValues);
+  const rowOrganizationalLevelInfo = extractRowOrganizationalLevel(normalizedValues, rowIsScoreRow);
+  const rowCompetencyName = hasRowLabel ? cleanCompetencyName(normalizedValues[0]) : null;
   
   // Process each column that has a competency-employee mapping
   Object.entries(competencyEmployeeMap).forEach(([colIndex, mapping]) => {
     const index = parseInt(colIndex);
-    if (index < values.length) {
+    const valueIndex = hasRowLabel ? index + 1 : index;
+    if (valueIndex < normalizedValues.length) {
+      const competencyName = rowCompetencyName || mapping.competency;
       processScoreValue(
-        values[index],
-        mapping,
+        normalizedValues[valueIndex],
+        { ...mapping, competency: competencyName },
         scoreData,
         dynamicEmployeeMapping,
         employeeOrgLevelMapping,
@@ -187,6 +211,7 @@ export const generateEmployeeData = (
       position: '', // Placeholder
       sub_position: '', // Placeholder
       organizational_level: organizationalLevel,
+      organizationalLevel,
       performance,
     };
   });

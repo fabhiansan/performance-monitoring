@@ -7,7 +7,7 @@
 
 import { Employee } from '../types';
 import { parsePerformanceData } from './parser';
-import { parseEmployeeCSV, validateEmployeeDataV2 } from './csvParser';
+import { parseEmployeeCSV } from './csvParser';
 import { ValidationResult, getValidationSeverity } from './validationService';
 import { simplifyOrganizationalLevel } from '../utils/organizationalLevels';
 import { matchEmployeeNames, autoResolveFuzzyMatches } from './NameMatchingService';
@@ -175,8 +175,7 @@ function parseCSVLine(line: string, delimiter = ','): string[] {
  * Process employee roster data
  */
 async function processEmployeeRoster(rawText: string): Promise<ImportResult> {
-  const parsedEmployees = parseEmployeeCSV(rawText);
-  const validation = validateEmployeeDataV2(parsedEmployees);
+  const { employees: employeeRecords, validation } = parseEmployeeCSV(rawText);
 
   if (!validation.isValid) {
     const errorMessages = validation.errors.map(e => e.message).join('\n');
@@ -184,17 +183,24 @@ async function processEmployeeRoster(rawText: string): Promise<ImportResult> {
   }
 
   // Convert EmployeeData to Employee format
-  const employees: Employee[] = parsedEmployees.map((emp, index) => ({
-    id: index + 1,
-    name: emp.name,
-    nip: emp.nip || '',
-    gol: emp.gol || '',
-    pangkat: emp.pangkat || '',
-    position: emp.position || '',
-    sub_position: emp.subPosition || '',
-    organizational_level: simplifyOrganizationalLevel(emp.organizationalLevel, emp.gol),
-    performance: []
-  }));
+  const employees: Employee[] = employeeRecords.map((emp, index) => {
+    const resolvedLevel = emp.organizational_level?.trim()
+      ? emp.organizational_level
+      : simplifyOrganizationalLevel(emp.organizationalLevel, emp.gol);
+
+    return {
+      id: index + 1,
+      name: emp.name,
+      nip: emp.nip || "",
+      gol: emp.gol || "",
+      pangkat: emp.pangkat || "",
+      position: emp.position || "",
+      sub_position: emp.subPosition || "",
+      organizational_level: resolvedLevel,
+      organizationalLevel: emp.organizationalLevel,
+      performance: [],
+    };
+  });
 
   return {
     type: 'employee_roster',
@@ -253,7 +259,12 @@ async function processPerformanceData(
   }
 
   // Parse the performance data
-  const parseResult = parsePerformanceData(rawText, undefined, updatedOrgMapping);
+  // Convert string mapping to EmployeeMapping format
+  const employeeMapping: Record<string, { organizational_level?: string }> = {};
+  Object.entries(updatedOrgMapping).forEach(([name, level]) => {
+    employeeMapping[name] = { organizational_level: level };
+  });
+  const parseResult = parsePerformanceData(rawText, undefined, employeeMapping);
   const sortedEmployees = parseResult.employees.sort((a, b) => a.name.localeCompare(b.name));
 
   // Check validation severity
@@ -300,7 +311,12 @@ export async function continueImportAfterResolution(
   orgLevelMapping: Record<string, string>
 ): Promise<ImportResult> {
   // Parse with the resolved mapping
-  const parseResult = parsePerformanceData(rawText, undefined, orgLevelMapping);
+  // Convert string mapping to EmployeeMapping format
+  const employeeMapping: Record<string, { organizational_level?: string }> = {};
+  Object.entries(orgLevelMapping).forEach(([name, level]) => {
+    employeeMapping[name] = { organizational_level: level };
+  });
+  const parseResult = parsePerformanceData(rawText, undefined, employeeMapping);
   const sortedEmployees = parseResult.employees.sort((a, b) => a.name.localeCompare(b.name));
 
   // Check validation severity

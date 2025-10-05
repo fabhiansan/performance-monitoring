@@ -6,7 +6,7 @@
 import { useState, useCallback } from 'react';
 import { Employee } from '../types';
 import { parsePerformanceData } from '../services/parser';
-import { parseEmployeeCSV, validateEmployeeData } from '../services/csvParser';
+import { parseEmployeeCSV } from '../services/csvParser';
 import { ValidationResult } from '../services/validationService';
 import { simplifyOrganizationalLevel } from '../utils/organizationalLevels';
 
@@ -120,46 +120,31 @@ export function useDataProcessing() {
       
       if (detection.type === 'employee_roster') {
         // Process employee roster data
-        const employeeData = parseEmployeeCSV(rawText);
-        const validationResult = validateEmployeeData(employeeData);
-        
+        const { employees: employeeRecords, validation: validationResult } = parseEmployeeCSV(rawText);
+
         // Convert EmployeeData to Employee format
-        const employees: Employee[] = employeeData.map((emp, index) => ({
-          id: index + 1,
-          name: emp.name,
-          nip: emp.nip || '',
-          gol: emp.gol || '',
-          pangkat: emp.pangkat || '',
-          position: emp.position || '',
-          sub_position: emp.subPosition || '',
-          organizational_level: simplifyOrganizationalLevel(emp.organizationalLevel, emp.gol),
-          performance: []
-        }));
-        
-        // Convert validation result to ValidationResult format
-        const standardValidationResult: ValidationResult = {
-          isValid: validationResult.valid,
-          errors: validationResult.errors.map(error => ({
-            type: 'missing_employee' as const,
-            message: error
-          })),
-          warnings: [],
-          summary: {
-            totalEmployees: employees.length,
-            validEmployees: employees.filter(emp => emp.name && emp.gol).length,
-            invalidEmployees: employees.filter(emp => !emp.name || !emp.gol).length,
-            totalCompetencies: 0,
-            requiredCompetencies: [],
-            missingCompetencies: [],
-            dataCompleteness: 0,
-            completeness: 0,
-            scoreQuality: 'poor' as const
-          }
-        };
-        
+        const employees: Employee[] = employeeRecords.map((emp, index) => {
+          const resolvedLevel = emp.organizational_level?.trim()
+            ? emp.organizational_level
+            : simplifyOrganizationalLevel(emp.organizationalLevel, emp.gol);
+
+          return {
+            id: index + 1,
+            name: emp.name,
+            nip: emp.nip || "",
+            gol: emp.gol || "",
+            pangkat: emp.pangkat || "",
+            position: emp.position || "",
+            sub_position: emp.subPosition || "",
+            organizational_level: resolvedLevel,
+            organizationalLevel: emp.organizationalLevel,
+            performance: [],
+          };
+        });
+
         return {
           employees,
-          validationResult: standardValidationResult,
+          validationResult,
           unknownEmployees: [],
           orgMap: {}
         };

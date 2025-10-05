@@ -19,14 +19,15 @@ export interface ParsedCsvLine {
  * Auto-detect delimiter for CSV data
  */
 export const detectDelimiter = (line: string): { delimiter: string; isSpaceDelimited: boolean } => {
-  const commaCount = (line.match(/,/g) || []).length;
-  const tabCount = (line.match(/\t/g) || []).length;
-  const multiSpaceCount = (line.match(/\s{2,}/g) || []).length; // 2+ consecutive spaces
-  
-  // Priority: tabs > multiple spaces > commas
+  const sanitizedLine = line.replace(/"(?:[^"]|""|\n)*"/g, "");
+  const commaCount = (sanitizedLine.match(/,/g) || []).length;
+  const tabCount = (sanitizedLine.match(/\t/g) || []).length;
+  const multiSpaceCount = (sanitizedLine.match(/\s{2,}/g) || []).length; // 2+ consecutive spaces
+
+  // Priority: tabs > multiple spaces (when comma absent) > commas
   if (tabCount > 0) {
     return { delimiter: '\t', isSpaceDelimited: false };
-  } else if (multiSpaceCount > 0 && multiSpaceCount >= commaCount) {
+  } else if (multiSpaceCount > 0 && commaCount === 0) {
     return { delimiter: '', isSpaceDelimited: true };
   } else {
     return { delimiter: ',', isSpaceDelimited: false };
@@ -179,4 +180,39 @@ export const parseScoreValue = (scoreValue: string): number | null => {
  */
 export const isValidScore = (score: number): boolean => {
   return !isNaN(score) && score >= 0 && score <= 100;
+};
+
+/**
+ * Convert a score represented as string into a numeric value.
+ * Supports numeric strings (integer/float), rating labels, and trims whitespace.
+ * Returns 0 for empty or invalid inputs to keep downstream calculations safe.
+ */
+export const convertScoreToNumber = (rawScore: string | number | null | undefined): number => {
+  if (rawScore === null || rawScore === undefined) {
+    return 0;
+  }
+
+  if (typeof rawScore === 'number') {
+    return Number.isFinite(rawScore) ? rawScore : 0;
+  }
+
+  const trimmedScore = rawScore.trim();
+  if (trimmedScore === '') {
+    return 0;
+  }
+
+  if (isStringRating(trimmedScore)) {
+    try {
+      return convertStringRatingToScore(trimmedScore);
+    } catch (error) {
+      // Fall through to numeric parsing if conversion fails unexpectedly
+    }
+  }
+
+  const numericValue = Number(trimmedScore.replace(/,/g, '.'));
+  if (!Number.isNaN(numericValue)) {
+    return numericValue;
+  }
+
+  return 0;
 };

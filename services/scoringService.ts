@@ -160,9 +160,12 @@ export const generateEmployeeRecap = (
   const performance = employee.performance ?? [];
   const perilakuKinerja = calculatePerilakuKinerja(performance);
   const kualitasKerja = calculateKualitasKerja(performance, positionType);
-  
-  // For staff positions, penilaianPimpinan is not used in calculation
-  const effectivePenilaianPimpinan = positionType === 'staff' ? 0 : penilaianPimpinan;
+  const hasPerformance = performance.length > 0;
+
+  // If there is no performance data, penilaian pimpinan should not contribute.
+  const effectivePenilaianPimpinan = hasPerformance && positionType === 'eselon'
+    ? penilaianPimpinan
+    : 0;
   const totalNilai = calculateTotalScore(perilakuKinerja, kualitasKerja, effectivePenilaianPimpinan, positionType);
 
   return {

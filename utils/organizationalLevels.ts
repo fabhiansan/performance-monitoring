@@ -722,6 +722,7 @@ const ESELON_II_PATTERNS = [
   /\b(plt\.?\s*)?kepala\s+dinas\b/,
   /\b(plt\.?\s*)?kepala\s+badan\b/,
   /\b(plt\.?\s*)?kepala\s+kantor\b/,
+  /\bsekretaris\s+dinas\b/,
   /\b(plt\.?\s*)?direktur\s+utama\b/,
   /\b(plt\.?\s*)?direktur\s+jenderal\b/,
   /\bkepala\s+instansi\b/,

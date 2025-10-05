@@ -5,7 +5,12 @@ import { server } from './mocks/server'
 
 // Start the MSW server before all tests
 beforeAll(() => {
+  const fetchBeforeListen = globalThis.fetch
   server.listen({ onUnhandledRequest: 'error' })
+
+  if (typeof fetchBeforeListen === 'function' && (fetchBeforeListen as any)?.mock) {
+    globalThis.fetch = fetchBeforeListen
+  }
 })
 
 // Reset any runtime request handlers after each test

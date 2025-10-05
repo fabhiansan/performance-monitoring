@@ -3,11 +3,15 @@
  * Provides a unified interface for fetching, caching, and synchronizing employee data
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Employee } from '../types';
-import { employeeApi, sessionApi } from '../services/api';
-import { queryKeys, invalidateQueries } from './useQueryClient';
-import { handleQueryError, queryRetryConfig, mutationRetryConfig } from './queryErrorHandling';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Employee } from "../types";
+import { employeeApi, sessionApi } from "../services/api";
+import { queryKeys, invalidateQueries } from "./useQueryClient";
+import {
+  handleQueryError,
+  queryRetryConfig,
+  mutationRetryConfig,
+} from "./queryErrorHandling";
 
 /**
  * Fetch all master employees (from employee_database table)
@@ -26,18 +30,25 @@ export function useEmployees() {
 }
 
 /**
- * Fetch employees for a specific session (with performance data)
- * Used in Analytics, Rekap Kinerja, and other views showing performance scores
- * Supports request cancellation via AbortSignal
+ * Fetch all master employees with session-specific performance data
+ * This is the primary hook for viewing employee data with performance scores for a specific session
+ * Returns ALL employees from master database, but performance array is filtered by session
+ * Used in Dashboard, Analytics, Reports, etc.
  */
-export function useSessionEmployees(sessionId: string | null | undefined) {
+export function useEmployeesWithSessionData(
+  sessionId: string | null | undefined,
+) {
   return useQuery<Employee[]>({
-    queryKey: queryKeys.employees.session(sessionId), // Factory handles null/undefined
+    queryKey: queryKeys.employees.session(sessionId), // Reuse session query key
     queryFn: async ({ signal }) => {
-      if (!sessionId) return [];
+      if (!sessionId) {
+        // If no session, return all employees with empty performance arrays
+        return await employeeApi.getAllEmployees(signal);
+      }
+      // This endpoint now returns ALL employees with session-filtered performance data
       return await sessionApi.getEmployeeDataBySession(sessionId, signal);
     },
-    enabled: !!sessionId, // Only fetch if sessionId is provided
+    enabled: true, // Always enabled, even without sessionId
     staleTime: 5 * 60 * 1000, // 5 minutes
     ...queryRetryConfig,
   });
@@ -64,7 +75,13 @@ export function useOrganizationalMappings() {
  */
 export function useSaveEmployeeData() {
   return useMutation({
-    mutationFn: async ({ employees, sessionName }: { employees: Employee[]; sessionName?: string }) => {
+    mutationFn: async ({
+      employees,
+      sessionName,
+    }: {
+      employees: Employee[];
+      sessionName?: string;
+    }) => {
       return await sessionApi.saveEmployeeData(employees, sessionName);
     },
     onSuccess: () => {
@@ -73,7 +90,7 @@ export function useSaveEmployeeData() {
       invalidateQueries.employees();
     },
     onError: (error) => {
-      handleQueryError(error, 'save employee data');
+      handleQueryError(error, "save employee data");
     },
     ...mutationRetryConfig,
   });
@@ -96,42 +113,44 @@ export function useAddEmployee() {
       subPosition?: string;
       organizationalLevel?: string;
     }) => {
-      return await employeeApi.addEmployee(
-        params.name,
-        params.nip || '-',
-        params.gol || '-',
-        params.pangkat || '-',
-        params.position || '-',
-        params.subPosition || '-',
-        params.organizationalLevel
-      );
+      return await employeeApi.addEmployee({
+        name: params.name,
+        nip: params.nip || "-",
+        gol: params.gol || "-",
+        pangkat: params.pangkat || "-",
+        position: params.position || "-",
+        subPosition: params.subPosition || "-",
+        organizationalLevel: params.organizationalLevel,
+      });
     },
     onMutate: async (newEmployeeParams) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: queryKeys.employees.all });
 
       // Snapshot previous value
-      const previousEmployees = queryClient.getQueryData<Employee[]>(queryKeys.employees.all);
+      const previousEmployees = queryClient.getQueryData<Employee[]>(
+        queryKeys.employees.all,
+      );
 
       // Create temporary employee object for optimistic update
       const tempEmployee: Employee = {
         id: Date.now(), // Temporary ID that will be replaced by server response
         name: newEmployeeParams.name,
-        nip: newEmployeeParams.nip || '-',
-        gol: newEmployeeParams.gol || '-',
-        pangkat: newEmployeeParams.pangkat || '-',
-        position: newEmployeeParams.position || '-',
-        sub_position: newEmployeeParams.subPosition || '-',
-        organizational_level: newEmployeeParams.organizationalLevel || '',
+        nip: newEmployeeParams.nip || "-",
+        gol: newEmployeeParams.gol || "-",
+        pangkat: newEmployeeParams.pangkat || "-",
+        position: newEmployeeParams.position || "-",
+        sub_position: newEmployeeParams.subPosition || "-",
+        organizational_level: newEmployeeParams.organizationalLevel || "",
         performance: [],
       };
 
       // Optimistically add the new employee
       if (previousEmployees) {
-        queryClient.setQueryData<Employee[]>(
-          queryKeys.employees.all,
-          [...previousEmployees, tempEmployee]
-        );
+        queryClient.setQueryData<Employee[]>(queryKeys.employees.all, [
+          ...previousEmployees,
+          tempEmployee,
+        ]);
       }
 
       return { previousEmployees };
@@ -139,9 +158,12 @@ export function useAddEmployee() {
     onError: (error, _newEmployee, context) => {
       // Rollback on error
       if (context?.previousEmployees) {
-        queryClient.setQueryData(queryKeys.employees.all, context.previousEmployees);
+        queryClient.setQueryData(
+          queryKeys.employees.all,
+          context.previousEmployees,
+        );
       }
-      handleQueryError(error, 'add employee');
+      handleQueryError(error, "add employee");
     },
     onSettled: () => {
       // Refetch to get the actual employee with server-generated ID
@@ -170,29 +192,30 @@ export function useUpdateEmployee() {
       subPosition: string;
       organizationalLevel?: string;
     }) => {
-      return await employeeApi.updateEmployee(
-        params.id,
-        params.name,
-        params.nip,
-        params.gol,
-        params.pangkat,
-        params.position,
-        params.subPosition,
-        params.organizationalLevel
-      );
+      return await employeeApi.updateEmployee(params.id, {
+        name: params.name,
+        nip: params.nip,
+        gol: params.gol,
+        pangkat: params.pangkat,
+        position: params.position,
+        subPosition: params.subPosition,
+        organizationalLevel: params.organizationalLevel,
+      });
     },
     onMutate: async (newEmployee) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: queryKeys.employees.all });
 
       // Snapshot previous value
-      const previousEmployees = queryClient.getQueryData<Employee[]>(queryKeys.employees.all);
+      const previousEmployees = queryClient.getQueryData<Employee[]>(
+        queryKeys.employees.all,
+      );
 
       // Optimistically update the cache
       if (previousEmployees) {
         queryClient.setQueryData<Employee[]>(
           queryKeys.employees.all,
-          previousEmployees.map(emp =>
+          previousEmployees.map((emp) =>
             emp.id === newEmployee.id
               ? {
                   ...emp,
@@ -202,10 +225,11 @@ export function useUpdateEmployee() {
                   pangkat: newEmployee.pangkat,
                   position: newEmployee.position,
                   sub_position: newEmployee.subPosition,
-                  organizational_level: newEmployee.organizationalLevel || emp.organizational_level,
+                  organizational_level:
+                    newEmployee.organizationalLevel || emp.organizational_level,
                 }
-              : emp
-          )
+              : emp,
+          ),
         );
       }
 
@@ -214,9 +238,12 @@ export function useUpdateEmployee() {
     onError: (error, _newEmployee, context) => {
       // Rollback on error
       if (context?.previousEmployees) {
-        queryClient.setQueryData(queryKeys.employees.all, context.previousEmployees);
+        queryClient.setQueryData(
+          queryKeys.employees.all,
+          context.previousEmployees,
+        );
       }
-      handleQueryError(error, 'update employee');
+      handleQueryError(error, "update employee");
     },
     onSettled: () => {
       invalidateQueries.employees();
@@ -242,13 +269,15 @@ export function useDeleteEmployee() {
       await queryClient.cancelQueries({ queryKey: queryKeys.employees.all });
 
       // Snapshot the previous value
-      const previousEmployees = queryClient.getQueryData<Employee[]>(queryKeys.employees.all);
+      const previousEmployees = queryClient.getQueryData<Employee[]>(
+        queryKeys.employees.all,
+      );
 
       // Optimistically update by removing the employee
       if (previousEmployees) {
         queryClient.setQueryData<Employee[]>(
           queryKeys.employees.all,
-          previousEmployees.filter(emp => emp.id !== employeeId)
+          previousEmployees.filter((emp) => emp.id !== employeeId),
         );
       }
 
@@ -258,9 +287,12 @@ export function useDeleteEmployee() {
     onError: (error, _employeeId, context) => {
       // Rollback to previous state on error
       if (context?.previousEmployees) {
-        queryClient.setQueryData(queryKeys.employees.all, context.previousEmployees);
+        queryClient.setQueryData(
+          queryKeys.employees.all,
+          context.previousEmployees,
+        );
       }
-      handleQueryError(error, 'delete employee');
+      handleQueryError(error, "delete employee");
     },
     onSettled: () => {
       // Always refetch after error or success to ensure consistency

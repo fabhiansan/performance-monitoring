@@ -189,6 +189,7 @@ export class BaseApiClient {
     try {
       return await this.handleApiCall<T>(
         () => fetch(`${this.baseUrl}${endpoint}`, {
+          method: 'GET',
           headers: this.getRequestHeaders(),
           signal: context.signal || controller.signal
         }),
